@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Voice call signalling: real clients (the <marmot-core> code from
- * client/Marmot.html) calling each other through a real server. Node has no
+ * client/index.html) calling each other through a real server. Node has no
  * WebRTC, so a fake RTCPeerConnection stands in for the browser's media stack.
  * Everything else is real: the offer and answer travel as Double Ratchet
  * messages through /api/commit and the socket.
@@ -15,7 +15,7 @@ const path = require('path');
 const WebSocket = require('ws');
 const { createServer } = require('../server');
 
-const html = fs.readFileSync(path.join(__dirname, '..', '..', 'client', 'Marmot.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', '..', 'client', 'index.html'), 'utf8');
 const core = html.split('/*<marmot-core>*/')[1].split('/*</marmot-core>*/')[0];
 const { MarmotClient } = new Function(core + '\nreturn {MarmotClient};')();
 

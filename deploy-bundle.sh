@@ -7,7 +7,7 @@ out="${1:-marmot-bundle.zip}"
 stage=$(mktemp -d)
 cp server/server.js server/db.js server/seal.js server/discord.js server/package.json server/package-lock.json "$stage"/
 cp -r server/.ebextensions server/.platform "$stage"/
-mkdir -p "$stage/client" && cp client/Marmot.html "$stage/client/"
+mkdir -p "$stage/client" && cp client/index.html "$stage/client/"
 rm -f "$out"
 # bsdtar writes real zips with forward-slash paths; Git Bash's GNU tar cannot write zips at all
 TAR=tar; [ -x /c/Windows/System32/tar.exe ] && TAR=/c/Windows/System32/tar.exe

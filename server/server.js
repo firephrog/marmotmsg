@@ -446,9 +446,9 @@ function createServer(opts) {
 
   // Serving the client is a convenience; the same file works opened from disk.
   // ../client in the repo; ./client in a deployment bundle, where the server directory is the root.
-  const clientFile = [path.join(__dirname, 'client', 'Marmot.html'), path.join(__dirname, '..', 'client', 'Marmot.html')]
-    .find(f => fs.existsSync(f)) || path.join(__dirname, '..', 'client', 'Marmot.html');
-  app.get(['/', '/Marmot.html'], (req, res) => {
+  const clientFile = [path.join(__dirname, 'client', 'index.html'), path.join(__dirname, '..', 'client', 'index.html')]
+    .find(f => fs.existsSync(f)) || path.join(__dirname, '..', 'client', 'index.html');
+  app.get(['/', '/index.html', '/Marmot.html'], (req, res) => {
     if (!fs.existsSync(clientFile)) return res.status(404).send('client not found');
     res.set('Cache-Control', 'no-cache');
     res.sendFile(clientFile);

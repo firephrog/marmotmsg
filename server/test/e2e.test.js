@@ -1,7 +1,7 @@
 'use strict';
 /**
  * End-to-end tests: the real client engine (lifted verbatim from the
- * <marmot-core> section of client/Marmot.html) talking to a real server over
+ * <marmot-core> section of client/index.html) talking to a real server over
  * HTTP and WebSocket, backed by a throwaway database.
  */
 const test = require('node:test');
@@ -12,7 +12,7 @@ const path = require('path');
 const WebSocket = require('ws');
 const { createServer } = require('../server');
 
-const html = fs.readFileSync(path.join(__dirname, '..', '..', 'client', 'Marmot.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', '..', 'client', 'index.html'), 'utf8');
 const core = html.split('/*<marmot-core>*/')[1].split('/*</marmot-core>*/')[0];
 const { MarmotClient, Ratchet, Acct } = new Function(core + '\nreturn {MarmotClient,Ratchet,Acct};')();
 

@@ -7,7 +7,7 @@ user's chats.
 A browser based messanging app, built inside a singular HTML file. Uses the Signal protocol to keep messages secure, and also offers a Discord bot to link Discord channels to Marmot users.
 
 ```
-client/Marmot.html     the whole client: UI, protocol, account crypto, engine
+client/index.html     the whole client: UI, protocol, account crypto, engine
 server/server.js       HTTP API + WebSocket push
 server/db.js           SQL storage (SQLite)
 server/seal.js         at-rest column encryption
@@ -24,7 +24,7 @@ npm start               # http://localhost:8080
 npm test
 ```
 
-Open `http://localhost:8080`, or open `client/Marmot.html` straight from disk and enter the server
+Open `http://localhost:8080`, or open `client/index.html` straight from disk and enter the server
 address on the login screen. To give people a copy that connects automatically, set the `SERVER`
 constant near the top of the client script.
 
