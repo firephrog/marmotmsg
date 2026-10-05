@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marmot</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%23151311%22%2F%3E%3Crect%20x%3D%22.5%22%20y%3D%22.5%22%20width%3D%2215%22%20height%3D%2215%22%20fill%3D%22none%22%20stroke%3D%22%23f0a92a%22%2F%3E%3Cg%20transform%3D%22translate(1.75%201.25)%22%3E%3Cg%20transform%3D%22scale(.8)%22%3E%3Cline%20x2%3D%225.5%22%20stroke%3D%22%23f0a92a%22%20x1%3D%221.5%22%20y1%3D%2213.5%22%20y2%3D%2213.5%22%20stroke-width%3D%221.5%22%2F%3E%3Cline%20x2%3D%2214%22%20stroke%3D%22%23f0a92a%22%20y2%3D%222.5%22%20x1%3D%2214%22%20y1%3D%2214.5%22%20stroke-width%3D%222%22%2F%3E%3Cline%20x2%3D%229%22%20stroke%3D%22%23f0a92a%22%20y2%3D%222.5%22%20x1%3D%229%22%20y1%3D%2214.5%22%20stroke-width%3D%222%22%2F%3E%3Cpolyline%20fill%3D%22none%22%20stroke%3D%22%23f0be72%22%20points%3D%225.5%2014%201%2014%207%202.5%2015%202.5%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0e0d;--rail:#151311;--list:#121110;--row:#1d1a17;--bubble:#1f1c19;--panel:#1a1816;--input:#161412;--line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.12);--text:#efece8;--muted:#a39d95;--dim:#837d75;--faint:#6f6962;--avatar:#2d2925;--avatar-fg:#d6d0c8;--accent:#f0a92a;--accent-soft:#f5c36a;--accent-ink:#2a1a02;--accent-wash:rgba(240,169,42,0.12);--ok:#6ecfa8;--ok-line:rgba(110,207,168,0.4);--warn:#e8b64c;--bad:#ff7a63}
+[data-theme=light]{--bg:#f8f6f3;--rail:#efebe6;--list:#f3f0ec;--row:#e7e2dc;--bubble:#e9e4de;--panel:#ebe6e0;--input:#efebe6;--line:rgba(40,32,24,0.1);--line2:rgba(40,32,24,0.18);--text:#221d18;--muted:#5f5850;--dim:#736b62;--faint:#8b837a;--avatar:#d9d2ca;--avatar-fg:#3b352f;--accent:#a8620a;--accent-soft:#8a4e04;--accent-ink:#fff7ec;--accent-wash:rgba(168,98,10,0.1);--ok:#1f8a63;--ok-line:rgba(31,138,99,0.4);--warn:#8a6410;--bad:#c2381f}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;width:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,'Segoe UI',sans-serif;overflow:hidden}
+.mono,.lbl,.note,.chip,.time,.badge,.grouplbl,.status,.meta,.tbtn,.pill,.send,.stamp,.sys,.kv,.fp,.live,.seg button,.toast,.sn,.search,.inp,.empty{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
+.app{position:fixed;inset:0;display:flex;background:var(--bg);overflow:hidden;transition:top .22s ease}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+button:disabled{opacity:.4;cursor:default}
+.hidden{display:none!important}
+/* rail */
+.rail{width:210px;flex:none;display:flex;flex-direction:column;padding:20px 0 16px;background:var(--rail);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;padding:0 16px}
+.logo{width:22px;height:22px;flex:none}
+.brand b{font-size:17px;font-weight:700;letter-spacing:.04em}
+.ver{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);border:1px solid var(--accent);padding:2px 4px}
+.tagline{padding:6px 16px 0;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.rule{height:1px;margin:18px 16px;background:var(--line)}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.nav button{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px 0 12px;color:var(--muted);font-size:13.5px;transition:background .15s,color .15s}
+.nav button .dot{width:6px;height:6px;flex:none;border:1px solid var(--faint)}
+.nav button .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.nav button:hover{background:var(--row);color:var(--text)}
+.nav button[aria-current=page]{background:var(--accent-wash);border-left:2px solid var(--accent);padding-left:10px;color:var(--accent-soft);font-weight:500}
+.nav button[aria-current=page] .dot{background:var(--accent);border-color:var(--accent)}
+.spacer{flex:1}
+.me{margin:0 12px 12px;padding:12px;background:var(--panel);border:1px solid var(--line)}
+.me-top{display:flex;align-items:center;gap:8px;min-width:0}
+.me-top div:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av{flex:none;display:flex;align-items:center;justify-content:center;background:var(--avatar);color:var(--avatar-fg);font-family:'JetBrains Mono',monospace}
+.av-26{width:26px;height:26px;font-size:11px;background:var(--accent);color:var(--accent-ink)}
+.av-34{width:34px;height:34px;font-size:11px}
+.fp{margin-top:8px;font-size:9.5px;line-height:1.6;color:var(--dim);word-break:break-all}
+.live{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:9.5px;color:var(--ok)}
+.live i{width:5px;height:5px;background:currentColor}
+.live.off{color:var(--faint)}.live.warn{color:var(--warn)}
+.seg{display:flex;gap:1px;margin:0 12px;border:1px solid var(--line2)}
+.seg button{flex:1;text-align:center;padding:7px 0;font-size:10px;color:var(--dim);transition:background .2s,color .2s}
+.seg button[aria-pressed=true]{background:var(--row);color:var(--text)}
+/* list column */
+.col{width:340px;flex:none;display:flex;flex-direction:column;background:var(--list);border-right:1px solid var(--line)}
+.col-head{display:flex;align-items:center;justify-content:space-between;padding:20px 18px 14px}
+.col-head h2{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em}
+.pill{font-size:10px;color:var(--accent-soft);border:1px solid var(--accent);padding:5px 9px}
+.pill{transition:background .15s}
+.pill:hover{background:var(--accent-wash)}
+.search{margin:0 14px 12px;padding:9px 10px;width:calc(100% - 28px);background:var(--input);border:1px solid var(--line);color:var(--text);font-size:11px;transition:border-color .15s}
+.search::placeholder,.inp::placeholder{color:var(--faint)}
+.search:focus,.inp:focus{outline:none;border-color:var(--accent)}
+.rows{flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.row{display:flex;gap:11px;align-items:center;padding:12px 16px 12px 18px;width:100%;transition:background .15s,border-color .15s,padding .15s}
+.row:hover{background:var(--row)}
+.row[aria-current=true]{background:var(--row);border-left:2px solid var(--accent);padding-left:16px}
+.row-main{flex:1;min-width:0}
+.row-top{display:flex;align-items:center;gap:6px}
+.row-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{margin-top:3px;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-size:9px;color:var(--dim);border:1px solid var(--line2);padding:1px 4px;white-space:nowrap}
+.chip.ok{color:var(--ok);border-color:var(--ok-line)}
+.row-right{flex:none;text-align:right}
+.time{font-size:9.5px;color:var(--dim)}
+.badge{margin-top:5px;min-width:18px;padding:1px 4px;background:var(--accent);color:var(--accent-ink);font-size:9.5px;text-align:center}
+.grouplbl{padding:14px 18px 10px;font-size:9px;letter-spacing:.12em;color:var(--faint);line-height:1.8}
+.status{display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid var(--line);font-size:9.5px;color:var(--dim)}
+.status i{width:5px;height:5px;flex:none;background:var(--ok)}
+.status i.bad{background:var(--bad)}.status i.idle{background:var(--faint)}
+/* main pane */
+.pane{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.pane-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);min-height:65px}
+.pane-title{font-size:15px;font-weight:600}
+.meta{margin-top:3px;font-size:9.5px;color:var(--dim)}
+.acts{margin-left:auto;display:flex;align-items:center;gap:6px}
+.tbtn{padding:7px 10px;border:1px solid var(--line2);font-size:10px;color:var(--muted);white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.tbtn:hover{border-color:var(--accent);color:var(--accent-soft)}
+.tbtn.danger:hover{border-color:var(--bad);color:var(--bad)}
+.thread{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:20px 22px;overflow-y:auto}
+.day{display:flex;align-items:center;gap:12px}
+.day span{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--faint)}
+.day i{flex:1;height:1px;background:var(--line)}
+.msg{max-width:68%}
+.msg.in{align-self:flex-start}
+.msg.out{align-self:flex-end}
+.msg .body{padding:10px 13px;background:var(--bubble);font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;transition:opacity .2s,background .2s,color .2s}
+.msg.out .body{background:var(--accent);color:var(--accent-ink)}
+.msg.sending .body{opacity:.65}
+.msg.failed .body{background:var(--bubble);color:var(--muted);border:1px dashed var(--bad)}
+.stamp{margin-top:5px;font-size:9.5px;color:var(--faint)}
+.msg.out .stamp{text-align:right}
+.stamp button{color:var(--bad);text-decoration:underline}
+.sys{align-self:center;max-width:80%;text-align:center;font-size:9.5px;line-height:1.7;color:var(--faint)}
+.composer{margin:0 18px 18px;border:1px solid var(--line2);background:var(--input);transition:border-color .15s}
+.composer:focus-within{border-color:var(--accent)}
+.composer textarea{display:block;width:100%;height:48px;max-height:180px;padding:13px 14px;background:none;border:0;resize:none;color:var(--text);font:400 14px/1.4 'Space Grotesk',system-ui,sans-serif}
+.composer textarea:focus{outline:none}
+.composer textarea::placeholder{color:var(--faint)}
+.composer-bar{display:flex;align-items:center;gap:10px;padding:0 10px 10px}
+.hint{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint)}
+.send{padding:7px 14px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:500;transition:filter .15s,background .15s,opacity .15s}
+.send:hover{filter:brightness(1.08)}
+.empty{flex:1;display:grid;place-items:center;font-size:11px;color:var(--faint);text-align:center;line-height:2;padding:20px}
+/* settings */
+.sheet{flex:1;overflow-y:auto;padding:20px 22px 26px}
+.sec{margin-bottom:28px}
+.sec h3{margin:0 0 4px;font-size:14px;font-weight:600}
+.note{font-size:9.5px;line-height:1.7;color:var(--dim);margin-bottom:14px;max-width:64ch}
+.field{margin-bottom:14px}
+.lbl{font-size:9px;letter-spacing:.12em;color:var(--faint);margin-bottom:6px}
+.inp{width:100%;padding:9px 10px;background:var(--input);border:1px solid var(--line2);color:var(--text);font-size:11px;transition:border-color .15s}
+.btnrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.kv{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:10px;max-width:640px}
+.kv b{flex:none;width:150px;font-weight:400;color:var(--faint)}
+.kv span{color:var(--muted);word-break:break-all}
+.err{color:var(--bad);font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.6;min-height:16px;margin-top:8px}
+/* overlays */
+.scrim{position:fixed;inset:0;background:rgba(10,9,8,.62);display:grid;place-items:center;z-index:20;padding:16px;animation:fade .2s ease both}
+.scrim.solid{background:var(--bg)}
+.modal{width:440px;max-width:100%;max-height:90vh;overflow-y:auto;background:var(--rail);border:1px solid var(--line2);padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.35);animation:lift .28s cubic-bezier(.2,.85,.25,1) both}
+.modal h3{margin:0 0 4px;font-size:16px;font-weight:600}
+.modal-foot{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.modal-foot .grow{flex:1}
+.auth-seg{display:flex;border:1px solid var(--line2);margin:16px 0}
+.auth-seg button{flex:1;text-align:center;padding:9px 0;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--dim);transition:background .2s,color .2s}
+.auth-seg button[aria-pressed=true]{background:var(--accent-wash);color:var(--accent-soft)}
+.toasts{position:fixed;left:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:40;max-width:380px}
+.toast{padding:10px 12px;background:var(--panel);border:1px solid var(--line2);border-left:2px solid var(--accent);font-size:10px;line-height:1.6;color:var(--muted);animation:slide .25s ease}
+.sn{font-size:14px;line-height:2;letter-spacing:.08em;color:var(--text);background:var(--input);border:1px solid var(--line2);padding:12px;text-align:center;word-spacing:.4em}
+.back{display:none}
+/* peers */
+.chip.warn{color:var(--warn);border-color:var(--warn)}
+.chip.bad{color:var(--bad);border-color:var(--bad)}
+.chip.dc{color:var(--muted);border-color:var(--line2)}
+.who{margin-bottom:4px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--muted)}
+.who i{font-style:normal;color:var(--faint)}
+.plain{align-self:center;max-width:80%;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.7;color:var(--warn)}
+.grouplbl.note2{padding-top:4px;letter-spacing:.06em}
+.more{margin:4px 18px 10px;align-self:flex-start}
+.gate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 18px 18px;padding:12px 14px;border:1px dashed var(--line2);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+.gate .grow{flex:1;min-width:160px;line-height:1.6}
+.tbtn[aria-pressed=true]{border-color:var(--accent);color:var(--accent-soft);background:var(--accent-wash)}
+.tabs{display:none}
+.tabs button{flex:1;padding:11px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--dim)}
+.tabs button[aria-current=page]{color:var(--accent-soft);box-shadow:inset 0 2px 0 var(--accent)}
+.tabs .n{margin-left:4px;color:var(--accent)}
+/* voice */
+/* while a call is up the whole app moves down and the bar sits above it, so it covers nothing */
+.app.with-call{top:58px}
+.callbar{position:fixed;top:0;left:0;right:0;height:58px;z-index:30;display:flex;align-items:center;gap:10px;padding:0 16px 0 18px;background:var(--rail);border-bottom:1px solid var(--line2);box-shadow:inset 3px 0 0 var(--accent);animation:drop .22s ease both}
+.callbar.ringing{box-shadow:inset 3px 0 0 var(--ok);background:linear-gradient(90deg,var(--accent-wash),transparent 60%),var(--rail)}
+.callbar.ringing .av{animation:pulse 1.4s ease-in-out infinite}
+.callbar .grow{flex:1;min-width:0}
+.callbar .pane-title{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.callbar .who-btn{display:block;max-width:100%}
+.callbar .meta{font-variant-numeric:tabular-nums}
+.callbar .meta.warn{color:var(--warn)}
+.send.ok{background:var(--ok)}
+.hang{padding:7px 12px;background:var(--bad);color:#fff;font-size:10px;font-weight:500;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
+.hang{transition:filter .15s}
+.hang:hover{filter:brightness(1.08)}
+.callbar.out{animation:rise .18s ease both;pointer-events:none}
+.scrim.out{animation:fadeout .18s ease both;pointer-events:none}
+.scrim.out .modal{animation:sink .18s ease both}
+.toast.out{animation:slideout .25s ease both}
+/* entering a pane, a column or a message: only when it changes, never on a plain re-render */
+.pane.enter{animation:paneIn .24s cubic-bezier(.2,.85,.25,1) both}
+.rows.enter{animation:rowsIn .22s ease both}
+.msg.new{animation:msgIn .26s cubic-bezier(.2,.85,.25,1) both}
+.msg.in.new{transform-origin:left bottom}.msg.out.new{transform-origin:right bottom}
+.sys.new{animation:fade .3s ease both}
+/* theme switch: everything eases between palettes for a moment */
+.theme-fade,.theme-fade *,.theme-fade *::before,.theme-fade *::after{transition:background-color .3s ease,color .3s ease,border-color .3s ease,box-shadow .3s ease!important}
+@keyframes drop{from{opacity:0;transform:translateY(-8px)}}
+@keyframes rise{to{opacity:0;transform:translateY(-8px)}}
+@keyframes fadeout{to{opacity:0}}
+@keyframes sink{to{opacity:0;transform:translateY(8px) scale(.98)}}
+@keyframes slideout{to{opacity:0;transform:translateX(-14px)}}
+@keyframes paneIn{from{opacity:0;transform:translateY(6px)}}
+@keyframes paneSide{from{opacity:0;transform:translateX(24px)}}
+@keyframes rowsIn{from{opacity:0;transform:translateY(4px)}}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px) scale(.97)}}
+@keyframes pulse{50%{box-shadow:0 0 0 5px var(--accent-wash)}}
+@keyframes fade{from{opacity:0}}
+@keyframes lift{from{opacity:0;transform:translateY(12px) scale(.98)}}
+@keyframes slide{from{opacity:0;transform:translateX(-14px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+/* narrow screens: one column at a time */
+@media (max-width:820px){
+ .rail{display:none}
+ .col{width:100%;border-right:0}
+ .app.in-pane .col{display:none}
+ .app:not(.in-pane) .pane{display:none}
+ .back{display:inline-block}
+ .tabs{display:flex;border-top:1px solid var(--line)}
+ .gate{margin:0 12px 12px}
+ .pane-head .meta,.pane-head .pane-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .callbar .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .msg{max-width:86%}
+ .thread{padding:16px}
+ .composer{margin:0 12px 12px}
+ .pane.enter{animation-name:paneSide}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="rail">
+    <div class="brand"><svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg><b>MARMOT</b><div class="ver">v0.4</div></div>
+    <div class="tagline">end-to-end encrypted messaging</div>
+    <div class="rule"></div>
+    <div class="nav" id="nav">
+      <button data-screen="messages" aria-current="page"><i class="dot"></i>Messages<span class="n" id="navUnread"></span></button>
+      <button data-screen="peers"><i class="dot"></i>Peers<span class="n" id="navPeers"></span></button>
+      <button data-screen="discord" id="navDiscord" class="hidden"><i class="dot"></i>Discord<span class="n" id="navDc"></span></button>
+      <button data-screen="settings"><i class="dot"></i>Settings<span class="n"></span></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="me">
+      <div class="me-top"><div class="av av-26" id="meAv">··</div><div style="font-size:13px;font-weight:500" id="meName">signed out</div></div>
+      <div class="fp" id="meFp"></div>
+      <div class="live off" id="meLive"><i></i><span id="meStatus">offline</span></div>
+    </div>
+    <div class="seg" id="themeSeg">
+      <button data-theme-set="light" aria-pressed="false">LIGHT</button>
+      <button data-theme-set="dark" aria-pressed="true">DARK</button>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-head"><h2 id="colTitle">Messages</h2><button class="pill" id="colAction">+ NEW</button></div>
+    <input class="search" id="search" placeholder="search conversations…" autocomplete="off">
+    <div class="rows" id="rows"></div>
+    <div class="tabs" id="tabs">
+      <button data-screen="messages">CHATS<span class="n" id="tabUnread"></span></button>
+      <button data-screen="peers">PEERS<span class="n" id="tabPeers"></span></button>
+      <button data-screen="discord" id="tabDiscord" class="hidden">DISCORD<span class="n" id="tabDc"></span></button>
+      <button data-screen="settings">SETTINGS</button>
+    </div>
+    <div class="status"><i id="statusDot" class="idle"></i><span id="statusText">not connected</span></div>
+  </div>
+
+  <div class="pane" id="pane"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+<div id="callbar" role="status" aria-live="polite"></div>
+<audio id="callAudio" autoplay playsinline></audio>
+<div id="overlay"></div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   SERVER — the Marmot server everyone using this file connects to.
+   Leave blank and the login screen asks for it (and remembers the answer).
+   When this file is served by the Marmot server itself, its own address is
+   used automatically.
+   ========================================================================== */
+const LOGO='<svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg>';
+const SERVER='http://marmot-beta.us-east-1.elasticbeanstalk.com';
+
+/*<marmot-core>*/
+/* Everything between these markers is DOM-free: the protocol, the account
+   crypto and the client engine. server/test runs this exact code in Node to
+   exercise real clients against a real server. */
+
+/* ---------------------------------------------------------------- utils */
+const te=new TextEncoder(),td=new TextDecoder();
+function rand(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return a}
+function b64(buf){const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
+function ub64(str){const s=atob(str),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a}
+function cat(...parts){const p=parts.map(x=>new Uint8Array(x));const out=new Uint8Array(p.reduce((n,x)=>n+x.length,0));let o=0;for(const x of p){out.set(x,o);o+=x.length}return out}
+function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
+const Z32=new Uint8Array(32);
+const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
+const isDiscord=id=>String(id).startsWith('dc:');
+const clock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+
+/* --------------------------------------------------------------- crypto */
+/* The Signal construction on WebCrypto primitives:
+     agreement      X25519            (X3DH with one-time prekeys, 4 DHs)
+     signatures     Ed25519           (signed prekey)
+     KDF chains     HKDF-SHA256 / HMAC-SHA256
+     payload        AES-256-GCM, header + both identities as associated data
+   Signal uses one Curve25519 key for both DH and signing (XEdDSA); WebCrypto
+   has no XEdDSA, so an identity here is an X25519 key plus an Ed25519 key,
+   and the user id is the hash of the pair. */
+const CR={
+ async pair(kind){
+  const alg=kind==='sign'?{name:'Ed25519'}:{name:'X25519'};
+  const k=await crypto.subtle.generateKey(alg,true,kind==='sign'?['sign','verify']:['deriveBits']);
+  return {pub:b64(await crypto.subtle.exportKey('raw',k.publicKey)),priv:b64(await crypto.subtle.exportKey('pkcs8',k.privateKey))}},
+ async dh(privB64,pubB64){
+  const priv=await crypto.subtle.importKey('pkcs8',ub64(privB64),{name:'X25519'},false,['deriveBits']);
+  const pub=await crypto.subtle.importKey('raw',ub64(pubB64),{name:'X25519'},false,[]);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'X25519',public:pub},priv,256))},
+ async sign(privB64,data){
+  const k=await crypto.subtle.importKey('pkcs8',ub64(privB64),{name:'Ed25519'},false,['sign']);
+  return b64(await crypto.subtle.sign('Ed25519',k,data))},
+ async verify(pubB64,sigB64,data){
+  try{const k=await crypto.subtle.importKey('raw',ub64(pubB64),{name:'Ed25519'},false,['verify']);
+   return await crypto.subtle.verify('Ed25519',k,ub64(sigB64),data)}catch(e){return false}},
+ async sha256(bytes){return new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))},
+ async hkdf(ikm,salt,info,len){
+  const k=await crypto.subtle.importKey('raw',ikm,'HKDF',false,['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'HKDF',hash:'SHA-256',salt,info:te.encode(info)},k,len*8))},
+ async hmacKey(raw){return crypto.subtle.importKey('raw',raw,{name:'HMAC',hash:'SHA-256'},false,['sign'])},
+ async hmac(key,data){
+  if(!(key instanceof CryptoKey))key=await this.hmacKey(key);
+  return new Uint8Array(await crypto.subtle.sign('HMAC',key,data))},
+ async aesKey(raw){return crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])},
+ async pbkdf2(pass,salt,iter){
+  const base=await crypto.subtle.importKey('raw',te.encode(pass),'PBKDF2',false,['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},base,256))},
+ /** Seals a JSON value under an AES-GCM key, bound to `aad`. */
+ async seal(key,obj,aad){
+  const iv=rand(12);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad||new Uint8Array()},key,te.encode(JSON.stringify(obj)));
+  return {iv:b64(iv),ct:b64(ct)}},
+ async open(key,box,aad){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(box.iv),additionalData:aad||new Uint8Array()},key,ub64(box.ct));
+  return JSON.parse(td.decode(pt))},
+ /* Double Ratchet KDFs */
+ async kdfRoot(rk,dhOut){const b=await this.hkdf(dhOut,rk,'Marmot_Ratchet',64);return [b.slice(0,32),b.slice(32,64)]},
+ async kdfChain(ck){const k=await this.hmacKey(ck);return [await this.hmac(k,new Uint8Array([2])),await this.hmac(k,new Uint8Array([1]))]},  // [next chain key, message key]
+ async aead(mk,data,aad,decrypt){
+  const m=await this.hkdf(mk,Z32,'Marmot_Message',44);
+  const key=await this.aesKey(m.slice(0,32)),iv=m.slice(32,44);
+  return new Uint8Array(decrypt
+   ?await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:aad},key,data)
+   :await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},key,data))}
+};
+
+/* ------------------------------------------------------- account crypto */
+/* The password never leaves the browser. PBKDF2 stretches it once and HKDF
+   splits the result in two: an auth key the server checks (it stores only an
+   scrypt verifier of it), and a vault key the server never sees, which
+   decrypts the vault holding the identity private keys and the data key that
+   encrypts everything else the server stores for this account. */
+const Acct={
+ ITER:600000,MINPASS:10,
+ checkPass(p){if(!p||p.length<this.MINPASS)throw new Error('use at least '+this.MINPASS+' characters — this password is the only thing protecting your keys');return p},
+ async derive(pass,saltB64,iter){
+  const m=await CR.pbkdf2(pass,ub64(saltB64),iter);
+  const auth=await CR.hkdf(m,Z32,'Marmot_Auth',32);
+  const vk=await CR.hkdf(m,Z32,'Marmot_Vault',32);
+  return {auth:b64(auth),vkRaw:b64(vk),vaultKey:await CR.aesKey(vk)}},
+ async userId(ikPub,skPub){return hex(await CR.sha256(cat(ub64(ikPub),ub64(skPub)))).slice(0,32)},
+ async newIdentity(){
+  const ik=await CR.pair('dh'),sk=await CR.pair('sign'),spk=await CR.pair('dh');
+  spk.id=1;spk.sig=await CR.sign(sk.priv,ub64(spk.pub));
+  return {ik,sk,spk}},
+ async opks(start,n){const out=[];for(let i=0;i<n;i++){const p=await CR.pair('dh');out.push({id:start+i,pub:p.pub,priv:p.priv})}return out},
+ /** Safety number: 30 digits per identity, the two halves in canonical order.
+     Both people see the same 60 digits iff each holds the other's real keys. */
+ async safety(a,b){
+  const half=async x=>{
+   const h=await CR.sha256(cat(te.encode('Marmot_Safety_1'),ub64(x.ik),ub64(x.sk)));
+   let s='';for(let i=0;i<6;i++){let n=0;for(let j=0;j<5;j++)n=n*256+h[i*5+j];s+=String(n%100000).padStart(5,'0')}
+   return s};
+  const [x,y]=[await half(a),await half(b)].sort();
+  return (x+y).match(/.{5}/g).join(' ')}
+};
+
+/* -------------------------------------------------------- double ratchet */
+/* Pure functions over plain-JSON session state: every step works on a copy,
+   and the caller persists the result atomically with whatever the step
+   produced (a stored message, an outgoing envelope, a mailbox ack). A forged
+   or corrupt frame therefore cannot advance — or destroy — a session. */
+const Ratchet={
+ MAX_SKIP:1000,MAX_KEPT:2000,ARCHIVE:3,
+ F:new Uint8Array(32).fill(255),
+ clone:x=>JSON.parse(JSON.stringify(x)),
+ empty:()=>({active:null,archived:[],eks:[]}),
+ aad(st,h){return te.encode('Marmot_v1|'+st.ad+'|'+h.dh+'|'+h.pn+'|'+h.n)},
+
+ /** X3DH, initiator side, from a fetched prekey bundle. */
+ async initiate(me,b){
+  if(!await CR.verify(b.sk,b.spk.sig,ub64(b.spk.pub)))throw new Error('signed prekey failed verification');
+  const ek=await CR.pair('dh');
+  const parts=[this.F,await CR.dh(me.ik.priv,b.spk.pub),await CR.dh(ek.priv,b.ik),await CR.dh(ek.priv,b.spk.pub)];
+  if(b.opk)parts.push(await CR.dh(ek.priv,b.opk.pub));
+  const sk=await CR.hkdf(cat(...parts),Z32,'Marmot_X3DH',32);
+  const st={rk:b64(sk),cks:null,ckr:null,dhs:null,dhr:b.spk.pub,ns:0,nr:0,pn:0,skipped:{},
+   ad:me.ik.pub+'.'+b.ik,peer:{ik:b.ik,sk:b.sk},
+   pre:{ik:me.ik.pub,sk:me.sk.pub,ek:ek.pub,spk:b.spk.id,opk:b.opk?b.opk.id:null}};
+  await this._sendStep(st);
+  return st},
+
+ /** X3DH, responder side, from the prekey header on an inbound message. */
+ async respond(me,pre,spk,opk){
+  const parts=[this.F,await CR.dh(spk.priv,pre.ik),await CR.dh(me.ik.priv,pre.ek),await CR.dh(spk.priv,pre.ek)];
+  if(opk)parts.push(await CR.dh(opk.priv,pre.ek));
+  const sk=await CR.hkdf(cat(...parts),Z32,'Marmot_X3DH',32);
+  return {rk:b64(sk),cks:null,ckr:null,dhs:{pub:spk.pub,priv:spk.priv},dhr:null,ns:0,nr:0,pn:0,skipped:{},
+   ad:pre.ik+'.'+me.ik.pub,peer:{ik:pre.ik,sk:pre.sk},pre:null}},
+
+ /** Makes a freshly initiated session active, keeping the old one to decrypt
+     anything still in flight under it. */
+ install(rec,st){
+  const r=this.clone(rec);r.eks=r.eks||[];
+  if(r.active)r.archived=[r.active].concat(r.archived||[]).slice(0,this.ARCHIVE);
+  r.active=st;return r},
+
+ async _sendStep(st){
+  const kp=await CR.pair('dh');st.dhs=kp;
+  const [rk,ck]=await CR.kdfRoot(ub64(st.rk),await CR.dh(kp.priv,st.dhr));
+  st.rk=b64(rk);st.cks=b64(ck);st.ns=0},
+
+ async _dhRatchet(st,their){
+  st.pn=st.ns;st.ns=0;st.nr=0;st.dhr=their;
+  const [rk,ck]=await CR.kdfRoot(ub64(st.rk),await CR.dh(st.dhs.priv,their));
+  st.rk=b64(rk);st.ckr=b64(ck);
+  await this._sendStep(st)},
+
+ async _skip(st,until){
+  if(!st.ckr)return;
+  if(until-st.nr>this.MAX_SKIP)throw new Error('too many skipped messages');
+  while(st.nr<until){
+   const [next,mk]=await CR.kdfChain(ub64(st.ckr));
+   st.skipped[st.dhr+'|'+st.nr]=b64(mk);st.ckr=b64(next);st.nr++}
+  const keys=Object.keys(st.skipped);
+  if(keys.length>this.MAX_KEPT)keys.slice(0,keys.length-this.MAX_KEPT).forEach(k=>delete st.skipped[k])},
+
+ async encrypt(rec,inner){
+  const r=this.clone(rec),st=r.active;
+  if(!st||!st.cks)throw new Error('no sending chain');
+  const [next,mk]=await CR.kdfChain(ub64(st.cks));
+  st.cks=b64(next);
+  const h={dh:st.dhs.pub,pn:st.pn,n:st.ns};st.ns++;
+  const ct=await CR.aead(mk,te.encode(JSON.stringify(inner)),this.aad(st,h));
+  const env={v:1,h,ct:b64(ct)};
+  if(st.pre)env.pre=st.pre;          // repeated until the peer replies
+  return {rec:r,env}},
+
+ async _open(st,env){
+  const h=env.h;
+  if(!h||typeof h.dh!=='string'||!Number.isInteger(h.n)||!Number.isInteger(h.pn)||h.n<0||h.pn<0)throw new Error('malformed header');
+  const ct=ub64(env.ct),aad=this.aad(st,h),sk=h.dh+'|'+h.n;
+  if(st.skipped[sk]){
+   const pt=await CR.aead(ub64(st.skipped[sk]),ct,aad,true);
+   delete st.skipped[sk];return JSON.parse(td.decode(pt))}
+  if(h.dh!==st.dhr){await this._skip(st,h.pn);await this._dhRatchet(st,h.dh)}
+  await this._skip(st,h.n);
+  if(!st.ckr)throw new Error('no receiving chain');
+  const [next,mk]=await CR.kdfChain(ub64(st.ckr));
+  st.ckr=b64(next);st.nr++;
+  const pt=await CR.aead(mk,ct,aad,true);
+  st.pre=null;                       // the peer has answered: handshake complete
+  return JSON.parse(td.decode(pt))},
+
+ /** Tries the active session, then superseded ones, then — if the frame
+     carries a prekey header — a new responder handshake. Whichever opens the
+     frame becomes active, so two people who start a session at the same
+     moment converge on one instead of losing messages.
+     ctx: {me, peerId, spk(id), opk(id)} */
+ async decrypt(rec,env,ctx){
+  if(!env||env.v!==1||typeof env.ct!=='string')throw new Error('malformed envelope');
+  const tries=[];
+  if(rec.active)tries.push([rec.active,-1]);
+  (rec.archived||[]).forEach((a,i)=>tries.push([a,i]));
+  let last=null;
+  for(const [s,i] of tries){
+   try{const st=this.clone(s);const inner=await this._open(st,env);return {rec:this._promote(rec,st,i),inner,opk:null}}
+   catch(e){last=e}}
+  const pre=env.pre;
+  if(!pre)throw last||new Error('no session with this sender');
+  if(await Acct.userId(pre.ik,pre.sk)!==ctx.peerId)throw new Error('handshake keys do not belong to the sender');
+  if((rec.eks||[]).includes(pre.ek))throw new Error('replayed handshake');
+  const spk=ctx.spk(pre.spk);
+  if(!spk)throw new Error('handshake targets an unknown signed prekey');
+  let opk=null;
+  if(pre.opk!=null){opk=ctx.opk(pre.opk);if(!opk)throw new Error('handshake used a one-time prekey that is already spent')}
+  const st=await this.respond(ctx.me,pre,spk,opk);
+  const inner=await this._open(st,env);
+  const r=this._promote(rec,st,-2);
+  r.eks=[pre.ek].concat(r.eks||[]).slice(0,64);
+  return {rec:r,inner,opk:pre.opk}},
+
+ _promote(rec,st,idx){
+  const r=this.clone(rec);r.archived=r.archived||[];r.eks=r.eks||[];
+  if(idx===-1){r.active=st;return r}
+  const keep=r.archived.filter((_,i)=>i!==idx);
+  if(r.active)keep.unshift(r.active);
+  r.archived=keep.slice(0,this.ARCHIVE);r.active=st;return r}
+};
+
+/* ----------------------------------------------------------- the engine */
+/* Records live in memory under logical keys and are mirrored to the server
+   as blobs, each AES-GCM sealed with the account's data key and stored under
+   an HMAC of its logical key — the server sees neither names nor contents.
+     prof              {nextOpk}
+     opk:<id>          one-time prekey pair
+     peer:<userId>     pinned identity {userId,username,ik,sk,verified}
+     sess:<userId>     ratchet record {active,archived,eks}
+     msg:<userId>:<id> message {id,peer,dir,text,ts,state}
+   Relationships (friends, requests, blocks) are not records: the server
+   holds them, because it is the server that refuses traffic between
+   strangers. They are kept in this.peers as {userId,username,state,since}.
+   Discord channels are conversations too, under the id "dc:<linkId>". They
+   are NOT end-to-end encrypted: the server relays them in plaintext. Their
+   messages arrive as server-originated envelopes and are stored like any
+   other msg: record; this.links holds the channels this account is in. */
+class Tx{
+ constructor(c){this.c=c;this.puts=[];this.dels=[];this.ack=[];this.send=[];this.opks=[];this.mem=new Map()}
+ async put(logical,d){
+  const k=await this.c.name(logical);
+  const box=await CR.seal(this.c.key,{k:logical,d},te.encode(k));
+  this.puts=this.puts.filter(p=>p.k!==k);this.puts.push({k,v:JSON.stringify(box)});
+  this.mem.set(logical,[d,k]);return this}
+ async del(logical){const k=await this.c.name(logical);this.dels.push(k);this.mem.set(logical,[null,k]);return this}
+ body(){return {puts:this.puts,dels:this.dels,ack:this.ack,send:this.send,opks:this.opks}}
+ apply(){for(const [l,[d,k]] of this.mem)d===null?this.c._del(l):this.c._set(l,d,k)}
+ async commit(){
+  const r=await this.c.api('POST','/api/commit',this.body());
+  this.apply();
+  if(r.opkCount!=null)this.c.opkCount=r.opkCount;
+  this.c.emit('change');return r}
+}
+
+/* ---------------------------------------------------------------- voice */
+/* Voice calls are WebRTC, so the audio is SRTP keyed by a DTLS handshake
+   between the two browsers. What makes that end-to-end is the signalling: the
+   offer and answer, which carry each side's DTLS certificate fingerprint,
+   travel as ordinary Double Ratchet messages. The server relays them but can
+   neither read nor alter them, so it cannot put itself in the middle of the
+   DTLS handshake. A TURN relay, when one is needed, forwards SRTP it cannot
+   decrypt.
+   One call at a time. Signals are {k:'call', t, call:<id>, sdp?} with t one
+   of offer | answer | decline | busy | end. Each call leaves one line in the
+   chat history, stored like any other record. */
+class Voice{
+ constructor(c,opts){
+  this.c=c;this.call=null;
+  this.RTC=opts.RTCPeerConnection||globalThis.RTCPeerConnection||null;
+  const md=globalThis.navigator&&globalThis.navigator.mediaDevices;
+  this.getMedia=opts.getUserMedia||(md&&md.getUserMedia?k=>md.getUserMedia(k):null);
+  this.ring=opts.ring||45000;        // how long an unanswered call rings
+  this.connect=opts.connectWait||20000;
+  this.grace=opts.grace||10000;      // how long a dropped connection may take to recover
+  this.gather=opts.gather||4000}
+ supported(){return !!(this.RTC&&this.getMedia)}
+ why(){return this.RTC?'voice calls need microphone access: open Marmot over https or from localhost':'this browser does not support voice calls'}
+ emit(){this.c.emit('call',this.call)}
+ send(call,t,extra){return this.c._sendInner(call.peer,Object.assign({k:'call',t,call:call.id},extra))}
+
+ async start(peerId){
+  const cur=this.call;
+  if(cur&&cur.peer===peerId&&cur.dir==='in'&&cur.state==='ringing')return this.accept();
+  if(cur)throw new Error('you are already in a call');
+  if(!this.supported())throw new Error(this.why());
+  if(!this.c.isFriend(peerId))throw new Error('you can only call friends');
+  const call=this.call={id:uid(),peer:peerId,dir:'out',state:'calling',created:Date.now(),muted:false};
+  this.emit();
+  try{
+   await this._open(call);
+   await call.pc.setLocalDescription(await call.pc.createOffer());
+   await this._gathered(call.pc);
+   if(this.call!==call)return null;
+   call.timer=setTimeout(()=>{if(this.call===call&&call.state==='calling')this.hangup('timeout')},this.ring);
+   await this.send(call,'offer',{sdp:call.pc.localDescription.sdp});
+  }catch(e){
+   if(this.call!==call)return null;        // hung up while starting
+   this._finish(call,'failed',e.message);this.send(call,'end').catch(()=>{});throw e}
+  return call}
+
+ async accept(){
+  const call=this.call;
+  if(!call||call.dir!=='in'||call.state!=='ringing')return null;
+  if(!this.supported()){const e=new Error(this.why());this.decline();throw e}
+  call.state='connecting';clearTimeout(call.timer);this.emit();
+  try{
+   await this._open(call);
+   await call.pc.setRemoteDescription({type:'offer',sdp:call.offer});
+   await call.pc.setLocalDescription(await call.pc.createAnswer());
+   await this._gathered(call.pc);
+   if(this.call!==call)return null;
+   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
+   await this.send(call,'answer',{sdp:call.pc.localDescription.sdp});
+  }catch(e){
+   if(this.call!==call)return null;
+   this.hangup('failed',e.message);throw e}
+  return call}
+
+ decline(){
+  const call=this.call;
+  if(!call||call.dir!=='in'||call.state!=='ringing')return;
+  this._finish(call,'declined');return this.send(call,'decline').catch(()=>{})}
+
+ /** Resolves once the other side has been told (or telling them failed). */
+ hangup(how,detail){
+  const call=this.call;if(!call)return Promise.resolve();
+  if(call.dir==='in'&&call.state==='ringing'&&!how)return this.decline();
+  this._finish(call,how||'ended',detail);return this.send(call,'end').catch(()=>{})}
+
+ setMuted(on){
+  const call=this.call;if(!call)return;
+  call.muted=!!on;
+  if(call.stream)call.stream.getTracks().forEach(t=>{t.enabled=!on});
+  this.emit()}
+
+ /** Microphone, ICE servers and the peer connection, checking after each wait
+     that the call was not hung up meanwhile (and releasing the mic if it was). */
+ async _open(call){
+  const stream=await this.getMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  if(this.call!==call){stream.getTracks().forEach(t=>t.stop());throw new Error('call ended')}
+  call.stream=stream;
+  if(call.muted)stream.getTracks().forEach(t=>{t.enabled=false});
+  let ice={iceServers:[]};
+  try{ice=await this.c.api('GET','/api/ice')}catch(e){}
+  if(this.call!==call)throw new Error('call ended');
+  const pc=call.pc=new this.RTC({iceServers:ice.iceServers||[]});
+  for(const t of stream.getTracks())pc.addTrack(t,stream);
+  pc.ontrack=ev=>{if(this.call!==call)return;call.remote=(ev.streams&&ev.streams[0])||null;this.emit()};
+  const watch=()=>{
+   if(this.call!==call)return;
+   const s=pc.connectionState||pc.iceConnectionState;
+   if(s==='connected'||s==='completed'){
+    clearTimeout(call.lost);call.unstable=false;
+    if(call.state!=='active'){call.state='active';call.started=Date.now();clearTimeout(call.timer)}
+    this.emit()}
+   else if(s==='disconnected'&&call.state==='active'&&!call.unstable){
+    call.unstable=true;this.emit();
+    call.lost=setTimeout(()=>{if(this.call===call&&call.unstable)this.hangup('lost')},this.grace)}
+   else if(s==='failed')this.hangup('lost')};
+  pc.onconnectionstatechange=watch;pc.oniceconnectionstatechange=watch}
+
+ /** Waits for ICE gathering so the offer/answer carries every candidate:
+     one signal each way instead of a stream of trickled candidates. */
+ _gathered(pc){
+  if(pc.iceGatheringState==='complete')return Promise.resolve();
+  return new Promise(res=>{
+   const done=()=>{clearTimeout(t);res()},t=setTimeout(done,this.gather);
+   pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete')done()};
+   pc.onicecandidate=ev=>{if(!ev.candidate)done()}})}
+
+ /** Inbound signal from a friend, already authenticated by the ratchet. */
+ _signal(peer,s,ts){
+  const call=this.call,mine=!!call&&call.peer===peer&&call.id===s.call;
+  if(s.t==='offer'){
+   if(typeof s.sdp!=='string')return;
+   if(call&&call.peer===peer&&call.dir==='out'&&call.state==='calling'){
+    // both called at once: the call from the lower user id goes ahead, the other side answers it
+    if(this.c.me.userId<peer)return;
+    this._drop(call)}
+   else if(call){
+    if(call.peer!==peer)this.c._logCall(peer,'call-'+s.call,ts,'missed voice call (you were on another call)',true).catch(()=>{});
+    this.send({peer,id:s.call},'busy').catch(()=>{});return}
+   const glare=!!call;
+   const c=this.call={id:s.call,peer,dir:'in',state:'ringing',created:ts,offer:s.sdp,muted:false};
+   c.timer=setTimeout(()=>{if(this.call===c&&c.state==='ringing')this._finish(c,'timeout')},Math.max(1000,this.ring-(this.c.serverNow()-ts)));
+   this.emit();
+   if(glare)this.accept().catch(()=>{});
+   return}
+  if(!mine)return;
+  if(s.t==='answer'&&call.dir==='out'&&call.state==='calling'&&typeof s.sdp==='string'){
+   call.state='connecting';clearTimeout(call.timer);this.emit();
+   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
+   call.pc.setRemoteDescription({type:'answer',sdp:s.sdp}).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
+  else if((s.t==='decline'||s.t==='busy')&&call.dir==='out')this._finish(call,s.t==='busy'?'busy':'declined');
+  else if(s.t==='end')this._finish(call,'ended')}
+
+ /** Ends a call without a trace: sign-out, or yielding to a crossing call. */
+ _drop(call){
+  call=call||this.call;if(!call||this.call!==call)return;
+  this.call=null;
+  clearTimeout(call.timer);clearTimeout(call.lost);
+  if(call.stream)call.stream.getTracks().forEach(t=>t.stop());
+  if(call.pc)try{call.pc.close()}catch(e){}
+  this.emit()}
+
+ _finish(call,how,detail){
+  if(this.call!==call)return;
+  this._drop(call);
+  let text;
+  if(call.started)text='voice call · '+clock(Math.round((Date.now()-call.started)/1000))+(how==='lost'?' · connection lost':'');
+  else if(call.dir==='in')text={declined:'declined voice call',lost:'voice call failed: could not connect',
+   failed:'voice call failed: '+detail}[how]||'missed voice call';
+  else text={timeout:'no answer',declined:'voice call declined',busy:'they were on another call',
+   lost:'voice call failed: could not connect',failed:'voice call failed: '+detail}[how]||'cancelled voice call';
+  const missed=call.dir==='in'&&call.state==='ringing'&&how!=='declined';
+  this.c._logCall(call.peer,'call-'+call.id,call.created,text,missed).catch(()=>{})}
+}
+
+class MarmotClient{
+ constructor(opts){
+  opts=opts||{};
+  this.WS=opts.WebSocket||globalThis.WebSocket;
+  this.iter=opts.iter||Acct.ITER;
+  this.opkBatch=opts.opkBatch||50;
+  this.handlers=new Map();this.server='';this.ws=null;
+  this.voice=new Voice(this,opts);
+  this._reset()}
+
+ _reset(){
+  this.closing=true;
+  this.voice._drop();
+  if(this.ws){try{this.ws.close()}catch(e){}}
+  clearTimeout(this._wsTimer);clearTimeout(this._retryTimer);
+  Object.assign(this,{token:null,vk:null,me:null,vault:null,key:null,mac:null,ws:null,wsState:'closed',
+   recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
+   locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
+   peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),discordEnabled:false,skew:0})}
+
+ /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
+ serverNow(){return Date.now()+this.skew}
+
+ on(ev,fn){if(!this.handlers.has(ev))this.handlers.set(ev,[]);this.handlers.get(ev).push(fn);return this}
+ emit(ev,...a){for(const fn of this.handlers.get(ev)||[]){try{fn(...a)}catch(e){console.error(e)}}}
+
+ setServer(url){
+  url=String(url||'').trim().replace(/\/+$/,'');
+  if(!/^https?:\/\/[^\s/]+/i.test(url))throw new Error('server address must start with http:// or https://');
+  this.server=url}
+
+ async api(method,path,body){
+  let res;
+  try{res=await fetch(this.server+path,{method,
+   headers:Object.assign({'Content-Type':'application/json'},this.token?{Authorization:'Bearer '+this.token}:{}),
+   body:body===undefined?undefined:JSON.stringify(body)})}
+  catch(e){const err=new Error('cannot reach the server at '+this.server);err.network=true;throw err}
+  let j={};try{j=await res.json()}catch(e){}
+  if(!res.ok||j.ok===false){
+   const err=new Error(j.error||('server error '+res.status));err.status=res.status;
+   if(res.status===401&&this.token&&path!=='/api/account/delete')this._signedOut(err.message);
+   throw err}
+  return j}
+
+ /** Serialise async work per key — a ratchet must never be stepped twice at once. */
+ lock(key,fn){
+  const prev=this.locks.get(key)||Promise.resolve();
+  const run=prev.then(fn,fn);
+  this.locks.set(key,run.catch(()=>{}));
+  return run}
+
+ /* ---- record store ---- */
+ async name(logical){
+  let k=this.names.get(logical);if(k)return k;
+  k=hex(await CR.hmac(this.mac,te.encode(logical))).slice(0,32);
+  this.names.set(logical,k);return k}
+ get(logical){return this.recs.get(logical)}
+ _set(logical,d,k){
+  this.recs.set(logical,d);if(k)this.names.set(logical,k);
+  if(logical.startsWith('msg:')){let m=this.byPeer.get(d.peer);if(!m)this.byPeer.set(d.peer,m=new Map());m.set(d.id,d)}}
+ _del(logical){
+  const d=this.recs.get(logical);this.recs.delete(logical);
+  if(d&&logical.startsWith('msg:')){const m=this.byPeer.get(d.peer);if(m)m.delete(d.id)}}
+ async _loadStore(){
+  const r=await this.api('GET','/api/store');
+  let bad=0;
+  for(const b of r.blobs){
+   try{const o=await CR.open(this.key,JSON.parse(b.v),te.encode(b.k));
+    if(await this.name(o.k)!==b.k)throw new Error('misfiled');   // a blob moved under another name
+    this._set(o.k,o.d,b.k)}
+   catch(e){bad++}}
+  if(bad)console.warn(bad+' stored records could not be opened');}
+
+ async _install(vault,info){
+  this.vault=vault;
+  this.key=await CR.aesKey(ub64(vault.dataKey));
+  this.mac=await CR.hmacKey(ub64(vault.macKey));
+  this.me={userId:info.userId,username:info.username,ik:vault.ik,sk:vault.sk,spk:vault.spk,created:vault.created}}
+ _spk(id){const v=this.vault;if(v.spk.id===id)return v.spk;return (v.spks||[]).find(s=>s.id===id)||null}
+
+ /* ---- account ---- */
+ async signup(username,pass){
+  username=String(username||'').trim();
+  Acct.checkPass(pass);
+  try{
+   const salt=b64(rand(16));
+   const d=await Acct.derive(pass,salt,this.iter);
+   const id=await Acct.newIdentity();
+   const userId=await Acct.userId(id.ik.pub,id.sk.pub);
+   const vault={v:1,ik:id.ik,sk:id.sk,spk:id.spk,spks:[],dataKey:b64(rand(32)),macKey:b64(rand(32)),created:Date.now()};
+   const sealed=await CR.seal(d.vaultKey,vault,te.encode('Marmot_Vault'));
+   await this._install(vault,{userId,username});
+   const opks=await Acct.opks(1,this.opkBatch);
+   const tx=new Tx(this);
+   for(const o of opks)await tx.put('opk:'+o.id,o);
+   await tx.put('prof',{nextOpk:this.opkBatch+1});
+   const r=await this.api('POST','/api/signup',{username,userId,salt,iter:this.iter,auth:d.auth,vault:sealed,
+    identity:{ik:id.ik.pub,sk:id.sk.pub},spk:{id:id.spk.id,pub:id.spk.pub,sig:id.spk.sig},
+    opks:opks.map(o=>({id:o.id,pub:o.pub})),puts:tx.puts});
+   tx.apply();
+   this.token=r.token;this.vk=d.vkRaw;this.me.username=r.username;this.opkCount=opks.length;this.peersLoaded=true;
+  }catch(e){this._reset();throw e}
+  this.connect();this.emit('change');
+  return this.me}
+
+ async login(username,pass){
+  username=String(username||'').trim();
+  try{
+   const pre=await this.api('POST','/api/prelogin',{username});
+   const d=await Acct.derive(pass,pre.salt,pre.iter);
+   const r=await this.api('POST','/api/login',{username,auth:d.auth});
+   this.token=r.token;this.vk=d.vkRaw;this.discoverable=!!r.discoverable;
+   await this._openVault(r.vault,d.vaultKey,r.userId,r.username);
+  }catch(e){this._reset();throw e}
+  this.connect();this.replenish().catch(()=>{});this.emit('change');
+  return this.me}
+
+ /** Picks a signed-in tab back up after a reload (token + vault key kept in sessionStorage). */
+ async resume(s){
+  this.setServer(s.server);this.token=s.token;this.vk=s.vk;
+  try{
+   const me=await this.api('GET','/api/me');
+   const v=await this.api('GET','/api/vault');
+   await this._openVault(v.vault,await CR.aesKey(ub64(s.vk)),me.userId,me.username);
+   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;
+  }catch(e){this._reset();throw e}
+  this.connect();this.replenish().catch(()=>{});this.emit('change');
+  return this.me}
+
+ async _openVault(box,vaultKey,userId,username){
+  let v;
+  try{v=await CR.open(vaultKey,box,te.encode('Marmot_Vault'))}catch(e){throw new Error('could not open the account vault')}
+  // the server could have swapped the record: bind the recovered keys to the id
+  if(await Acct.userId(v.ik.pub,v.sk.pub)!==userId)throw new Error('account record does not match its keys — refusing to sign in');
+  await this._install(v,{userId,username});
+  await this._loadStore();
+  await this.loadPeers();
+  await this.loadLinks().catch(()=>{})}
+
+ session(){return this.token?{server:this.server,token:this.token,vk:this.vk}:null}
+
+ async logout(){
+  await this.voice.hangup();
+  try{await this.api('POST','/api/logout')}catch(e){}
+  this._reset();this.emit('signedout','');this.emit('change')}
+
+ async deleteAccount(pass){
+  const pre=await this.api('POST','/api/prelogin',{username:this.me.username});
+  const d=await Acct.derive(pass,pre.salt,pre.iter);
+  await this.api('POST','/api/account/delete',{auth:d.auth});
+  this._reset();this.emit('signedout','account deleted');this.emit('change')}
+
+ _signedOut(reason){
+  if(!this.token)return;
+  this._reset();this.emit('signedout',reason||'signed out');this.emit('change')}
+
+ /* ---- live connection ---- */
+ connect(){
+  if(!this.WS||!this.token)return;
+  this.closing=false;
+  const ws=new this.WS(this.server.replace(/^http/i,'ws')+'/ws');
+  this.ws=ws;this.wsState='connecting';this.emit('status');
+  ws.onopen=()=>ws.send(JSON.stringify({t:'auth',token:this.token}));
+  ws.onmessage=ev=>{
+   let m;try{m=JSON.parse(ev.data)}catch(e){return}
+   if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadLinks().catch(()=>{})}
+   else if(m.t==='env'&&m.env)this._enqueue(m.env);
+   else if(m.t==='peers')this.loadPeers().catch(()=>{});
+   else if(m.t==='links')this.loadLinks().catch(()=>{});
+   else if(m.t==='prekeys')this.replenish().catch(()=>{});
+   else if(m.t==='revoked')this._signedOut('this account was signed in on another device')};
+  ws.onerror=()=>{};
+  ws.onclose=()=>{
+   if(this.ws!==ws)return;
+   this.ws=null;this.wsState='closed';this.emit('status');
+   if(this.closing||!this.token)return;
+   this._backoff=Math.min(30000,(this._backoff||500)*2);
+   this._wsTimer=setTimeout(()=>this.connect(),this._backoff)}}
+
+ /** Pulls everything waiting in the mailbox. Envelopes the socket already
+     delivered are skipped, so the two paths never double-process a frame. */
+ async drain(){
+  if(this._draining)return this._draining;
+  this._draining=(async()=>{
+   try{
+    for(let round=0;round<20;round++){
+     const r=await this.api('GET','/api/inbox');
+     r.envelopes.forEach(e=>this._enqueue(e));
+     await this.inq;
+     if(r.envelopes.length<300)break}
+   }finally{this._draining=null}})();
+  return this._draining}
+
+ _enqueue(e){
+  if(!this.token||this.done.has(e.id)||this.queued.has(e.id))return;
+  this.queued.add(e.id);
+  this.inq=this.inq.then(()=>this._handle(e)).catch(err=>{
+   console.warn('envelope '+e.id+' not processed yet:',err.message);
+   this._retrySoon()}).finally(()=>this.queued.delete(e.id))}
+
+ _retrySoon(){clearTimeout(this._retryTimer);this._retryTimer=setTimeout(()=>{if(this.token)this.drain().catch(()=>{})},4000)}
+
+ async _peerRecord(peerId,tx){
+  const have=this.get('peer:'+peerId);if(have)return have;
+  let p={userId:peerId,username:null,verified:false,added:Date.now()};
+  try{const r=await this.api('GET','/api/users/lookup?id='+encodeURIComponent(peerId));
+   if(await Acct.userId(r.user.ik,r.user.sk)===peerId)p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk})}
+  catch(e){if(e.network)throw e}
+  await tx.put('peer:'+peerId,p);return p}
+
+ /** One inbound envelope → one atomic commit: the advanced ratchet, the stored
+     message, the receipt going back, the spent prekey and the mailbox ack all
+     land together, or nothing does and the envelope is retried. */
+ async _handle(e){
+  if(this.done.has(e.id)||!this.token)return;
+  if(isDiscord(e.from))return this._handleDiscord(e);
+  const peerId=e.from;
+  let note=null,sig=null;
+  await this.lock(peerId,async()=>{
+   if(this.done.has(e.id))return;
+   let env=null;try{env=JSON.parse(e.payload)}catch(x){}
+   const rec=this.get('sess:'+peerId)||Ratchet.empty();
+   let out=null,why='';
+   try{out=await Ratchet.decrypt(rec,env,{me:this.me,peerId,spk:id=>this._spk(id),opk:id=>this.get('opk:'+id)})}
+   catch(x){why=x.message||'authentication failed'}
+   const tx=new Tx(this);tx.ack.push(e.id);
+   await this._peerRecord(peerId,tx);
+   if(!out){
+    const id='x'+e.id;
+    await tx.put('msg:'+peerId+':'+id,{id,peer:peerId,dir:'sys',ts:e.ts,text:'a message could not be decrypted ('+why+')'});
+   }else{
+    let sess=out.rec;
+    const inner=out.inner||{};
+    if(out.opk!=null)await tx.del('opk:'+out.opk);
+    if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
+     const key='msg:'+peerId+':'+inner.id;
+     if(!this.get(key)){
+      const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
+      await tx.put(key,{id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received'});
+      note={peer:peerId,text:inner.t}}
+     const r=await Ratchet.encrypt(sess,{k:'receipt',ids:[inner.id]});
+     sess=r.rec;tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
+    }else if(inner.k==='receipt'&&Array.isArray(inner.ids)){
+     for(const id of inner.ids.slice(0,100)){
+      const key='msg:'+peerId+':'+id,m=this.get(key);
+      if(m&&m.dir==='out'&&m.state!=='delivered')await tx.put(key,Object.assign({},m,{state:'delivered'}))}}
+    else if(inner.k==='call'&&typeof inner.call==='string'&&inner.call.length<=64&&
+     ['offer','answer','decline','busy','end'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
+     const key='msg:'+peerId+':call-'+inner.call;
+     // an offer that waited in the mailbox past its ring time is a missed call, not a ringing phone
+     if(inner.t==='offer'&&this.serverNow()-e.ts>this.voice.ring){
+      if(!this.get(key)){
+       await tx.put(key,{id:'call-'+inner.call,peer:peerId,dir:'sys',ts:e.ts,text:'missed voice call'});
+       note={peer:peerId,text:'missed voice call'}}}
+     else sig=inner}
+    await tx.put('sess:'+peerId,sess)}
+   await tx.commit();
+   this.done.add(e.id);
+   if(this.done.size>5000)this.done=new Set([...this.done].slice(-2500))});
+  if(sig)this.voice._signal(peerId,sig,e.ts);
+  if(note){this.unread.set(note.peer,(this.unread.get(note.peer)||0)+1);this.emit('message',note.peer,note.text)}}
+
+ /* ---- peers ---- */
+ /** Looks a user up by exact username and pins their identity locally. */
+ async pinUser(username){
+  username=String(username||'').trim();
+  if(username.toLowerCase()===this.me.username.toLowerCase())throw new Error('that is you');
+  const r=await this.api('GET','/api/users/lookup?username='+encodeURIComponent(username));
+  const u=r.user;
+  if(await Acct.userId(u.ik,u.sk)!==u.userId)throw new Error('the server returned keys that do not match this user');
+  const clash=[...this.recs.entries()].find(([k,p])=>k.startsWith('peer:')&&p.userId!==u.userId&&
+   p.username&&p.username.toLowerCase()===u.username.toLowerCase());
+  if(!this.get('peer:'+u.userId)){
+   const tx=new Tx(this);
+   await tx.put('peer:'+u.userId,{userId:u.userId,username:u.username,ik:u.ik,sk:u.sk,verified:false,added:Date.now(),
+    replaced:clash?clash[1].userId:undefined});
+   await tx.commit()}
+  return {userId:u.userId,username:u.username,changed:!!clash}}
+
+ /** Pins a user known only by id (an accepted request, a friend added elsewhere). */
+ async _pinId(id){
+  if(this.get('peer:'+id))return;
+  await this.lock(id,async()=>{
+   if(this.get('peer:'+id))return;
+   const tx=new Tx(this);await this._peerRecord(id,tx);await tx.commit()})}
+
+ async loadPeers(){
+  if(!this.token)return;
+  const r=await this.api('GET','/api/peers');
+  const before=this.peers,first=!this.peersLoaded;
+  this.peers=new Map(r.peers.map(p=>[p.userId,p]));this.peersLoaded=true;
+  for(const p of this.peers.values()){
+   const was=before.get(p.userId);
+   if(!first&&p.state==='incoming'&&(!was||was.state!=='incoming'))this.emit('peer','request',p);
+   if(!first&&p.state==='friend'&&was&&was.state==='outgoing')this.emit('peer','accepted',p);
+   if(p.state==='friend'&&!this.get('peer:'+p.userId))this._pinId(p.userId).catch(()=>{})}
+  this.emit('change')}
+
+ /** action: request | accept | remove | block | unblock. target: a user id, or {username}. */
+ async peerAction(action,target){
+  const body={action};
+  if(typeof target==='string')body.userId=target;
+  else{
+   // pin the identity first, so the keys we later message are the ones looked up here
+   const u=await this.pinUser(target.username);body.userId=u.userId;
+   if(u.changed)this.emit('peer','changed',{userId:u.userId,username:u.username})}
+  const r=await this.api('POST','/api/peers',body);
+  const p=r.peer;
+  if(p.state==='none')this.peers.delete(p.userId);else this.peers.set(p.userId,p);
+  if(p.state==='friend')await this._pinId(p.userId).catch(()=>{});
+  this.emit('change');return p}
+ requestFriend(username){return this.peerAction('request',{username})}
+
+ async setDiscoverable(on){
+  const r=await this.api('POST','/api/me/discovery',{on:!!on});
+  this.discoverable=r.discoverable;this.emit('change');return r.discoverable}
+ /** Users who opted into global discovery; q filters by username. */
+ async discover(q,offset){
+  const r=await this.api('GET','/api/peers/global?q='+encodeURIComponent(q||'')+'&offset='+(offset||0));
+  return {users:r.users,more:r.more}}
+
+ relation(id){const p=this.peers.get(id);return p?p.state:'none'}
+ isFriend(id){return this.relation(id)==='friend'}
+
+ /* ---- discord link ---- */
+ async loadLinks(){
+  if(!this.token)return;
+  const r=await this.api('GET','/api/discord/links');
+  this.discordEnabled=!!r.enabled;this.links=new Map(r.links.map(l=>[l.linkId,l]));
+  this.emit('change')}
+ async joinDiscord(code){
+  const r=await this.api('POST','/api/discord/join',{code:String(code||'').trim()});
+  this.links.set(r.link.linkId,r.link);this.emit('change');return r.link}
+ async leaveDiscord(linkId){
+  await this.api('POST','/api/discord/leave',{link:linkId});
+  this.links.delete(linkId);this.emit('change')}
+ link(id){return this.links.get(String(id).replace(/^dc:/,''))||null}
+
+ /** Discord traffic is plaintext from the server: no ratchet, just store and ack. */
+ async _handleDiscord(e){
+  const peer=e.from;let p=null,note=null;
+  try{p=JSON.parse(e.payload)}catch(x){}
+  await this.lock(peer,async()=>{
+   if(this.done.has(e.id))return;
+   const tx=new Tx(this);tx.ack.push(e.id);
+   if(p&&p.k==='dc'&&p.t==='msg'&&typeof p.text==='string'&&p.id){
+    const key='msg:'+peer+':'+p.id;
+    if(!this.get(key)){
+     await tx.put(key,{id:String(p.id),peer,dir:'in',text:p.text.slice(0,MAXTEXT),author:String(p.author||'someone').slice(0,80),
+      src:p.src==='marmot'?'marmot':'discord',ts:Number(p.ts)||e.ts,state:'received'});
+     note={peer,text:p.text}}}
+   else if(p&&p.k==='dc'&&p.t==='sys'&&typeof p.text==='string'){
+    const id='s'+e.id;await tx.put('msg:'+peer+':'+id,{id,peer,dir:'sys',ts:e.ts,text:p.text.slice(0,500)})}
+   await tx.commit();
+   this.done.add(e.id)});
+  if(p&&p.gone)this.loadLinks().catch(()=>{});
+  if(note){this.unread.set(peer,(this.unread.get(peer)||0)+1);this.emit('message',peer,note.text)}}
+
+ async _sendDiscord(peerId,text,reuseId){
+  const linkId=peerId.slice(3);
+  if(!this.links.has(linkId))throw new Error('you are not in this channel');
+  if(text.length>DCTEXT)throw new Error('Discord messages are limited to '+DCTEXT+' characters');
+  const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending'};
+  this.pending.set(m.id,m);this.emit('change');
+  let r;
+  try{r=await this.api('POST','/api/discord/send',{link:linkId,text})}
+  catch(e){m.state='failed';m.error=e.message;this.emit('change');throw e}
+  // it is in Discord now: from here on, never offer a retry that would post it twice
+  m.state='sent';
+  try{const tx=new Tx(this);await tx.put('msg:'+peerId+':'+r.id,Object.assign({},m,{id:r.id,ts:r.ts}));await tx.commit();this.pending.delete(m.id)}
+  catch(e){console.warn('sent to Discord but not saved to history:',e.message)}
+  this.emit('change');return r.id}
+
+ /* ---- messaging ---- */
+
+ async sendText(peerId,text,reuseId){
+  text=String(text||'');
+  if(!text.trim())return null;
+  if(text.length>MAXTEXT)throw new Error('messages are limited to '+MAXTEXT+' characters');
+  if(isDiscord(peerId))return this._sendDiscord(peerId,text,reuseId);
+  if(!this.isFriend(peerId))throw new Error('you can only message friends');
+  const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending'};
+  this.pending.set(m.id,m);this.emit('change');
+  try{
+   await this._sendInner(peerId,{k:'text',id:m.id,t:text,ts:m.ts},tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'})));
+   this.pending.delete(m.id);
+  }catch(e){m.state='failed';m.error=e.message;this.emit('change');throw e}
+  this.emit('change');
+  return m.id}
+
+ /** Encrypts `inner` to a friend and commits it with whatever `more(tx)` adds,
+     opening a session from their prekey bundle first if there is none. */
+ async _sendInner(peerId,inner,more){
+  await this.lock(peerId,async()=>{
+   let rec=this.get('sess:'+peerId)||Ratchet.empty();
+   const tx=new Tx(this);
+   if(!rec.active||!rec.active.cks){
+    const b=(await this.api('GET','/api/bundle/'+encodeURIComponent(peerId))).bundle;
+    if(b.userId!==peerId||await Acct.userId(b.ik,b.sk)!==peerId)throw new Error('the server returned keys that do not belong to this user');
+    rec=Ratchet.install(rec,await Ratchet.initiate(this.me,b));
+    if(!this.get('peer:'+peerId))await tx.put('peer:'+peerId,{userId:peerId,username:b.username,ik:b.ik,sk:b.sk,verified:false,added:Date.now()})}
+   const out=await Ratchet.encrypt(rec,inner);
+   await tx.put('sess:'+peerId,out.rec);
+   if(more)await more(tx);
+   tx.send.push({to:peerId,payload:JSON.stringify(out.env)});
+   await tx.commit()})}
+
+ /** One line of call history in the chat; a missed call also counts as unread. */
+ async _logCall(peer,id,ts,text,missed){
+  const key='msg:'+peer+':'+id;
+  if(!this.token||this.get(key))return;
+  const tx=new Tx(this);await tx.put(key,{id,peer,dir:'sys',ts,text});await tx.commit();
+  if(missed){this.unread.set(peer,(this.unread.get(peer)||0)+1);this.emit('message',peer,text)}}
+
+ async retry(msgId){
+  const m=this.pending.get(msgId);
+  if(!m||m.state!=='failed')return;
+  this.pending.delete(msgId);
+  return this.sendText(m.peer,m.text,m.id)}
+ discard(msgId){this.pending.delete(msgId);this.emit('change')}
+
+ /** Tops the server back up with one-time prekeys when it runs low. */
+ async replenish(){
+  if(this._replenishing||!this.token)return;
+  this._replenishing=true;
+  try{
+   const me=await this.api('GET','/api/me');this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;
+   if(me.opkCount>=20)return;
+   await this.lock('__prekeys',async()=>{
+    const prof=this.get('prof')||{nextOpk:1};
+    const list=await Acct.opks(prof.nextOpk,this.opkBatch);
+    const tx=new Tx(this);
+    for(const o of list)await tx.put('opk:'+o.id,o);
+    await tx.put('prof',Object.assign({},prof,{nextOpk:prof.nextOpk+this.opkBatch}));
+    tx.opks=list.map(o=>({id:o.id,pub:o.pub}));
+    await tx.commit()});
+  }finally{this._replenishing=false;this.emit('status')}}
+
+ async setVerified(peerId,on){
+  const p=this.get('peer:'+peerId);if(!p)return;
+  const tx=new Tx(this);await tx.put('peer:'+peerId,Object.assign({},p,{verified:!!on}));await tx.commit()}
+ async safetyNumber(peerId){
+  const p=this.get('peer:'+peerId);
+  if(!p||!p.ik)throw new Error('no pinned keys for this user yet');
+  return Acct.safety({ik:this.me.ik.pub,sk:this.me.sk.pub},p)}
+
+ peer(id){return this.get('peer:'+id)||{userId:id,username:null,verified:false}}
+ displayName(id){
+  if(isDiscord(id)){const l=this.link(id);return l?'#'+l.channel:'#discord channel'}
+  const p=this.peer(id),r=this.peers.get(id);return p.username||(r&&r.username)||('user '+String(id).slice(0,8))}
+ sessionState(id){const r=this.get('sess:'+id);if(!r||!r.active)return 'none';return r.active.pre?'handshake sent':'established'}
+ thread(peerId){
+  const list=[...(this.byPeer.get(peerId)||new Map()).values()];
+  for(const m of this.pending.values())if(m.peer===peerId)list.push(m);
+  return list.sort((a,b)=>a.ts-b.ts)}
+ /** Everyone with a message history, plus `extra` (the chat currently open). */
+ conversations(extra){
+  const ids=new Set([...this.byPeer.keys()].filter(id=>this.byPeer.get(id).size));
+  for(const m of this.pending.values())ids.add(m.peer);
+  if(extra)ids.add(extra);
+  for(const id of this.links.keys())ids.add('dc:'+id);
+  return [...ids].map(id=>{const t=this.thread(id),last=t[t.length-1];return {id,last,ts:last?last.ts:(this.peer(id).added||0)}})
+   .sort((a,b)=>b.ts-a.ts)}
+}
+/*</marmot-core>*/
+
+/* ================================================================== UI */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function initials(n){const s=String(n||'?').replace(/[^a-z0-9]/gi,'');return (s.slice(0,2)||'??').toUpperCase()}
+function hm(ts){return new Date(ts).toTimeString().slice(0,5)}
+function dayLabel(ts){const d=new Date(ts),n=new Date();
+ if(d.toDateString()===n.toDateString())return 'TODAY';
+ if(d.toDateString()===new Date(n-864e5).toDateString())return 'YESTERDAY';
+ return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase()}
+function shortTime(ts){if(!ts)return '';const d=new Date(ts),n=new Date();
+ if(d.toDateString()===n.toDateString())return hm(ts);
+ if(n-d<6*864e5)return d.toLocaleDateString(undefined,{weekday:'short'}).toLowerCase();
+ return d.toLocaleDateString(undefined,{month:'numeric',day:'numeric'})}
+function toast(msg,ms){const t=document.createElement('div');t.className='toast';t.textContent=msg;$('#toasts').appendChild(t);
+ setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
+const store={
+ get(k){try{return localStorage.getItem('marmot.'+k)}catch(e){return null}},
+ set(k,v){try{v==null?localStorage.removeItem('marmot.'+k):localStorage.setItem('marmot.'+k,v)}catch(e){}},
+ sget(){try{return JSON.parse(sessionStorage.getItem('marmot.session')||'null')}catch(e){return null}},
+ sset(v){try{v?sessionStorage.setItem('marmot.session',JSON.stringify(v)):sessionStorage.removeItem('marmot.session')}catch(e){}}
+};
+
+const M=new MarmotClient();
+
+const UI={
+ S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',
+    global:{q:null,users:[],more:false,loading:false,err:'',seq:0}},
+ _raf:0,
+ /** Replays el's entrance animation: for when what it shows changes, not for every re-render. */
+ enter(el){el.classList.remove('enter');void el.offsetWidth;el.classList.add('enter')},
+ render(){if(this._raf)return;this._raf=requestAnimationFrame(()=>{this._raf=0;this.renderNow()})},
+ renderNow(){this.renderRail();this.renderCol();this.renderPane();this.renderStatus()},
+ /** The conversation open on the current screen: a Discord channel on Discord, a person on Messages. */
+ cur(){return this.S.screen==='discord'?this.S.dc:this.S.screen==='messages'?this.S.chat:null},
+
+ renderRail(){
+  document.querySelectorAll('#nav button,#tabs button').forEach(b=>
+   b.dataset.screen===this.S.screen?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'));
+  let unread=0,dcUnread=0;M.unread.forEach((n,id)=>isDiscord(id)?dcUnread+=n:unread+=n);
+  const requests=[...M.peers.values()].filter(p=>p.state==='incoming').length;
+  $('#navUnread').textContent=$('#tabUnread').textContent=unread||'';
+  $('#navPeers').textContent=$('#tabPeers').textContent=requests||'';
+  $('#navDc').textContent=$('#tabDc').textContent=dcUnread||'';
+  const dcOn=!!M.me&&(M.discordEnabled||M.links.size>0);
+  $('#navDiscord').classList.toggle('hidden',!dcOn);$('#tabDiscord').classList.toggle('hidden',!dcOn);
+  const total=unread+requests+dcUnread,vc=M.voice.call;
+  document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+total+') ':'')+'Marmot';
+  if(M.me){
+   $('#meAv').textContent=initials(M.me.username);$('#meName').textContent=M.me.username;
+   $('#meFp').textContent='id '+M.me.userId.slice(0,16)}
+  else{$('#meAv').textContent='··';$('#meName').textContent='signed out';$('#meFp').textContent=''}
+  const live=M.wsState==='live';
+  $('#meLive').className='live'+(live?'':(M.token?' warn':' off'));
+  $('#meStatus').textContent=live?'online':(M.token?'reconnecting…':'offline');
+  document.querySelectorAll('#themeSeg button').forEach(b=>
+   b.setAttribute('aria-pressed',String(b.dataset.themeSet===document.documentElement.dataset.theme)))},
+
+ renderStatus(){
+  const dot=$('#statusDot'),txt=$('#statusText');
+  if(!M.token){dot.className='idle';txt.textContent='not signed in';return}
+  const host=M.server.replace(/^https?:\/\//,'');
+  if(M.wsState==='live'){dot.className='';txt.textContent='connected · '+host}
+  else{dot.className='bad';txt.textContent=(M.wsState==='connecting'?'connecting · ':'disconnected · ')+host}},
+
+ renderCol(){
+  const rows=$('#rows'),scr=this.S.screen;
+  if(this._colScreen!==scr){if(this._colScreen)this.enter(rows);this._colScreen=scr}
+  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord'}[scr]||'Messages';
+  $('#colAction').textContent=scr==='peers'?'+ ADD':scr==='discord'?'+ JOIN':'+ NEW';
+  $('#colAction').classList.toggle('hidden',scr==='settings');
+  const search=$('#search');
+  search.classList.toggle('hidden',scr==='settings');
+  search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':'search conversations…';
+  if(scr==='settings'){
+   rows.innerHTML='<button class="row" data-act="open-settings" aria-current="true"><div class="row-main"><div class="row-name">Account &amp; security</div>'+
+    '<div class="row-sub">identity, discovery, connection, session</div></div></button>';
+   return}
+  if(!M.me){rows.innerHTML='';return}
+  if(scr==='peers')return this.renderPeers(rows);
+  if(scr==='discord')return this.renderDiscordCol(rows);
+  const f=this.S.filter.toLowerCase();
+  const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
+  rows.innerHTML=list.length?list.map(c=>{
+   const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last;
+   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':'')+l.text:'no messages yet';
+   return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
+    '<div class="av av-34">'+(isDiscord(c.id)?'#':esc(initials(M.displayName(c.id))))+'</div>'+
+    '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+
+    (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+'</div>'+
+    '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
+    '<div class="row-right"><div class="time">'+esc(shortTime(c.ts))+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'}).join('')
+   :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO ADD ONE BY USERNAME')+'</div>'},
+
+ /* ---------- discord ---------- */
+ /** Linked Discord servers, each with the channels this account has joined. */
+ renderDiscordCol(rows){
+  if(!M.discordEnabled&&!M.links.size){
+   rows.innerHTML='<div class="grouplbl">THE DISCORD LINK IS NOT ENABLED ON THIS SERVER</div>';return}
+  const f=this.S.filter.trim().toLowerCase();
+  const guilds=new Map();
+  for(const l of M.links.values()){
+   if(f&&!(l.channel+' '+l.guild).toLowerCase().includes(f))continue;
+   if(!guilds.has(l.guild))guilds.set(l.guild,[]);
+   guilds.get(l.guild).push(l)}
+  // channels you left but still have history for stay listed, under the server they belonged to
+  let html='';
+  for(const [g,list] of [...guilds.entries()].sort((a,b)=>a[0].localeCompare(b[0]))){
+   html+='<div class="grouplbl">'+esc(g.toUpperCase())+' · '+list.length+' CHANNEL'+(list.length===1?'':'S')+'</div>';
+   html+=list.sort((a,b)=>a.channel.localeCompare(b.channel)).map(l=>this.dcRow('dc:'+l.linkId,l)).join('')}
+  const left=M.conversations().filter(c=>isDiscord(c.id)&&!M.link(c.id)&&c.last);
+  if(left.length&&!f)html+='<div class="grouplbl">LEFT · '+left.length+'</div>'+left.map(c=>this.dcRow(c.id,null)).join('');
+  if(!html)html='<div class="grouplbl">'+(f?'NO MATCHES':'NO DISCORD CHANNELS YET<br>ASK A DISCORD MODERATOR FOR AN INVITE CODE,<br>THEN USE + JOIN')+'</div>';
+  rows.innerHTML=html},
+ dcRow(id,l){
+  const t=M.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
+  const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+last.text:(l?'no messages yet':'');
+  return '<button class="row" data-dc="'+esc(id)+'"'+(id===this.S.dc?' aria-current="true"':'')+'>'+
+   '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(id))+'</span></div>'+
+   '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
+   '<div class="row-right"><div class="time">'+esc(last?shortTime(last.ts):'')+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'},
+
+ /* ---------- peers ---------- */
+ STATE:{friend:['FRIEND','ok'],incoming:['WANTS TO BE FRIENDS','warn'],outgoing:['REQUEST SENT',''],blocked:['BLOCKED','bad'],none:['NOT CONNECTED','']},
+ peerRow(p,sub){
+  const st=M.relation(p.userId),[label,cls]=st==='incoming'?['REQUEST','warn']:this.STATE[st];
+  return '<button class="row" data-peer="'+esc(p.userId)+'"'+(p.userId===this.S.peer?' aria-current="true"':'')+'>'+
+   '<div class="av av-34">'+esc(initials(p.username))+'</div>'+
+   '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(p.username)+'</span>'+
+   (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</div>'+
+   '<div class="row-sub">'+esc(sub)+'</div></div>'+
+   (st==='none'?'':'<div class="row-right"><span class="chip '+cls+'">'+label+'</span></div>')+'</button>'},
+ renderPeers(rows){
+  const f=this.S.filter.trim().toLowerCase(),G=this.S.global;
+  const mine=[...M.peers.values()].filter(p=>!f||p.username.toLowerCase().includes(f))
+   .sort((a,b)=>a.username.localeCompare(b.username));
+  const by=s=>mine.filter(p=>p.state===s);
+  const since=p=>p.since?new Date(p.since).toLocaleDateString():'';
+  let html='';
+  const group=(label,list,sub)=>{if(list.length)html+='<div class="grouplbl">'+label+' · '+list.length+'</div>'+list.map(p=>this.peerRow(p,sub(p))).join('')};
+  group('REQUESTS',by('incoming'),()=>'wants to be friends');
+  group('FRIENDS',by('friend'),p=>'friends since '+since(p));
+  group('SENT',by('outgoing'),()=>'waiting for them to accept');
+  const glob=G.users.filter(u=>!M.peers.has(u.userId));
+  html+='<div class="grouplbl">GLOBAL'+(glob.length?' · '+glob.length+(G.more?'+':''):'')+'</div>';
+  if(G.err)html+='<div class="grouplbl note2">'+esc(G.err.toUpperCase())+'</div>';
+  else if(G.loading&&!glob.length)html+='<div class="grouplbl note2">SEARCHING…</div>';
+  else if(!glob.length)html+='<div class="grouplbl note2">'+(f?'NOBODY DISCOVERABLE MATCHES “'+esc(f.toUpperCase())+'”':'NOBODY ELSE IS DISCOVERABLE YET')+'</div>';
+  html+=glob.map(u=>this.peerRow(u,'discoverable')).join('');
+  if(G.more)html+='<button class="tbtn more" data-act="global-more">LOAD MORE</button>';
+  html+='<div class="grouplbl note2">'+(M.discoverable?'YOU ARE LISTED IN GLOBAL':'YOU ARE HIDDEN FROM GLOBAL')+' · <button data-act="goto-discovery" style="text-decoration:underline">CHANGE</button></div>';
+  group('BLOCKED',by('blocked'),()=>'cannot message or request you');
+  rows.innerHTML=html},
+ /** Global list for the current search; stale responses are ignored. */
+ async loadGlobal(more){
+  const G=this.S.global,q=this.S.filter.trim();
+  if(!M.token)return;
+  if(!more&&G.q===q&&!G.err&&G.users.length)return;   // already have it
+  const seq=++G.seq;G.loading=true;G.err='';this.render();
+  try{
+   const r=await M.discover(q,more?G.users.length:0);
+   if(seq!==G.seq)return;
+   G.q=q;G.users=more?G.users.concat(r.users):r.users;G.more=r.more}
+  catch(e){if(seq===G.seq)G.err=e.message}
+  finally{if(seq===G.seq){G.loading=false;this.render()}}},
+ /** Whatever is known about a user: relationship, global listing, or pinned record. */
+ peerInfo(id){
+  return M.peers.get(id)||this.S.global.users.find(u=>u.userId===id)||{userId:id,username:M.displayName(id)}},
+
+ peerPaneHTML(id){
+  const p=this.peerInfo(id),st=M.relation(id),pin=M.peer(id),name=esc(p.username);
+  const notes={
+   friend:'You are friends. Either of you can message the other, and remove the friendship at any time.',
+   incoming:name+' wants to be friends. Accept to let each of you message the other.',
+   outgoing:'Your request is waiting for '+name+'. You can message once they accept.',
+   blocked:'You blocked '+name+'. They cannot message you or send you requests, and they no longer see you in global.',
+   none:'Send a friend request. Nobody can message you, or be messaged by you, without one.'};
+  const b=(act,label,cls)=>'<button class="'+(cls||'tbtn')+'" data-peer-act="'+act+'">'+label+'</button>';
+  const acts={
+   friend:b('message','MESSAGE','send')+b('call','CALL')+(pin.ik?b('verify','VERIFY'):'')+b('remove','REMOVE FRIEND','tbtn danger')+b('block','BLOCK','tbtn danger'),
+   incoming:b('accept','ACCEPT','send')+b('remove','DECLINE')+b('block','BLOCK','tbtn danger'),
+   outgoing:b('remove','CANCEL REQUEST')+b('block','BLOCK','tbtn danger'),
+   blocked:b('unblock','UNBLOCK'),
+   none:b('request','ADD FRIEND','send')+b('block','BLOCK','tbtn danger')}[st];
+  const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
+  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
+   '<div class="av av-34">'+esc(initials(p.username))+'</div><div style="min-width:0"><div class="pane-title">'+name+
+   (pin.verified?' <span class="chip ok">VERIFIED</span>':'')+'</div><div class="meta">'+this.STATE[st][0].toLowerCase()+'</div></div></div>'+
+   '<div class="sheet"><div class="sec"><h3>Relationship</h3><div class="note">'+notes[st]+'</div><div class="btnrow">'+acts+'</div>'+
+   '<div class="err" id="peerErr"></div></div>'+
+   '<div class="sec"><h3>Identity</h3>'+kv('username',p.username)+kv('user id',id)+
+   (p.since&&st==='friend'?kv('friends since',new Date(p.since).toLocaleString()):'')+
+   kv('keys',pin.ik?(pin.verified?'pinned · safety number verified':'pinned · not yet verified'):'not pinned yet')+'</div></div>'},
+
+ async peerAct(act,id){
+  const name=this.peerInfo(id).username;
+  if(act==='message')return this.open(id);
+  if(act==='call')return this.call(id);
+  if(act==='verify')return this.verify(id);
+  if(act==='block'||(act==='remove'&&M.relation(id)==='friend')){
+   const ok=await this.confirm(act==='block'?'Block '+name+'?':'Remove '+name+'?',
+    act==='block'?'They will not be able to message you or send you requests, and you disappear from their global list. Your chat history stays on this account.'
+     :'Neither of you will be able to message the other until you are friends again. Your chat history stays on this account.',
+    act==='block'?'BLOCK':'REMOVE');
+   if(!ok)return}
+  const err=$('#peerErr');if(err)err.textContent='';
+  try{
+   const p=await M.peerAction(act,id);
+   if(act==='accept')toast('you and '+name+' are now friends');
+   if(act==='request')toast(p.state==='friend'?'you and '+name+' are now friends':'request sent to '+name)}
+  catch(e){const err=$('#peerErr');if(err)err.textContent=e.message;else toast(e.message)}},
+
+ confirm(title,note,go){
+  return new Promise(res=>{
+   let done=false;const fin=v=>{if(done)return;done=true;this.close();res(v)};
+   this.modal('<h3>'+esc(title)+'</h3><div class="note">'+esc(note)+'</div>'+
+    '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="no">CANCEL</button><button class="send" data-m="yes">'+esc(go)+'</button></div>',
+    act=>fin(act==='yes'));
+   this._onClose=()=>fin(false)})},
+
+ /* ---------- pane ---------- */
+ renderPane(){
+  const pane=$('#pane'),scr=this.S.screen;
+  const sel=scr==='settings'?this.S.set:scr==='peers'?!!this.S.peer:!!this.cur();
+  $('#app').classList.toggle('in-pane',sel);
+  if(scr==='peers'){
+   // no inputs live in this pane, so it is simply rebuilt
+   const pk='peers:'+(this.S.peer||'');
+   if(this.S.paneKey!==pk){this.S.paneKey=pk;this.enter(pane)}
+   pane.innerHTML=this.S.peer?this.peerPaneHTML(this.S.peer):
+    '<div class="empty">'+(M.me?'SELECT A PEER<br>OR ADD ONE BY USERNAME WITH + ADD':'')+'</div>';
+   return}
+  const chat=this.cur();
+  const key=scr==='settings'?'settings':(scr+':'+(chat||''));
+  if(key!==this.S.paneKey){
+   this.S.paneKey=key;this.enter(pane);
+   if(scr==='settings')pane.innerHTML=this.settingsHTML();
+   else if(!chat)pane.innerHTML='<div class="empty">'+(!M.me?'':scr==='discord'?'SELECT A CHANNEL<br>OR JOIN ONE WITH + JOIN':'SELECT A CONVERSATION<br>OR START ONE WITH + NEW')+'</div>';
+   else{
+    pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
+     '<div class="av av-34" id="chatAv"></div><div style="min-width:0"><div class="pane-title" id="chatName"></div><div class="meta" id="chatMeta"></div></div>'+
+     '<div class="acts">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
+      :'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
+     '<div class="thread" id="thread"></div>'+
+     '<div class="composer" id="composerBox"><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
+     '<div class="composer-bar"><span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
+     '<div class="gate hidden" id="gate"></div>';
+    if(M.isFriend(chat)||M.link(chat))$('#composer').focus()}}
+  if(scr==='settings')this.fillSettings();
+  else if(chat)this.renderThread()},
+
+ renderThread(){
+  const id=this.cur(),th=$('#thread');if(!id||!th)return;
+  if(isDiscord(id))return this.renderDiscord(id,th);
+  const p=M.peer(id),st=M.relation(id);
+  $('#chatAv').textContent=initials(M.displayName(id));
+  $('#chatName').innerHTML=esc(M.displayName(id))+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
+  $('#chatMeta').textContent='id '+id.slice(0,16)+' · '+(st==='friend'?'session '+M.sessionState(id):this.STATE[st][0].toLowerCase());
+  // only friends can be messaged: otherwise the composer gives way to the next step
+  const gate=$('#gate'),friend=st==='friend',vc=M.voice.call;
+  $('#composerBox').classList.toggle('hidden',!friend);gate.classList.toggle('hidden',friend);
+  // CALL answers a call ringing from this person; otherwise one call at a time
+  const cb=$('#callBtn');
+  if(cb){cb.disabled=!friend||(!!vc&&!(vc.peer===id&&vc.state==='ringing'));cb.textContent=vc&&vc.peer===id?(vc.state==='ringing'?'ANSWER':'IN CALL'):'CALL'}
+  if(!friend){
+   const n=esc(M.displayName(id));
+   const g={none:['You and '+n+' are not friends, so neither of you can send messages.','request','ADD FRIEND'],
+    incoming:[n+' wants to be friends.','accept','ACCEPT'],
+    outgoing:['Waiting for '+n+' to accept your friend request.',null],
+    blocked:['You blocked '+n+'.','unblock','UNBLOCK']}[st];
+   const html='<span class="grow">'+g[0]+'</span>'+(g[1]?'<button class="send" data-peer-act="'+g[1]+'">'+g[2]+'</button>':'');
+   if(gate.innerHTML!==html)gate.innerHTML=html}
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  let html='',lastDay='';
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
+  if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
+  if(p.replaced)html+='<div class="sys" data-k="replaced">this username used to belong to a different identity. verify before trusting it.</div>';
+  for(const m of list){
+   const day=dayLabel(m.ts);
+   if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   const state=m.dir==='out'?(m.state==='failed'
+     ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
+     :' · '+m.state):'';
+   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
+    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+  this.patch(th,html);
+  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+
+ /** Makes el's children match html while keeping the nodes that stay (matched by data-k),
+     so a bubble that is still animating in, or easing from sending to sent, is not cut short. */
+ patch(el,html){
+  const t=document.createElement('div');t.innerHTML=html;
+  const old=new Map();for(const c of el.children)if(c.dataset.k)old.set(c.dataset.k,c);
+  const want=[...t.childNodes].map(n=>{
+   const o=n.nodeType===1&&n.dataset.k&&old.get(n.dataset.k);
+   if(o&&o.tagName===n.tagName){old.delete(n.dataset.k);this.morph(o,n);return o}
+   return n});
+  want.forEach((n,i)=>{if(el.childNodes[i]!==n)el.insertBefore(n,el.childNodes[i]||null)});
+  while(el.childNodes.length>want.length)el.lastChild.remove()},
+ morph(o,n){
+  for(const a of [...o.attributes])if(!n.hasAttribute(a.name))o.removeAttribute(a.name);
+  for(const a of n.attributes){
+   // an entrance animation keeps running until it is done, even once the item is no longer new
+   const v=a.name==='class'&&o.classList.contains('new')&&!n.classList.contains('new')?a.value+' new':a.value;
+   if(o.getAttribute(a.name)!==v)o.setAttribute(a.name,v)}
+  const oc=o.childNodes,nc=[...n.childNodes];
+  nc.forEach((c,i)=>{
+   const x=oc[i];
+   if(x&&x.nodeType===c.nodeType&&(c.nodeType!==1||x.tagName===c.tagName)){
+    if(c.nodeType===1)this.morph(x,c);else if(x.nodeValue!==c.nodeValue)x.nodeValue=c.nodeValue}
+   else if(x)o.replaceChild(c,x);else o.appendChild(c)});
+  while(oc.length>nc.length)o.lastChild.remove()},
+
+ /** m => ' new' for messages that arrived since this thread was last drawn.
+     Opening a thread animates the pane instead, so nothing counts as new then. */
+ fresh(id,list){
+  const first=this._seenFor!==id;
+  if(first){this._seenFor=id;this._seen=new Set()}
+  const seen=this._seen;
+  return m=>{if(seen.has(m.id))return '';seen.add(m.id);return first?'':' new'}},
+
+ /** A bridged Discord channel: not end-to-end encrypted, and says so. */
+ renderDiscord(id,th){
+  const l=M.link(id);
+  $('#chatAv').textContent='#';
+  $('#chatName').innerHTML=esc(M.displayName(id))+' <span class="chip dc">DISCORD</span>';
+  $('#chatMeta').textContent=(l?l.guild+' · ':'')+'not end-to-end encrypted';
+  const gate=$('#gate');
+  $('#composerBox').classList.toggle('hidden',!l);gate.classList.toggle('hidden',!!l);
+  const ghtml='<span class="grow">You are no longer in this channel. A Discord moderator can give you a new invite code.</span>';
+  if(!l&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
+  const leave=document.querySelector('[data-act=leave]');if(leave)leave.classList.toggle('hidden',!l);
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
+  for(const m of list){
+   const day=dayLabel(m.ts);
+   if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   const state=m.dir==='out'?(m.state==='failed'
+     ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
+     :m.state==='sending'?' · sending':''):'';
+   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
+    (m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':'')+
+    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+  this.patch(th,html);
+  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+
+ async leaveDiscord(id){
+  const ok=await this.confirm('Leave '+M.displayName(id)+'?','You stop receiving this channel. Your copy of the history stays on this account. Rejoining needs a new invite code from a Discord moderator.','LEAVE');
+  if(!ok)return;
+  try{await M.leaveDiscord(id.slice(3))}catch(e){toast(e.message)}},
+
+ settingsHTML(){
+  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Account &amp; security</div><div class="meta">everything below is stored encrypted on the server</div></div></div>'+
+   '<div class="sheet">'+
+   '<div class="sec"><h3>Identity</h3><div class="note">Your user id is the hash of your public identity keys, so nobody — including the server — can present different keys under it without the id changing.</div><div id="setIdent"></div></div>'+
+   '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">When on, everyone on this server can find you in the global section of Peers and send you a friend request. When off, only people who know your exact username can. Either way, nobody can message you until you accept them.</div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="disc-off" id="discOff">HIDDEN</button><button class="tbtn" data-act="disc-on" id="discOn">LISTED</button></div><div class="err" id="discErr"></div></div>'+
+   '<div class="sec"><h3>Connection</h3><div id="setConn"></div></div>'+
+   '<div class="sec"><h3>Session</h3><div class="note">Signing in elsewhere signs this tab out: one device per account keeps the ratchet state consistent. Closing the tab forgets the session; reloading keeps it.</div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="logout">LOG OUT</button></div></div>'+
+   '<div class="sec"><h3>Delete account</h3><div class="note">Removes your account, keys, friendships, stored chats and any undelivered mail from the server. This cannot be undone.</div>'+
+   '<div class="field" style="max-width:360px"><div class="lbl">PASSWORD</div><input class="inp" type="password" id="delPass" autocomplete="current-password"></div>'+
+   '<div class="btnrow"><button class="tbtn danger" data-act="delete">DELETE ACCOUNT</button></div><div class="err" id="delErr"></div></div>'+
+   '</div>'},
+ fillSettings(){
+  if(!M.me)return;
+  const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
+  const msgs=[...M.recs.keys()].filter(k=>k.startsWith('msg:')).length;
+  const a=$('#setIdent'),b=$('#setConn');
+  if(a)a.innerHTML=kv('username',M.me.username)+kv('user id',M.me.userId)+kv('identity key',M.me.ik.pub)+
+   kv('signing key',M.me.sk.pub)+kv('created',M.me.created?new Date(M.me.created).toLocaleString():'—');
+  if(b)b.innerHTML=kv('server',M.server)+kv('live socket',M.wsState)+
+   kv('one-time prekeys',M.opkCount==null?'—':M.opkCount+' on server')+kv('stored records',M.recs.size+' ('+msgs+' messages)')+
+   kv('voice calls',M.voice.supported()?'available · DTLS-SRTP, keyed over the ratchet':M.voice.why());
+  const on=$('#discOn'),off=$('#discOff');
+  if(on){on.setAttribute('aria-pressed',String(M.discoverable));off.setAttribute('aria-pressed',String(!M.discoverable))}},
+
+ /* ---------- overlays ---------- */
+ modal(html,onClick){
+  const o=$('#overlay');
+  this._onClose=null;
+  o.innerHTML='<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+html+'</div></div>';
+  const scrim=o.firstChild;
+  scrim.addEventListener('mousedown',e=>{if(e.target===scrim)this.close()});
+  scrim.addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)onClick(b.dataset.m,b)});
+  const first=scrim.querySelector('input');if(first)first.focus();
+  return scrim},
+ close(){
+  const s=$('#overlay .scrim:not(.out)');
+  if(s){s.classList.add('out');setTimeout(()=>s.remove(),180)}
+  const f=this._onClose;this._onClose=null;if(f)f()},
+
+ auth(mode,msg){
+  mode=mode||'login';
+  const saved=SERVER||(/^https?:$/.test(location.protocol)?location.origin:'')||store.get('server')||'http://localhost:8080';
+  const o=$('#overlay');
+  o.innerHTML='<div class="scrim solid"><div class="modal"><div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v0.4</div></div>'+
+   '<div class="note" style="margin:8px 0 0">End-to-end encrypted. Your password never leaves this browser — it unlocks the keys the server stores for you, sealed.</div>'+
+   '<div class="auth-seg"><button data-mode="login" aria-pressed="'+(mode==='login')+'">LOG IN</button><button data-mode="signup" aria-pressed="'+(mode==='signup')+'">SIGN UP</button></div>'+
+   '<form id="authForm" autocomplete="on">'+
+   '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="aUser" name="username" autocomplete="username" spellcheck="false" placeholder="3-24 letters, digits, . _ -"></div>'+
+   '<div class="field"><div class="lbl">PASSWORD</div><input class="inp" id="aPass" type="password" name="password" autocomplete="'+(mode==='signup'?'new-password':'current-password')+'"></div>'+
+   (mode==='signup'?'<div class="field"><div class="lbl">CONFIRM PASSWORD</div><input class="inp" id="aPass2" type="password" autocomplete="new-password"></div>':'')+
+   '<div class="field"'+(SERVER?' style="display:none"':'')+'><div class="lbl">SERVER</div><input class="inp" id="aServer" value="'+esc(saved)+'" spellcheck="false"></div>'+
+   '<div class="err" id="aErr">'+esc(msg||'')+'</div>'+
+   '<div class="modal-foot"><span class="grow note" style="margin:0" id="aNote">'+(mode==='signup'?'10+ character password. It cannot be recovered.':'')+'</span>'+
+   '<button class="send" type="submit" id="aGo">'+(mode==='signup'?'CREATE ACCOUNT':'LOG IN')+'</button></div></form></div></div>';
+  o.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>this.auth(b.dataset.mode));
+  $('#aUser').focus();
+  $('#authForm').onsubmit=async ev=>{
+   ev.preventDefault();
+   const user=$('#aUser').value.trim(),pass=$('#aPass').value,err=$('#aErr'),go=$('#aGo');
+   err.textContent='';
+   try{
+    if(mode==='signup'&&pass!==$('#aPass2').value)throw new Error('passwords do not match');
+    M.setServer($('#aServer').value);
+    go.disabled=true;$('#aNote').textContent='deriving keys…';
+    if(mode==='signup')await M.signup(user,pass);else await M.login(user,pass);
+    store.set('server',M.server);store.sset(M.session());
+    this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.peer=null;this.S.paneKey='';this.render();
+   }catch(e){err.textContent=e.message;go.disabled=false;$('#aNote').textContent=''}}},
+
+ /** + NEW / + ADD: a friend opens their chat; anyone else gets a friend request. */
+ addPeer(){
+  const chat=this.S.screen==='messages';
+  this.modal('<h3>'+(chat?'New conversation':'Add a friend')+'</h3><div class="note">Enter their exact username. '+
+   (chat?'If you are already friends the chat opens; otherwise they get a friend request, and you can message once they accept.'
+    :'They get a friend request, and you can message each other once they accept.')+'</div>'+
+   '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="ncUser" spellcheck="false" autocomplete="off"></div>'+
+   '<div class="err" id="ncErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">'+(chat?'START':'SEND REQUEST')+'</button></div>',
+   async act=>{
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const err=$('#ncErr'),name=$('#ncUser').value.trim();err.textContent='';
+    if(!name)return;
+    const known=[...M.peers.values()].find(p=>p.username.toLowerCase()===name.toLowerCase());
+    try{
+     if(chat&&known&&known.state==='friend'){this.close();return this.open(known.userId)}
+     const p=await M.requestFriend(name);
+     this.close();
+     if(p.state==='friend'){toast('you and '+p.username+' are now friends');if(chat)return this.open(p.userId)}
+     else if(p.state==='outgoing')toast((known?'already waiting for ':'request sent to ')+p.username);
+     this.showPeer(p.userId)}
+    catch(e){err.textContent=e.status===404?'no user with that name':e.message}});
+  $('#ncUser').addEventListener('keydown',e=>{if(e.key==='Enter')$('[data-m=go]').click()})},
+ joinDiscord(){
+  this.modal('<h3>Join a Discord channel</h3><div class="note">Enter an invite code from a moderator of a Discord server that has the Marmot bot (they make one with /marmot invite). '+
+   'Discord chats are not end-to-end encrypted: the Marmot server and Discord can read them.</div>'+
+   '<div class="field"><div class="lbl">INVITE CODE</div><input class="inp" id="dcCode" spellcheck="false" autocomplete="off" placeholder="XXXXX-XXXXX"></div>'+
+   '<div class="err" id="dcErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">JOIN</button></div>',
+   async act=>{
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const err=$('#dcErr'),code=$('#dcCode').value.trim();err.textContent='';
+    if(!code)return;
+    try{const l=await M.joinDiscord(code);this.close();toast('joined #'+l.channel+' on '+l.guild);this.open('dc:'+l.linkId)}
+    catch(e){err.textContent=e.message}});
+  $('#dcCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('[data-m=go]').click()})},
+
+ async verify(id){
+  let sn;try{sn=await M.safetyNumber(id)}catch(e){return toast(e.message)}
+  const p=M.peer(id);
+  this.modal('<h3>Verify '+esc(M.displayName(id))+'</h3>'+
+   '<div class="note">Compare these digits with '+esc(M.displayName(id))+' in person or over a channel you already trust. If they match on both screens, nobody — not even the server — is in the middle.</div>'+
+   '<div class="sn">'+esc(sn)+'</div>'+
+   '<div class="modal-foot"><span class="grow note" style="margin:0">'+(p.verified?'currently marked verified':'not yet verified')+'</span>'+
+   '<button class="tbtn" data-m="close">CLOSE</button><button class="send" data-m="toggle">'+(p.verified?'UNMARK':'MARK VERIFIED')+'</button></div>',
+   async act=>{
+    if(act==='toggle'){try{await M.setVerified(id,!p.verified)}catch(e){toast(e.message)}}
+    this.close();this.render()})},
+
+ screen(s){
+  this.S.screen=s;this.S.filter='';$('#search').value='';
+  if(s==='peers'){this.S.global.q=null;this.loadGlobal()}
+  this.render()},
+ open(id){
+  if(isDiscord(id)){this.S.screen='discord';this.S.dc=id}else{this.S.screen='messages';this.S.chat=id}
+  M.unread.delete(id);this._stick=true;this.render()},
+ showPeer(id){if(this.S.screen!=='peers')this.screen('peers');this.S.peer=id;this.render()},
+
+ async send(){
+  const ta=$('#composer');if(!ta)return;
+  const text=ta.value,id=this.cur();
+  if(!text.trim())return;
+  ta.value='';this._stick=true;
+  try{await M.sendText(id,text)}catch(e){toast('not sent: '+e.message)}},
+
+ notify(peer,text){
+  if(document.hidden||this.cur()!==peer)toast(M.displayName(peer)+': '+text.slice(0,80),4000)},
+
+ /* ---------- voice ---------- */
+ async call(id){
+  try{await M.voice.start(id)}
+  catch(e){toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'microphone access was blocked — allow it in the browser to call':'call failed: '+e.message,7000)}},
+ async answer(){
+  try{await M.voice.accept()}
+  catch(e){toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'microphone access was blocked — allow it in the browser to answer':'could not answer: '+e.message,7000)}},
+
+ /** The floating call bar. It sits outside the panes so a call survives switching screens. */
+ renderCall(){
+  const box=$('#callbar'),c=M.voice.call,au=$('#callAudio');
+  const remote=(c&&c.remote)||null;
+  if(au.srcObject!==remote){au.srcObject=remote;if(remote)au.play().catch(()=>{})}
+  Ring.set(!!c&&c.dir==='in'&&c.state==='ringing');
+  $('#app').classList.toggle('with-call',!!c);
+  if(!c){
+   clearInterval(this._callTick);this._callTick=0;
+   if(box.classList.contains('callbar')&&!box.classList.contains('out')){
+    box.classList.add('out');
+    setTimeout(()=>{if(!M.voice.call){box.innerHTML='';box.className=''}},180)}
+   return}
+  if(!this._callTick)this._callTick=setInterval(()=>this.renderCall(),1000);
+  const ringing=c.dir==='in'&&c.state==='ringing';
+  const st=c.state==='active'?(c.unstable?'reconnecting… · ':'')+clock(Math.floor((Date.now()-c.started)/1000))+(c.muted?' · muted':'')
+   :{calling:'calling…',ringing:'incoming voice call',connecting:'connecting…'}[c.state];
+  const html='<div class="av av-34">'+esc(initials(M.displayName(c.peer)))+'</div>'+
+   '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(M.displayName(c.peer))+
+   (M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
+   '<div class="meta'+(c.unstable?' warn':'')+'">'+esc(st)+' · end-to-end encrypted</div></div>'+
+   (ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">ACCEPT</button>'
+    :'<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button><button class="hang" data-act="call-hangup">HANG UP</button>');
+  box.className='callbar'+(ringing?' ringing':'');
+  if(box.innerHTML!==html)box.innerHTML=html}
+};
+
+/** Incoming-call tone, synthesised so the file stays standalone. */
+const Ring={ctx:null,timer:0,on:false,
+ set(on){
+  if(on===this.on)return;
+  this.on=on;clearInterval(this.timer);
+  if(on){this.beep();this.timer=setInterval(()=>this.beep(),2200)}},
+ beep(){
+  try{
+   const a=this.ctx||(this.ctx=new AudioContext());
+   if(a.state==='suspended')a.resume().catch(()=>{});
+   const t=a.currentTime;
+   for(const [d,f] of [[0,880],[0.28,660]]){
+    const o=a.createOscillator(),g=a.createGain();
+    o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t+d);g.gain.exponentialRampToValueAtTime(0.12,t+d+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.24);
+    o.connect(g).connect(a.destination);o.start(t+d);o.stop(t+d+0.26)}}
+  catch(e){}}};
+
+/* ---------- wiring ---------- */
+document.addEventListener('click',async e=>{
+ const t=e.target.closest('button');if(!t||t.closest('#overlay'))return;
+ if(t.dataset.screen){UI.screen(t.dataset.screen);return}
+ if(t.dataset.themeSet){const r=document.documentElement;r.classList.add('theme-fade');clearTimeout(UI._themeT);UI._themeT=setTimeout(()=>r.classList.remove('theme-fade'),350);r.dataset.theme=t.dataset.themeSet;store.set('theme',t.dataset.themeSet);UI.render();return}
+ if(t.dataset.chat){UI.open(t.dataset.chat);return}
+ if(t.dataset.dc){UI.open(t.dataset.dc);return}
+ if(t.dataset.peer){UI.S.peer=t.dataset.peer;UI.render();return}
+ if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,UI.S.screen==='peers'?UI.S.peer:UI.S.chat);return}
+ if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
+ if(t.dataset.discard){M.discard(t.dataset.discard);return}
+ if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.addPeer();return}
+ switch(t.dataset.act){
+  case 'send':UI.send();break;
+  case 'back':
+   if(UI.S.screen==='peers')UI.S.peer=null;else if(UI.S.screen==='settings')UI.S.set=false;
+   else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
+   UI.render();break;
+  case 'verify':UI.verify(UI.S.chat);break;
+  case 'call':UI.call(UI.S.chat);break;
+  case 'call-accept':UI.answer();break;
+  case 'call-decline':M.voice.decline();break;
+  case 'call-hangup':M.voice.hangup();break;
+  case 'call-mute':M.voice.setMuted(!(M.voice.call&&M.voice.call.muted));break;
+  case 'call-open':if(M.voice.call)UI.open(M.voice.call.peer);break;
+  case 'profile':UI.showPeer(UI.S.chat);break;
+  case 'leave':UI.leaveDiscord(UI.S.dc);break;
+  case 'open-settings':UI.S.set=true;UI.render();break;
+  case 'goto-discovery':UI.screen('settings');UI.S.set=true;UI.renderNow();
+   {const s=$('#secDiscovery');if(s)s.scrollIntoView({block:'start'})}break;
+  case 'global-more':UI.loadGlobal(true);break;
+  case 'disc-on':case 'disc-off':{
+   const err=$('#discErr');err.textContent='';
+   try{await M.setDiscoverable(t.dataset.act==='disc-on');UI.S.global.q=null}catch(x){err.textContent=x.message}
+   break}
+  case 'logout':await M.logout();break;
+  case 'delete':{
+   const err=$('#delErr');err.textContent='';
+   try{await M.deleteAccount($('#delPass').value)}catch(x){err.textContent=x.message}
+   break}}
+});
+document.addEventListener('keydown',e=>{
+ if(e.target.id==='composer'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();UI.send()}
+ if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close()});
+let searchTimer=0;
+$('#search').addEventListener('input',e=>{
+ UI.S.filter=e.target.value;UI.renderCol();
+ if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
+
+M.on('change',()=>UI.render());
+M.on('status',()=>UI.render());
+M.on('message',(peer,text)=>UI.notify(peer,text));
+M.on('call',()=>{UI.renderCall();UI.render()});
+// closing the tab mid-call would drop it without telling the other side
+window.addEventListener('beforeunload',e=>{const c=M.voice.call;if(c&&c.state!=='ringing'){e.preventDefault();e.returnValue=''}});
+M.on('peer',(kind,p)=>{
+ if(kind==='request')toast(p.username+' wants to be friends — see Peers',7000);
+ else if(kind==='accepted')toast(p.username+' accepted your friend request',6000);
+ else if(kind==='changed')toast('warning: '+p.username+' now belongs to a different identity than before',9000)});
+M.on('signedout',reason=>{
+ store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',
+  global:{q:null,users:[],more:false,loading:false,err:'',seq:UI.S.global.seq+1}});
+ $('#search').value='';UI.render();
+ UI.auth('login',reason||'')});
+
+/* ---------- boot ---------- */
+(async function boot(){
+ document.documentElement.dataset.theme=store.get('theme')||'dark';
+ const subtle=window.crypto&&crypto.subtle;
+ let ok=!!subtle;
+ if(ok){try{await crypto.subtle.generateKey({name:'X25519'},false,['deriveBits']);await crypto.subtle.generateKey({name:'Ed25519'},false,['sign'])}catch(e){ok=false}}
+ if(!ok){
+  document.body.innerHTML='<div style="font:13px/1.8 monospace;color:#ddd;background:#111;padding:40px;min-height:100vh">'+
+   'Marmot needs WebCrypto with X25519 and Ed25519 — any current Chrome, Edge, Firefox or Safari.<br>'+
+   'If you opened this file from disk and see this, serve it over http://localhost or open it from the Marmot server instead.</div>';
+  return}
+ UI.renderNow();
+ const s=store.sget();
+ if(s&&s.token){
+  try{await M.resume(s);UI.render();return}
+  catch(e){store.sset(null);UI.auth('login',e.network?e.message:'session ended — sign in again');return}}
+ UI.auth('login');
+})();
+</script>
+</body>
+</html>

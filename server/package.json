@@ -1,0 +1,20 @@
+{
+  "name": "marmot-server",
+  "version": "0.4.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/e2e.test.js test/discord.test.js test/voice.test.js"
+  },
+  "description": "Marmot server: accounts, prekeys, encrypted mailbox and blob store",
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^18.0.5",
+    "express": "^4.22.3",
+    "ws": "^8.22.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}
