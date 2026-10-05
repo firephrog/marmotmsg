@@ -264,6 +264,20 @@ button:disabled{opacity:.4;cursor:default}
    ========================================================================== */
 const LOGO='<svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg>';
 const SERVER='https://3-232-71-161.sslip.io';
+/* Tried in order when SERVER can't be reached. Browsers block an https page
+   from calling an http:// server, so http:// ones are only tried when this
+   file is opened from disk or over http. */
+const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
+
+/** The first configured server that answers at all (any HTTP status counts). */
+async function reachServer(){
+ const list=[SERVER,...FALLBACK_SERVERS].filter(u=>u&&!(location.protocol==='https:'&&/^http:/i.test(u)));
+ for(const u of list){
+  const ac=new AbortController(),t=setTimeout(()=>ac.abort(),5000);
+  try{await fetch(u.replace(/\/+$/,'')+'/api/ice',{signal:ac.signal,cache:'no-store'});return u}
+  catch(e){console.warn('Marmot server not reachable:',u)}
+  finally{clearTimeout(t)}}
+ throw new Error('cannot reach the Marmot server')}
 
 /*<marmot-core>*/
 /* Everything between these markers is DOM-free: the protocol, the account
@@ -1594,8 +1608,9 @@ const UI={
    err.textContent='';
    try{
     if(mode==='signup'&&pass!==$('#aPass2').value)throw new Error('passwords do not match');
-    M.setServer($('#aServer').value);
-    go.disabled=true;$('#aNote').textContent='deriving keys…';
+    go.disabled=true;
+    if(SERVER){$('#aNote').textContent='connecting…';M.setServer(await reachServer())}else M.setServer($('#aServer').value);
+    $('#aNote').textContent='deriving keys…';
     if(mode==='signup')await M.signup(user,pass);else await M.login(user,pass);
     store.set('server',M.server);store.sset(M.session());
     this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.peer=null;this.S.paneKey='';this.render();
