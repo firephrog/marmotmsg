@@ -95,11 +95,36 @@ whoever ran the command):
 | `/marmot link` | bridge this channel (creates a webhook named Marmot) |
 | `/marmot invite [uses] [hours]` | an invite code: 1 use and 24 hours by default |
 | `/marmot members` | list the Marmot users in this channel |
-| `/marmot kick <username>` | remove a Marmot user |
+| `/marmot kick <username>` | remove a Marmot user (they also can't rejoin from the public list) |
+| `/marmot filter [level] [mode] [add] [remove] [links]` | show or change this channel's chat filter |
+| `/marmot public <enabled>` | let every Marmot user join without an invite code; needs a filter first |
 | `/marmot unlink` | stop bridging; Marmot members are removed |
 
-In Marmot, the **Discord** tab lists each linked server with the channels you are in. **+ JOIN**
-takes an invite code. **LEAVE** is in the chat header.
+In Marmot, the **Discord** tab lists each linked server with the channels you are in, and a
+**PUBLIC** group of channels anyone can join with one click. **+ JOIN** takes an invite code.
+**LEAVE** is in the chat header.
+
+**Chat filter.** Each linked channel has a filter for what Marmot users post into Discord, set with
+`/marmot filter`:
+
+- `level`: a built-in word list. `off`, `slurs only`, `slurs and swearing`, or `strict` (also mild
+  language). Each level includes the ones before it.
+- `mode`: `censor the word` (it reaches Discord as `f***`) or `block the message` (the sender gets an
+  error and nothing is posted).
+- `add` / `remove`: your own words, separated by commas. End a word with `*` to also catch words that
+  start with it (`spam*` catches `spammer`).
+- `links`: block messages that contain links.
+
+Run it with no options to see the current settings. Words match whole words, after folding case,
+look-alike characters (`sh!t`, `a$$`) and stretched letters (`fuuuck`), so `class` and `Scunthorpe`
+get through. A username the filter catches is starred where Discord shows it, and can't join a
+public channel at all. Discord → Marmot messages are not filtered.
+
+**Public channels.** `/marmot public enabled:True` lists the channel for every Marmot user and posts
+a notice in the channel. It is refused until the filter does something (a level other than `off`,
+at least one word, or links blocked), and while a channel is public its filter can't be turned off.
+`enabled:False` makes it invite-only again; people already in it stay. Someone removed with
+`/marmot kick` can't come back from the public list; an invite code from a moderator lets them back.
 Discord messages reach offline members through the normal mailbox. Mentions, custom emoji and
 attachments come through as text and links. Edits, deletes and reactions don't carry over yet.
 

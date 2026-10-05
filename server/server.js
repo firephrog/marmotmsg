@@ -383,13 +383,15 @@ function createServer(opts) {
 
   app.get('/api/discord/links', wrap(req => {
     const me = auth(req);
-    return { enabled: !!bridge, links: bridge ? bridge.linksOf(me.id) : [] };
+    return { enabled: !!bridge, links: bridge ? bridge.linksOf(me.id) : [], public: bridge ? bridge.publicLinks(me.id) : [] };
   }));
   app.post('/api/discord/join', strict, wrap(req => {
     const me = auth(req);
-    const l = needBridge().join(me, String((req.body || {}).code || ''));
+    const b = req.body || {};
+    // a public channel is joined by its id; anything else needs an invite code
+    const l = b.link ? needBridge().joinPublic(me, String(b.link)) : needBridge().join(me, String(b.code || ''));
     hub.push(me.id, { t: 'links' });
-    return { link: { linkId: l.id, guild: l.guildName, channel: l.channelName } };
+    return { link: { linkId: l.id, guild: l.guildName, channel: l.channelName, public: l.public } };
   }));
   app.post('/api/discord/leave', wrap(req => {
     const me = auth(req);
@@ -463,6 +465,11 @@ function createServer(opts) {
       if (!set) return;
       const data = JSON.stringify(msg);
       for (const ws of set) if (ws.readyState === 1) ws.send(data);
+    },
+    /** Every signed-in socket, e.g. when a Discord channel becomes public. */
+    pushAll(msg) {
+      const data = JSON.stringify(msg);
+      for (const set of this.sockets.values()) for (const ws of set) if (ws.readyState === 1) ws.send(data);
     },
     /** Revoked sockets get one notice before closing; they must not reconnect. */
     revoke(userId) {

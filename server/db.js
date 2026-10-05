@@ -76,8 +76,9 @@ CREATE TABLE IF NOT EXISTS discord_links (
   id         TEXT PRIMARY KEY,
   chan_tag   TEXT NOT NULL UNIQUE,
   guild_tag  TEXT NOT NULL,
-  body       TEXT NOT NULL,              -- sealed {guildId, channelId, guildName, channelName, webhookId, webhookToken, createdBy}
-  created    INTEGER NOT NULL
+  body       TEXT NOT NULL,              -- sealed {guildId, channelId, guildName, channelName, webhookId, webhookToken, createdBy, filter, barred}
+  created    INTEGER NOT NULL,
+  public     INTEGER NOT NULL DEFAULT 0  -- any Marmot user can join without an invite code
 );
 CREATE INDEX IF NOT EXISTS discord_links_guild ON discord_links(guild_tag);
 CREATE TABLE IF NOT EXISTS discord_invites (
@@ -97,7 +98,8 @@ CREATE INDEX IF NOT EXISTS discord_members_user ON discord_members(user_tag);
 
 /** Columns added after a table first shipped; applied to older databases on open. */
 const MIGRATIONS = [
-  ['users', 'discoverable', 'ALTER TABLE users ADD COLUMN discoverable INTEGER NOT NULL DEFAULT 0']
+  ['users', 'discoverable', 'ALTER TABLE users ADD COLUMN discoverable INTEGER NOT NULL DEFAULT 0'],
+  ['discord_links', 'public', 'ALTER TABLE discord_links ADD COLUMN public INTEGER NOT NULL DEFAULT 0']
 ];
 
 function open(opts) {
@@ -156,6 +158,8 @@ function open(opts) {
     linksByGuild: db.prepare('SELECT * FROM discord_links WHERE guild_tag = ?'),
     updateLink: db.prepare('UPDATE discord_links SET body = ? WHERE id = ?'),
     deleteLink: db.prepare('DELETE FROM discord_links WHERE id = ?'),
+    setPublic: db.prepare('UPDATE discord_links SET public = ? WHERE id = ?'),
+    publicLinks: db.prepare('SELECT * FROM discord_links WHERE public = 1 ORDER BY created'),
     insertInvite: db.prepare('INSERT INTO discord_invites (code_hash, link_id, expires, uses) VALUES (?, ?, ?, ?)'),
     invite: db.prepare('SELECT * FROM discord_invites WHERE code_hash = ?'),
     useInvite: db.prepare('UPDATE discord_invites SET uses = uses - 1 WHERE code_hash = ?'),
@@ -171,7 +175,7 @@ function open(opts) {
   };
 
   const memberTag = userId => S.tag('discord-member|' + userId);
-  const openLink = row => row && Object.assign({ id: row.id, created: row.created }, S.open(row.body, 'discord_links:' + row.id));
+  const openLink = row => row && Object.assign({ id: row.id, created: row.created, public: !!row.public }, S.open(row.body, 'discord_links:' + row.id));
   const sealLink = (id, body) => S.seal(body, 'discord_links:' + id);
   const insertEnvelope = (to, from, payload, now) => {
     const info = q.insertEnvelope.run(to, now, S.seal({ from, payload }, 'envelopes:' + to + ':' + now));
@@ -240,10 +244,13 @@ function open(opts) {
     linksByGuild: guildId => q.linksByGuild.all(S.tag('discord-guild|' + guildId)).map(openLink),
     updateLink(id, patch) {
       const l = openLink(q.link.get(id));
-      const body = Object.assign({}, l, patch); delete body.id; delete body.created;
+      const body = Object.assign({}, l, patch); delete body.id; delete body.created; delete body.public;
       q.updateLink.run(sealLink(id, body), id);
     },
     deleteLink: id => q.deleteLink.run(id),
+    setPublic: (id, on) => q.setPublic.run(on ? 1 : 0, id),
+    publicLinks: () => q.publicLinks.all().map(openLink),
+    memberCount: linkId => q.countMembers.get(linkId).n,
     createInvite: (code, linkId, uses, expires) => q.insertInvite.run(sha(code), linkId, expires, uses),
     /** Spends one use of an invite and adds the user; returns the link, or null if the code is no good. */
     redeemInvite: db.transaction((code, userId, maxMembers) => {
@@ -255,6 +262,16 @@ function open(opts) {
       q.putMember.run(inv.link_id, tag, S.seal({ userId, joined: Date.now() }, 'discord_members:' + inv.link_id + ':' + tag));
       if (inv.uses <= 1) q.deleteInvite.run(h); else q.useInvite.run(h);
       return { link: openLink(q.link.get(inv.link_id)), already: false };
+    }),
+    /** Joins a public channel without a code; returns {link, already}, or null if it is not public (any more). */
+    joinPublic: db.transaction((linkId, userId, maxMembers) => {
+      const row = q.link.get(String(linkId));
+      if (!row || !row.public) return null;
+      const tag = memberTag(userId);
+      if (q.member.get(row.id, tag)) return { link: openLink(row), already: true };
+      if (q.countMembers.get(row.id).n >= maxMembers) throw Object.assign(new Error('this channel is full'), { status: 409 });
+      q.putMember.run(row.id, tag, S.seal({ userId, joined: Date.now() }, 'discord_members:' + row.id + ':' + tag));
+      return { link: openLink(row), already: false };
     }),
     isMember: (linkId, userId) => !!q.member.get(linkId, memberTag(userId)),
     removeMember: (linkId, userId) => q.delMember.run(linkId, memberTag(userId)).changes > 0,

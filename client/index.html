@@ -707,7 +707,7 @@ class MarmotClient{
   Object.assign(this,{token:null,vk:null,me:null,vault:null,key:null,mac:null,ws:null,wsState:'closed',
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
-   peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),discordEnabled:false,skew:0})}
+   peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -1018,10 +1018,15 @@ class MarmotClient{
   if(!this.token)return;
   const r=await this.api('GET','/api/discord/links');
   this.discordEnabled=!!r.enabled;this.links=new Map(r.links.map(l=>[l.linkId,l]));
+  this.publicLinks=r.public||[];
   this.emit('change')}
  async joinDiscord(code){
   const r=await this.api('POST','/api/discord/join',{code:String(code||'').trim()});
   this.links.set(r.link.linkId,r.link);this.emit('change');return r.link}
+ /** Public channels need no code. */
+ async joinPublic(linkId){
+  const r=await this.api('POST','/api/discord/join',{link:linkId});
+  this.links.set(r.link.linkId,r.link);this.loadLinks().catch(()=>{});this.emit('change');return r.link}
  async leaveDiscord(linkId){
   await this.api('POST','/api/discord/leave',{link:linkId});
   this.links.delete(linkId);this.emit('change')}
@@ -1058,7 +1063,7 @@ class MarmotClient{
   catch(e){m.state='failed';m.error=e.message;this.emit('change');throw e}
   // it is in Discord now: from here on, never offer a retry that would post it twice
   m.state='sent';
-  try{const tx=new Tx(this);await tx.put('msg:'+peerId+':'+r.id,Object.assign({},m,{id:r.id,ts:r.ts}));await tx.commit();this.pending.delete(m.id)}
+  try{const tx=new Tx(this);await tx.put('msg:'+peerId+':'+r.id,Object.assign({},m,{id:r.id,ts:r.ts,text:typeof r.text==='string'?r.text:m.text}));await tx.commit();this.pending.delete(m.id)}
   catch(e){console.warn('sent to Discord but not saved to history:',e.message)}
   this.emit('change');return r.id}
 
@@ -1264,10 +1269,19 @@ const UI={
   for(const [g,list] of [...guilds.entries()].sort((a,b)=>a[0].localeCompare(b[0]))){
    html+='<div class="grouplbl">'+esc(g.toUpperCase())+' · '+list.length+' CHANNEL'+(list.length===1?'':'S')+'</div>';
    html+=list.sort((a,b)=>a.channel.localeCompare(b.channel)).map(l=>this.dcRow('dc:'+l.linkId,l)).join('')}
+  // public channels anyone can join without a code
+  const pub=M.publicLinks.filter(l=>!M.link(l.linkId)&&(!f||(l.channel+' '+l.guild).toLowerCase().includes(f)))
+   .sort((a,b)=>b.members-a.members||a.channel.localeCompare(b.channel));
+  if(pub.length)html+='<div class="grouplbl">PUBLIC · '+pub.length+'</div>'+pub.map(l=>this.pubRow(l)).join('');
   const left=M.conversations().filter(c=>isDiscord(c.id)&&!M.link(c.id)&&c.last);
   if(left.length&&!f)html+='<div class="grouplbl">LEFT · '+left.length+'</div>'+left.map(c=>this.dcRow(c.id,null)).join('');
   if(!html)html='<div class="grouplbl">'+(f?'NO MATCHES':'NO DISCORD CHANNELS YET<br>ASK A DISCORD MODERATOR FOR AN INVITE CODE,<br>THEN USE + JOIN')+'</div>';
   rows.innerHTML=html},
+ pubRow(l){
+  return '<button class="row" data-dcpub="'+esc(l.linkId)+'">'+
+   '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">#'+esc(l.channel)+'</span><span class="chip dc">PUBLIC</span></div>'+
+   '<div class="row-sub">'+esc(l.guild)+' · '+l.members+' on Marmot</div></div>'+
+   '<div class="row-right"><span class="chip">JOIN</span></div></button>'},
  dcRow(id,l){
   const t=M.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
   const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+last.text:(l?'no messages yet':'');
@@ -1505,8 +1519,14 @@ const UI={
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
+ async joinPublic(linkId){
+  const l=M.publicLinks.find(x=>x.linkId===linkId);if(!l)return;
+  const ok=await this.confirm('Join #'+l.channel+' on '+l.guild+'?','This Discord channel is public: anyone on Marmot can join. It is not end-to-end encrypted; the Marmot server and Discord can read it. '+
+   'Your username is shown to the Discord server, and the channel\'s chat filter applies to what you post.','JOIN');
+  if(!ok)return;
+  try{const j=await M.joinPublic(linkId);toast('joined #'+j.channel+' on '+j.guild);this.open('dc:'+j.linkId)}catch(e){toast(e.message)}},
  async leaveDiscord(id){
-  const ok=await this.confirm('Leave '+M.displayName(id)+'?','You stop receiving this channel. Your copy of the history stays on this account. Rejoining needs a new invite code from a Discord moderator.','LEAVE');
+  const ok=await this.confirm('Leave '+M.displayName(id)+'?','You stop receiving this channel. Your copy of the history stays on this account. '+(M.link(id)&&M.link(id).public?'It is public, so you can join it again from the Discord tab.':'Rejoining needs a new invite code from a Discord moderator.'),'LEAVE');
   if(!ok)return;
   try{await M.leaveDiscord(id.slice(3))}catch(e){toast(e.message)}},
 
@@ -1709,6 +1729,7 @@ document.addEventListener('click',async e=>{
  if(t.dataset.themeSet){const r=document.documentElement;r.classList.add('theme-fade');clearTimeout(UI._themeT);UI._themeT=setTimeout(()=>r.classList.remove('theme-fade'),350);r.dataset.theme=t.dataset.themeSet;store.set('theme',t.dataset.themeSet);UI.render();return}
  if(t.dataset.chat){UI.open(t.dataset.chat);return}
  if(t.dataset.dc){UI.open(t.dataset.dc);return}
+ if(t.dataset.dcpub){UI.joinPublic(t.dataset.dcpub);return}
  if(t.dataset.peer){UI.S.peer=t.dataset.peer;UI.render();return}
  if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,UI.S.screen==='peers'?UI.S.peer:UI.S.chat);return}
  if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
