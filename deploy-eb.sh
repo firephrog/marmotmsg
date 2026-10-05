@@ -1,12 +1,12 @@
 #!/bin/sh
-# First deploy of the Marmot beta to Elastic Beanstalk, behind CloudFront for HTTPS
-# (browsers only allow the microphone on secure pages, and there is no domain/ACM cert yet).
+# First deploy of the Marmot beta to Elastic Beanstalk. HTTPS is on the instance itself: a Let's
+# Encrypt certificate for <elastic-ip>.sslip.io (see server/.platform/hooks/postdeploy/10-https.sh).
 #
 #   sh deploy-eb.sh            create everything (run once)
 #   sh deploy-eb.sh update     deploy a new build to the existing environment
 #
 # Creates in us-east-1: EB application "marmot", environment "marmot-beta" (single t3.micro,
-# no load balancer), and a CloudFront distribution in front of it.
+# no load balancer).
 # Secrets: MARMOT_DB_KEY is generated here; DISCORD_TOKEN is copied from server/.env if set.
 # Both live only in the EB environment properties; they are never printed.
 set -e
@@ -43,7 +43,7 @@ const opts=[
  o('aws:autoscaling:launchconfiguration','IamInstanceProfile','aws-elasticbeanstalk-ec2-role'),
  o('aws:ec2:instances','InstanceTypes','t3.micro'),
  o('aws:elasticbeanstalk:healthreporting:system','SystemType','enhanced'),
- o(A,'NODE_ENV','production'),o(A,'MARMOT_DATA','/var/marmot-data'),o(A,'TRUST_PROXY','2'),
+ o(A,'NODE_ENV','production'),o(A,'MARMOT_DATA','/var/marmot-data'),o(A,'TRUST_PROXY','1'),
  o(A,'MARMOT_DB_KEY',crypto.randomBytes(32).toString('hex'))];
 for(const k of ['DISCORD_TOKEN','TURN_URLS','TURN_SECRET','STUN_URLS'])if(env[k])opts.push(o(A,k,env[k]));
 fs.writeFileSync(process.argv[1],JSON.stringify(opts));
@@ -57,17 +57,6 @@ aws elasticbeanstalk wait environment-exists --environment-names $ENV
 CNAME=$(aws elasticbeanstalk describe-environments --environment-names $ENV --query "Environments[0].CNAME" --output text)
 echo "EB: http://$CNAME"
 
-# CloudFront: no caching (CachingDisabled), every header/cookie/query passed through (AllViewer,
-# which also carries Authorization and the WebSocket upgrade), http to the origin.
-cat > "$TMP/cf.json" <<JSON
-{"CallerReference":"$APP-$LABEL","Comment":"Marmot beta: HTTPS for $ENV","Enabled":true,"PriceClass":"PriceClass_100",
- "Origins":{"Quantity":1,"Items":[{"Id":"$ENV","DomainName":"$CNAME","CustomOriginConfig":{"HTTPPort":80,"HTTPSPort":443,
-  "OriginProtocolPolicy":"http-only","OriginSslProtocols":{"Quantity":1,"Items":["TLSv1.2"]},"OriginReadTimeout":60,"OriginKeepaliveTimeout":60}}]},
- "DefaultCacheBehavior":{"TargetOriginId":"$ENV","ViewerProtocolPolicy":"redirect-to-https","Compress":true,
-  "CachePolicyId":"4135ea2d-6df8-44a3-9df3-4b5a84be39ad","OriginRequestPolicyId":"216adef6-5c7f-47e4-b989-5492eafa07d3",
-  "AllowedMethods":{"Quantity":7,"Items":["GET","HEAD","OPTIONS","PUT","POST","PATCH","DELETE"],"CachedMethods":{"Quantity":2,"Items":["GET","HEAD"]}}}}
-JSON
-DIST=$(aws cloudfront create-distribution --distribution-config "file://$FTMP/cf.json" --query "Distribution.[Id,DomainName]" --output text)
 rm -rf "$TMP"
-echo "CloudFront: $DIST (takes ~5 minutes to go live)"
-echo "Beta URL: https://$(echo "$DIST" | awk '{print $2}')"
+IP=$(aws elasticbeanstalk describe-environments --environment-names $ENV --query "Environments[0].EndpointURL" --output text)
+echo "HTTPS: https://$(echo "$IP" | tr . -).sslip.io (once the certificate is issued, a minute after the first deploy)"
