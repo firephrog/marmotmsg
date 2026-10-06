@@ -38,6 +38,7 @@ button:disabled{opacity:.4;cursor:default}
 .nav button[aria-current=page]{background:var(--accent-wash);border-left:2px solid var(--accent);padding-left:10px;color:var(--accent-soft);font-weight:500}
 .nav button[aria-current=page] .dot{background:var(--accent);border-color:var(--accent)}
 .spacer{flex:1}
+.dl{display:block;margin:0 12px 8px;text-align:center}
 .me{margin:0 12px 12px;padding:12px;background:var(--panel);border:1px solid var(--line)}
 .me-top{display:flex;align-items:center;gap:8px;min-width:0}
 .me-top div:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -232,6 +233,7 @@ button:disabled{opacity:.4;cursor:default}
       <div class="fp" id="meFp"></div>
       <div class="live off" id="meLive"><i></i><span id="meStatus">offline</span></div>
     </div>
+    <a class="tbtn dl hidden" id="dlHtml" href="index.html" download="marmot.html">DOWNLOAD HTML</a>
     <div class="seg" id="themeSeg">
       <button data-theme-set="light" aria-pressed="false">LIGHT</button>
       <button data-theme-set="dark" aria-pressed="true">DARK</button>
@@ -272,6 +274,9 @@ const SERVER='https://3-232-71-161.sslip.io';
    from calling an http:// server, so http:// ones are only tried when this
    file is opened from disk or over http. */
 const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
+/** The GitHub Pages copy offers the raw page as a download, to run from disk. */
+const ON_PAGES=/\.github\.io$/i.test(location.hostname);
+const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 
 /** The first configured server that answers at all (any HTTP status counts). */
 async function reachServer(){
@@ -1602,6 +1607,7 @@ const UI={
    (mode==='signup'?'<div class="field"><div class="lbl">CONFIRM PASSWORD</div><input class="inp" id="aPass2" type="password" autocomplete="new-password"></div>':'')+
    '<div class="field"'+(SERVER?' style="display:none"':'')+'><div class="lbl">SERVER</div><input class="inp" id="aServer" value="'+esc(saved)+'" spellcheck="false"></div>'+
    '<div class="err" id="aErr">'+esc(msg||'')+'</div>'+
+   (ON_PAGES?'<div class="btnrow" style="margin:0 0 8px">'+DL_LINK+'</div>':'')+
    '<div class="modal-foot"><span class="grow note" style="margin:0" id="aNote">'+(mode==='signup'?'10+ character password. It cannot be recovered.':'')+'</span>'+
    '<button class="send" type="submit" id="aGo">'+(mode==='signup'?'CREATE ACCOUNT':'LOG IN')+'</button></div></form></div></div>';
   o.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>this.auth(b.dataset.mode));
@@ -1819,6 +1825,7 @@ M.on('signedout',reason=>{
    'Marmot needs WebCrypto with X25519 and Ed25519 — any current Chrome, Edge, Firefox or Safari.<br>'+
    'If you opened this file from disk and see this, serve it over http://localhost or open it from the Marmot server instead.</div>';
   return}
+ if(ON_PAGES)$('#dlHtml').classList.remove('hidden');
  UI.renderNow();
  const s=store.sget();
  if(s&&s.token){
