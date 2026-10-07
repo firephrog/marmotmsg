@@ -152,6 +152,16 @@ button:disabled{opacity:.4;cursor:default}
 .gate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 18px 18px;padding:12px 14px;border:1px dashed var(--line2);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
 .gate .grow{flex:1;min-width:160px;line-height:1.6}
 .tbtn[aria-pressed=true]{border-color:var(--accent);color:var(--accent-soft);background:var(--accent-wash)}
+/* group chats */
+.av.grp{font-size:10px;box-shadow:inset 0 0 0 1px var(--accent)}
+.picks{max-height:260px;overflow-y:auto;border:1px solid var(--line2);background:var(--input)}
+.pick{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)}
+.pick:last-child{border-bottom:0}
+.pick:hover{background:var(--row)}
+.pick input{accent-color:var(--accent);margin:0;flex:none}
+.pick .row-main{font-weight:500}
+.pick .chip{margin-left:auto}
+.picks .grouplbl{padding:12px 10px}
 .tabs{display:none}
 .tabs button{flex:1;padding:11px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--dim)}
 .tabs button[aria-current=page]{color:var(--accent-soft);box-shadow:inset 0 2px 0 var(--accent)}
@@ -219,7 +229,7 @@ button:disabled{opacity:.4;cursor:default}
 <div class="app" id="app">
   <div class="rail">
     <div class="brand"><svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg><b>MARMOT</b><div class="ver">v0.4</div></div>
-    <div class="tagline">end-to-end encrypted messaging</div>
+    <div class="tagline">Signal Protocol messaging</div>
     <div class="rule"></div>
     <div class="nav" id="nav">
       <button data-screen="messages" aria-current="page"><i class="dot"></i>Messages<span class="n" id="navUnread"></span></button>
@@ -304,6 +314,8 @@ const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
 const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
 const isDiscord=id=>String(id).startsWith('dc:');
+const isGroup=id=>String(id).startsWith('g:');
+const GID=/^[0-9a-f]{24}$/,MAXNAME=64;
 const clock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 
 /* --------------------------------------------------------------- crypto */
@@ -530,7 +542,16 @@ const Ratchet={
    Discord channels are conversations too, under the id "dc:<linkId>". They
    are NOT end-to-end encrypted: the server relays them in plaintext. Their
    messages arrive as server-originated envelopes and are stored like any
-   other msg: record; this.links holds the channels this account is in. */
+   other msg: record; this.links holds the channels this account is in.
+   Group chats are conversations under the id "g:<groupId>". Who is in a
+   group is held by the server (this.groups), because it is the server that
+   lets members who are not friends reach each other. Everything said in a
+   group, its name included, is end-to-end encrypted: each message is sent
+   once per member over the ordinary pairwise ratchet, tagged with the group.
+     grp:<groupId>     {members:[userId]} as last seen, to tell joins and leaves apart
+     gname:<groupId>   {name,ts,by} the group's name, newest wins
+     msg:g:<groupId>:<id>  message, with `from` on inbound ones and `got`
+                       (who has confirmed delivery) on outbound ones */
 class Tx{
  constructor(c){this.c=c;this.puts=[];this.dels=[];this.ack=[];this.send=[];this.opks=[];this.mem=new Map()}
  async put(logical,d){
@@ -730,7 +751,8 @@ class MarmotClient{
   Object.assign(this,{token:null,vk:null,me:null,vault:null,key:null,mac:null,ws:null,wsState:'closed',
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
-   peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0})}
+   peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
+   groups:new Map()})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -849,6 +871,7 @@ class MarmotClient{
   await this._install(v,{userId,username});
   await this._loadStore();
   await this.loadPeers();
+  await this.loadGroups().catch(()=>{});
   await this.loadLinks().catch(()=>{})}
 
  session(){return this.token?{server:this.server,token:this.token,vk:this.vk}:null}
@@ -877,9 +900,10 @@ class MarmotClient{
   ws.onopen=()=>ws.send(JSON.stringify({t:'auth',token:this.token}));
   ws.onmessage=ev=>{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
-   if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadLinks().catch(()=>{})}
+   if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{});this.loadLinks().catch(()=>{})}
    else if(m.t==='env'&&m.env)this._enqueue(m.env);
    else if(m.t==='peers')this.loadPeers().catch(()=>{});
+   else if(m.t==='groups')this.loadGroups().catch(()=>{});
    else if(m.t==='links')this.loadLinks().catch(()=>{});
    else if(m.t==='prekeys')this.replenish().catch(()=>{});
    else if(m.t==='revoked')this._signedOut('this account was signed in on another device')};
@@ -946,7 +970,10 @@ class MarmotClient{
     let sess=out.rec;
     const inner=out.inner||{};
     if(out.opk!=null)await tx.del('opk:'+out.opk);
-    if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
+    if(inner.g!=null){
+     const r=await this._groupInner(peerId,inner,e,tx,sess);
+     sess=r.sess;note=r.note}
+    else if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
       const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
@@ -973,6 +1000,127 @@ class MarmotClient{
    if(this.done.size>5000)this.done=new Set([...this.done].slice(-2500))});
   if(sig)this.voice._signal(peerId,sig,e.ts);
   if(note){this.unread.set(note.peer,(this.unread.get(note.peer)||0)+1);this.emit('message',note.peer,note.text)}}
+
+ /** The group part of an inbound message: a text, a receipt for one of mine,
+     or a new name. Only counts if the sender is in the group, as far as the
+     server says; a message can beat the push about who joined, so an unknown
+     sender means the member list is reloaded once before giving up. */
+ async _groupInner(peerId,inner,e,tx,sess){
+  const gid=String(inner.g),none={sess,note:null};
+  if(!GID.test(gid))return none;
+  if(!this.inGroup(gid,peerId))await this.loadGroups().catch(()=>{});
+  if(!this.inGroup(gid,peerId))return none;
+  const conv='g:'+gid;
+  if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
+   const key='msg:'+conv+':'+inner.id;let note=null;
+   if(!this.get(key)){
+    const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
+    await tx.put(key,{id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received'});
+    note={peer:conv,text:this.displayName(peerId)+': '+inner.t}}
+   const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
+   tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
+   return {sess:r.rec,note}}
+  if(inner.k==='receipt'&&Array.isArray(inner.ids)){
+   for(const id of inner.ids.slice(0,100)){
+    const key='msg:'+conv+':'+id,m=this.get(key);
+    if(m&&m.dir==='out'&&!(m.got||[]).includes(peerId))
+     await tx.put(key,Object.assign({},m,{state:'delivered',got:(m.got||[]).concat(peerId)}))}
+   return none}
+  if(inner.k==='group'&&inner.t==='name'&&typeof inner.name==='string'&&Number.isFinite(inner.ts)){
+   const name=inner.name.trim().slice(0,MAXNAME),cur=this.get('gname:'+gid);
+   // newest name wins; a tie goes to the lower user id, so every member settles on the same one
+   if(cur&&(inner.ts<cur.ts||(inner.ts===cur.ts&&peerId>cur.by)))return none;
+   await tx.put('gname:'+gid,{name,ts:inner.ts,by:peerId});
+   if(inner.announce&&(!cur||cur.name!==name))
+    await tx.put('msg:'+conv+':n'+e.id,{id:'n'+e.id,peer:conv,dir:'sys',ts:e.ts,
+     text:this.displayName(peerId)+(name?' renamed the group to “'+name+'”':' removed the group name')})}
+  return none}
+
+ /* ---- group chats ---- */
+ group(gid){return this.groups.get(String(gid).replace(/^g:/,''))||null}
+ inGroup(gid,userId){const g=this.group(gid);return !!g&&g.members.some(m=>m.userId===userId)}
+ groupName(gid){gid=String(gid).replace(/^g:/,'');const n=this.get('gname:'+gid);return n&&n.name?n.name:''}
+
+ /** Who is in which group, from the server. Joins and leaves since this account
+     last looked become lines in the group's history. */
+ async loadGroups(){
+  if(!this.token)return;
+  return this.lock('__groups',async()=>{
+   const r=await this.api('GET','/api/groups');
+   if(!this.token)return;
+   const now=new Map(r.groups.map(g=>[g.groupId,g]));
+   const known=new Map();for(const g of now.values())for(const m of g.members)known.set(m.userId,m.username);
+   const name=id=>!id?'someone':id===this.me.userId?'you':known.get(id)||this.displayName(id);
+   const tx=new Tx(this);
+   let n=0;const line=async(gid,text)=>{const id='j'+Date.now().toString(36)+'-'+(n++);
+    await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:this.serverNow(),text})};
+   for(const g of now.values()){
+    const ids=g.members.map(m=>m.userId).sort(),rec=this.get('grp:'+g.groupId);
+    if(!rec||rec.left){
+     const me=g.members.find(m=>m.userId===this.me.userId)||{};
+     await line(g.groupId,me.invitedBy?name(me.invitedBy)+' added you':'you created this group')}
+    else{
+     for(const m of g.members)if(!rec.members.includes(m.userId))await line(g.groupId,name(m.invitedBy)+' added '+name(m.userId));
+     for(const id of rec.members)if(!ids.includes(id))await line(g.groupId,name(id)+' left')}
+    if(!rec||rec.left||rec.members.join()!==ids.join())await tx.put('grp:'+g.groupId,{members:ids})}
+   for(const [k,rec] of this.recs)if(k.startsWith('grp:')&&!rec.left&&!now.has(k.slice(4))){
+    await line(k.slice(4),'you left this group');await tx.put(k,{members:[],left:true})}
+   this.groups=now;
+   if(tx.puts.length)await tx.commit();
+   this.emit('change')})}
+
+ /** A new group with me in it; `invite` (friends' ids) may be empty. */
+ async createGroup(name,invite){
+  name=String(name||'').trim().slice(0,MAXNAME);
+  const r=await this.api('POST','/api/groups',{invite:invite||[]});
+  const gid=r.group.groupId;
+  await this.loadGroups();
+  if(name)await this.renameGroup(gid,name,false);
+  return gid}
+
+ async inviteToGroup(gid,ids){
+  gid=String(gid).replace(/^g:/,'');
+  const r=await this.api('POST','/api/groups/invite',{group:gid,invite:ids});
+  await this.loadGroups();
+  // newcomers learn the current name from whoever invited them
+  const n=this.get('gname:'+gid);
+  if(n&&r.added.length)await this._sendGroup(gid,{k:'group',t:'name',g:gid,name:n.name,ts:n.ts},null,r.added).catch(()=>{});
+  return r.added}
+
+ async leaveGroup(gid){
+  gid=String(gid).replace(/^g:/,'');
+  await this.api('POST','/api/groups/leave',{group:gid});
+  await this.loadGroups()}
+
+ /** Names (or, with '', unnames) a group for every member. */
+ async renameGroup(gid,name,announce){
+  gid=String(gid).replace(/^g:/,'');
+  name=String(name||'').trim().slice(0,MAXNAME);
+  if(!this.group(gid))throw new Error('you are not in this group');
+  announce=announce!==false;
+  const ts=Math.max(Date.now(),((this.get('gname:'+gid)||{}).ts||0)+1);
+  await this._sendGroup(gid,{k:'group',t:'name',g:gid,name,ts,announce},async tx=>{
+   await tx.put('gname:'+gid,{name,ts,by:this.me.userId});
+   if(announce){const id='n'+uid();await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:Date.now(),
+    text:name?'you renamed the group to “'+name+'”':'you removed the group name'})}})}
+
+ /** Encrypts `inner` to every other member (or just `only`) and commits it all at
+     once with whatever `more(tx)` adds. Each member's ratchet is locked in a
+     fixed order, so two sends to overlapping groups never wait on each other.
+     A member the server no longer lets this account reach (one of you blocked
+     the other) is skipped rather than failing the send for everyone. */
+ async _sendGroup(gid,inner,more,only){
+  const g=this.group(gid);if(!g)throw new Error('you are not in this group');
+  const to=g.members.map(m=>m.userId).filter(id=>id!==this.me.userId&&(!only||only.includes(id))).sort();
+  const run=async()=>{
+   const tx=new Tx(this);
+   for(const id of to){
+    let env;
+    try{env=await this._encryptTo(id,inner,tx)}catch(e){if(e.status===403||e.status===404)continue;throw e}
+    tx.send.push({to:id,payload:JSON.stringify(env),optional:true})}
+   if(more)await more(tx);
+   await tx.commit()};
+  await to.reduceRight((fn,id)=>()=>this.lock(id,fn),run)()}
 
  /* ---- peers ---- */
  /** Looks a user up by exact username and pins their identity locally. */
@@ -1097,32 +1245,41 @@ class MarmotClient{
   if(!text.trim())return null;
   if(text.length>MAXTEXT)throw new Error('messages are limited to '+MAXTEXT+' characters');
   if(isDiscord(peerId))return this._sendDiscord(peerId,text,reuseId);
-  if(!this.isFriend(peerId))throw new Error('you can only message friends');
+  const grp=isGroup(peerId);
+  if(grp?!this.group(peerId):!this.isFriend(peerId))throw new Error(grp?'you are not in this group':'you can only message friends');
   const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending'};
   this.pending.set(m.id,m);this.emit('change');
   try{
-   await this._sendInner(peerId,{k:'text',id:m.id,t:text,ts:m.ts},tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'})));
+   const inner={k:'text',id:m.id,t:text,ts:m.ts},save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
+   if(grp)await this._sendGroup(peerId.slice(2),Object.assign(inner,{g:peerId.slice(2)}),save);
+   else await this._sendInner(peerId,inner,save);
    this.pending.delete(m.id);
   }catch(e){m.state='failed';m.error=e.message;this.emit('change');throw e}
   this.emit('change');
   return m.id}
 
- /** Encrypts `inner` to a friend and commits it with whatever `more(tx)` adds,
-     opening a session from their prekey bundle first if there is none. */
+ /** Encrypts `inner` to a friend and commits it with whatever `more(tx)` adds. */
  async _sendInner(peerId,inner,more){
   await this.lock(peerId,async()=>{
-   let rec=this.get('sess:'+peerId)||Ratchet.empty();
    const tx=new Tx(this);
-   if(!rec.active||!rec.active.cks){
-    const b=(await this.api('GET','/api/bundle/'+encodeURIComponent(peerId))).bundle;
-    if(b.userId!==peerId||await Acct.userId(b.ik,b.sk)!==peerId)throw new Error('the server returned keys that do not belong to this user');
-    rec=Ratchet.install(rec,await Ratchet.initiate(this.me,b));
-    if(!this.get('peer:'+peerId))await tx.put('peer:'+peerId,{userId:peerId,username:b.username,ik:b.ik,sk:b.sk,verified:false,added:Date.now()})}
-   const out=await Ratchet.encrypt(rec,inner);
-   await tx.put('sess:'+peerId,out.rec);
+   const env=await this._encryptTo(peerId,inner,tx);
    if(more)await more(tx);
-   tx.send.push({to:peerId,payload:JSON.stringify(out.env)});
+   tx.send.push({to:peerId,payload:JSON.stringify(env)});
    await tx.commit()})}
+
+ /** One step of peerId's ratchet into `tx`, opening a session from their prekey
+     bundle first if there is none. The caller holds peerId's lock. */
+ async _encryptTo(peerId,inner,tx){
+  let rec=this.get('sess:'+peerId)||Ratchet.empty();
+  if(tx.mem.has('sess:'+peerId))rec=tx.mem.get('sess:'+peerId)[0];
+  if(!rec.active||!rec.active.cks){
+   const b=(await this.api('GET','/api/bundle/'+encodeURIComponent(peerId))).bundle;
+   if(b.userId!==peerId||await Acct.userId(b.ik,b.sk)!==peerId)throw new Error('the server returned keys that do not belong to this user');
+   rec=Ratchet.install(rec,await Ratchet.initiate(this.me,b));
+   if(!this.get('peer:'+peerId))await tx.put('peer:'+peerId,{userId:peerId,username:b.username,ik:b.ik,sk:b.sk,verified:false,added:Date.now()})}
+  const out=await Ratchet.encrypt(rec,inner);
+  await tx.put('sess:'+peerId,out.rec);
+  return out.env}
 
  /** One line of call history in the chat; a missed call also counts as unread. */
  async _logCall(peer,id,ts,text,missed){
@@ -1166,7 +1323,15 @@ class MarmotClient{
  peer(id){return this.get('peer:'+id)||{userId:id,username:null,verified:false}}
  displayName(id){
   if(isDiscord(id)){const l=this.link(id);return l?'#'+l.channel:'#discord channel'}
-  const p=this.peer(id),r=this.peers.get(id);return p.username||(r&&r.username)||('user '+String(id).slice(0,8))}
+  if(isGroup(id)){
+   const n=this.groupName(id);if(n)return n;
+   const g=this.group(id);if(!g)return 'group';
+   const others=g.members.filter(m=>m.userId!==this.me.userId).map(m=>m.username);
+   return others.length?others.slice(0,3).join(', ')+(others.length>3?' +'+(others.length-3):''):'empty group'}
+  const p=this.peer(id),r=this.peers.get(id);
+  if(p.username||(r&&r.username))return p.username||r.username;
+  for(const g of this.groups.values()){const m=g.members.find(x=>x.userId===id);if(m)return m.username}
+  return 'user '+String(id).slice(0,8)}
  sessionState(id){const r=this.get('sess:'+id);if(!r||!r.active)return 'none';return r.active.pre?'handshake sent':'established'}
  thread(peerId){
   const list=[...(this.byPeer.get(peerId)||new Map()).values()];
@@ -1178,7 +1343,9 @@ class MarmotClient{
   for(const m of this.pending.values())ids.add(m.peer);
   if(extra)ids.add(extra);
   for(const id of this.links.keys())ids.add('dc:'+id);
-  return [...ids].map(id=>{const t=this.thread(id),last=t[t.length-1];return {id,last,ts:last?last.ts:(this.peer(id).added||0)}})
+  for(const id of this.groups.keys())ids.add('g:'+id);
+  return [...ids].map(id=>{const t=this.thread(id),last=t[t.length-1],g=isGroup(id)&&this.group(id);
+   return {id,last,ts:last?last.ts:g?g.created:(this.peer(id).added||0)}})
    .sort((a,b)=>b.ts-a.ts)}
 }
 /*</marmot-core>*/
@@ -1266,15 +1433,17 @@ const UI={
   const f=this.S.filter.toLowerCase();
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
   rows.innerHTML=list.length?list.map(c=>{
-   const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last;
-   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':'')+l.text:'no messages yet';
+   const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last,grp=isGroup(c.id);
+   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+l.text:(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
    return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
-    '<div class="av av-34">'+(isDiscord(c.id)?'#':esc(initials(M.displayName(c.id))))+'</div>'+
+    '<div class="av av-34'+(grp?' grp':'')+'">'+(isDiscord(c.id)?'#':esc(initials(M.displayName(c.id))))+'</div>'+
     '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+
-    (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+'</div>'+
+    (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+
+    (grp?'<span class="chip">'+(M.group(c.id)?'GROUP':'LEFT')+'</span>':'')+'</div>'+
     '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
     '<div class="row-right"><div class="time">'+esc(shortTime(c.ts))+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'}).join('')
-   :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO ADD ONE BY USERNAME')+'</div>'},
+   :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO START A GROUP')+'</div>'},
+ memberCount(id){const g=M.group(id),n=g?g.members.length:0;return n+' member'+(n===1?'':'s')},
 
  /* ---------- discord ---------- */
  /** Linked Discord servers, each with the channels this account has joined. */
@@ -1379,7 +1548,7 @@ const UI={
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
    '<div class="av av-34">'+esc(initials(p.username))+'</div><div style="min-width:0"><div class="pane-title">'+name+
    (pin.verified?' <span class="chip ok">VERIFIED</span>':'')+'</div><div class="meta">'+this.STATE[st][0].toLowerCase()+'</div></div></div>'+
-   '<div class="sheet"><div class="sec"><h3>Relationship</h3><div class="note">'+notes[st]+'</div><div class="btnrow">'+acts+'</div>'+
+   '<div class="sheet"><div class="sec"><div class="btnrow" style="margin-top:0">'+acts+'</div>'+
    '<div class="err" id="peerErr"></div></div>'+
    '<div class="sec"><h3>Identity</h3>'+kv('username',p.username)+kv('user id',id)+
    (p.since&&st==='friend'?kv('friends since',new Date(p.since).toLocaleString()):'')+
@@ -1432,19 +1601,21 @@ const UI={
    else{
     pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
      '<div class="av av-34" id="chatAv"></div><div style="min-width:0"><div class="pane-title" id="chatName"></div><div class="meta" id="chatMeta"></div></div>'+
-     '<div class="acts">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
+     '<div class="acts" id="chatActs">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
+      :isGroup(chat)?'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
       :'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
-     '<div class="composer" id="composerBox"><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
+     '<div class="composer" id="composerBox"><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
      '<div class="composer-bar"><span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
-    if(M.isFriend(chat)||M.link(chat))$('#composer').focus()}}
+    if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
   if(scr==='settings')this.fillSettings();
   else if(chat)this.renderThread()},
 
  renderThread(){
   const id=this.cur(),th=$('#thread');if(!id||!th)return;
   if(isDiscord(id))return this.renderDiscord(id,th);
+  if(isGroup(id))return this.renderGroup(id,th);
   const p=M.peer(id),st=M.relation(id);
   $('#chatAv').textContent=initials(M.displayName(id));
   $('#chatName').innerHTML=esc(M.displayName(id))+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
@@ -1542,6 +1713,123 @@ const UI={
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
+ /** A group chat: each message shows who sent it, and mine show how many members confirmed delivery. */
+ renderGroup(id,th){
+  const g=M.group(id);
+  $('#chatAv').textContent=initials(M.displayName(id));$('#chatAv').classList.add('grp');
+  $('#chatName').textContent=M.displayName(id);
+  $('#chatMeta').textContent=g?this.memberCount(id)+' · end-to-end encrypted':'you are no longer in this group';
+  const gate=$('#gate');
+  $('#composerBox').classList.toggle('hidden',!g);gate.classList.toggle('hidden',!!g);
+  const ghtml='<span class="grow">You left this group. A member can invite you back if you are friends with them.</span>';
+  if(!g&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
+  document.querySelectorAll('#chatActs button').forEach(b=>b.classList.toggle('hidden',!g));
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  const others=g?g.members.length-1:0;
+  let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
+  for(const m of list){
+   const day=dayLabel(m.ts);
+   if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   const got=(m.got||[]).length;
+   const state=m.dir==='out'?(m.state==='failed'
+     ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
+     :m.state==='sending'?' · sending':got?' · delivered to '+(others&&got>=others?'everyone':got):' · sent'):'';
+   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
+    (m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':'')+
+    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+  this.patch(th,html);
+  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+
+ /** A checklist of friends for starting or growing a group; `skip` are ids already in it. */
+ friendPicker(skip){
+  const list=[...M.peers.values()].filter(p=>p.state==='friend'&&!(skip||[]).includes(p.userId)).sort((a,b)=>a.username.localeCompare(b.username));
+  if(!list.length)return '<div class="picks"><div class="grouplbl">'+((skip||[]).length>1?'EVERY FRIEND IS ALREADY IN THIS GROUP':'NO FRIENDS YET · ADD SOME IN PEERS')+'</div></div>';
+  return '<input class="search" id="pickFilter" placeholder="filter friends…" autocomplete="off" style="margin:0 0 8px;width:100%">'+
+   '<div class="picks" id="picks">'+list.map(p=>'<label class="pick" data-name="'+esc(p.username.toLowerCase())+'"><input type="checkbox" value="'+esc(p.userId)+'">'+
+    '<div class="av av-26" style="background:var(--avatar);color:var(--avatar-fg)">'+esc(initials(p.username))+'</div><span class="row-main">'+esc(p.username)+'</span>'+
+    (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</label>').join('')+'</div>'},
+ /** Wires a friendPicker's filter box and calls onPick(count) whenever the selection changes. */
+ wirePicker(onPick){
+  const f=$('#pickFilter'),box=$('#picks');if(!box)return;
+  f.addEventListener('input',()=>{const q=f.value.trim().toLowerCase();box.querySelectorAll('.pick').forEach(l=>l.classList.toggle('hidden',!!q&&!l.dataset.name.includes(q)))});
+  box.addEventListener('change',()=>onPick(this.picked().length))},
+ picked(){return [...document.querySelectorAll('#picks input:checked')].map(i=>i.value)},
+
+ /** + NEW on Messages: start a group (empty, or with friends picked here), or a direct chat by username. */
+ newChat(mode){
+  mode=mode||'group';
+  const seg='<div class="auth-seg"><button data-m="mode-group" aria-pressed="'+(mode==='group')+'">GROUP CHAT</button><button data-m="mode-direct" aria-pressed="'+(mode==='direct')+'">DIRECT MESSAGE</button></div>';
+  if(mode==='direct')return this.addPeer(seg);
+  const label=n=>n?'CREATE · '+(n+1)+' MEMBERS':'CREATE EMPTY GROUP';
+  this.modal('<h3>New conversation</h3>'+seg+
+   '<div class="field"><div class="lbl">GROUP NAME</div><input class="inp" id="gName" maxlength="'+MAXNAME+'" spellcheck="false" autocomplete="off" placeholder="optional · members can change it later"></div>'+
+   '<div class="field"><div class="lbl">INVITE FRIENDS · OPTIONAL</div>'+this.friendPicker()+'</div>'+
+   '<div class="note" style="margin:0">Leave everyone unticked to make an empty group and invite friends from inside it later. Any member can invite their own friends, so you may end up in a group with people you have not friended.</div>'+
+   '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo">'+label(0)+'</button></div>',
+   async(act,btn)=>{
+    if(act==='mode-direct')return this.newChat('direct');
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const err=$('#gErr');err.textContent='';btn.disabled=true;
+    try{const gid=await M.createGroup($('#gName').value,this.picked());this.close();this.open('g:'+gid)}
+    catch(e){err.textContent=e.message;btn.disabled=false}});
+  this.wirePicker(n=>{$('#gGo').textContent=label(n)});
+  $('#gName').addEventListener('keydown',e=>{if(e.key==='Enter')$('#gGo').click()})},
+
+ groupInvite(id){
+  const g=M.group(id);if(!g)return;
+  const label=n=>n?'INVITE '+n:'INVITE';
+  this.modal('<h3>Invite to '+esc(M.displayName(id))+'</h3><div class="note">You can invite your own friends. They see messages sent from now on, not the history before they joined.</div>'+
+   this.friendPicker(g.members.map(m=>m.userId))+
+   '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo" disabled>'+label(0)+'</button></div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const ids=this.picked();if(!ids.length)return;
+    const err=$('#gErr');err.textContent='';btn.disabled=true;
+    try{const added=await M.inviteToGroup(id,ids);this.close();toast(added.length?'invited '+added.length+' to '+M.displayName(id):'they were already in the group')}
+    catch(e){err.textContent=e.message;btn.disabled=false}});
+  this.wirePicker(n=>{const b=$('#gGo');b.textContent=label(n);b.disabled=!n})},
+
+ groupRename(id){
+  if(!M.group(id))return;
+  this.modal('<h3>Rename group</h3><div class="note">The new name is sent end-to-end encrypted to every member. Leave it blank to go back to listing the members.</div>'+
+   '<div class="field"><div class="lbl">GROUP NAME</div><input class="inp" id="gName" maxlength="'+MAXNAME+'" spellcheck="false" autocomplete="off" value="'+esc(M.groupName(id))+'"></div>'+
+   '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo">RENAME</button></div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const name=$('#gName').value.trim();
+    if(name===M.groupName(id))return this.close();
+    const err=$('#gErr');err.textContent='';btn.disabled=true;
+    try{await M.renameGroup(id,name);this.close()}catch(e){err.textContent=e.message;btn.disabled=false}});
+  const i=$('#gName');i.select();i.addEventListener('keydown',e=>{if(e.key==='Enter')$('#gGo').click()})},
+
+ groupMembers(id){
+  const g=M.group(id);if(!g)return;
+  const name=u=>u===M.me.userId?'you':M.displayName(u);
+  const rows=g.members.slice().sort((a,b)=>(b.userId===M.me.userId)-(a.userId===M.me.userId)||a.username.localeCompare(b.username)).map(m=>{
+   const st=m.userId===M.me.userId?'':M.relation(m.userId);
+   return '<div class="pick" style="cursor:default"><div class="av av-26" style="background:var(--avatar);color:var(--avatar-fg)">'+esc(initials(m.username))+'</div>'+
+    '<div class="row-main"><div>'+esc(m.username)+(m.userId===M.me.userId?' <span class="chip">YOU</span>':'')+'</div>'+
+    '<div class="meta">'+(m.invitedBy?'added by '+esc(name(m.invitedBy)):'started the group')+'</div></div>'+
+    (st?'<button class="tbtn" data-m="peer:'+esc(m.userId)+'" style="margin-left:auto">'+(st==='friend'?'PROFILE':'VIEW')+'</button>':'')+'</div>'}).join('');
+  this.modal('<h3>'+esc(M.displayName(id))+'</h3><div class="note">'+this.memberCount(id)+'. Members who are not your friends can message you here, but not directly.</div>'+
+   '<div class="picks">'+rows+'</div>'+
+   '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="close">CLOSE</button><button class="send" data-m="invite">INVITE</button></div>',
+   act=>{
+    if(act==='close')return this.close();
+    if(act==='invite')return this.groupInvite(id);
+    if(act.startsWith('peer:')){this.close();this.showPeer(act.slice(5))}})},
+
+ async groupLeave(id){
+  const ok=await this.confirm('Leave '+M.displayName(id)+'?','You stop receiving its messages. Your copy of the history stays on this account. A member who is your friend can invite you back.','LEAVE');
+  if(!ok)return;
+  try{await M.leaveGroup(id)}catch(e){toast(e.message)}},
+
  async joinPublic(linkId){
   const l=M.publicLinks.find(x=>x.linkId===linkId);if(!l)return;
   const ok=await this.confirm('Join #'+l.channel+' on '+l.guild+'?','This Discord channel is public: anyone on Marmot can join. It is not end-to-end encrypted; the Marmot server and Discord can read it. '+
@@ -1556,11 +1844,11 @@ const UI={
  settingsHTML(){
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Account &amp; security</div><div class="meta">everything below is stored encrypted on the server</div></div></div>'+
    '<div class="sheet">'+
-   '<div class="sec"><h3>Identity</h3><div class="note">Your user id is the hash of your public identity keys, so nobody — including the server — can present different keys under it without the id changing.</div><div id="setIdent"></div></div>'+
+   '<div class="sec"><h3>Identity</h3><div class="note">Information about your account and keys.</div><div id="setIdent"></div></div>'+
    '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">When on, everyone on this server can find you in the global section of Peers and send you a friend request. When off, only people who know your exact username can. Either way, nobody can message you until you accept them.</div>'+
    '<div class="btnrow"><button class="tbtn" data-act="disc-off" id="discOff">HIDDEN</button><button class="tbtn" data-act="disc-on" id="discOn">LISTED</button></div><div class="err" id="discErr"></div></div>'+
    '<div class="sec"><h3>Connection</h3><div id="setConn"></div></div>'+
-   '<div class="sec"><h3>Session</h3><div class="note">Signing in elsewhere signs this tab out: one device per account keeps the ratchet state consistent. Closing the tab forgets the session; reloading keeps it.</div>'+
+   '<div class="sec"><h3>Session</h3><div class="note"></div>'+
    '<div class="btnrow"><button class="tbtn" data-act="logout">LOG OUT</button></div></div>'+
    '<div class="sec"><h3>Delete account</h3><div class="note">Removes your account, keys, friendships, stored chats and any undelivered mail from the server. This cannot be undone.</div>'+
    '<div class="field" style="max-width:360px"><div class="lbl">PASSWORD</div><input class="inp" type="password" id="delPass" autocomplete="current-password"></div>'+
@@ -1599,7 +1887,7 @@ const UI={
   const saved=SERVER||(/^https?:$/.test(location.protocol)?location.origin:'')||store.get('server')||'http://localhost:8080';
   const o=$('#overlay');
   o.innerHTML='<div class="scrim solid"><div class="modal"><div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v0.4</div></div>'+
-   '<div class="note" style="margin:8px 0 0">End-to-end encrypted. Your password never leaves this browser — it unlocks the keys the server stores for you, sealed.</div>'+
+   '<div class="note" style="margin:8px 0 0">Create a password. Create a secure and memorable password. It cannot be recovered.</div>'+
    '<div class="auth-seg"><button data-mode="login" aria-pressed="'+(mode==='login')+'">LOG IN</button><button data-mode="signup" aria-pressed="'+(mode==='signup')+'">SIGN UP</button></div>'+
    '<form id="authForm" autocomplete="on">'+
    '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="aUser" name="username" autocomplete="username" spellcheck="false" placeholder="3-24 letters, digits, . _ -"></div>'+
@@ -1626,15 +1914,17 @@ const UI={
     this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.peer=null;this.S.paneKey='';this.render();
    }catch(e){err.textContent=e.message;go.disabled=false;$('#aNote').textContent=''}}},
 
- /** + NEW / + ADD: a friend opens their chat; anyone else gets a friend request. */
- addPeer(){
+ /** + ADD, and the direct side of + NEW (`seg` switches back to a group): a friend
+     opens their chat; anyone else gets a friend request. */
+ addPeer(seg){
   const chat=this.S.screen==='messages';
-  this.modal('<h3>'+(chat?'New conversation':'Add a friend')+'</h3><div class="note">Enter their exact username. '+
+  this.modal('<h3>'+(chat?'New conversation':'Add a friend')+'</h3>'+(seg||'')+'<div class="note">Enter their exact username. '+
    (chat?'If you are already friends the chat opens; otherwise they get a friend request, and you can message once they accept.'
     :'They get a friend request, and you can message each other once they accept.')+'</div>'+
    '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="ncUser" spellcheck="false" autocomplete="off"></div>'+
    '<div class="err" id="ncErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">'+(chat?'START':'SEND REQUEST')+'</button></div>',
    async act=>{
+    if(act==='mode-group')return this.newChat('group');
     if(act==='cancel')return this.close();
     if(act!=='go')return;
     const err=$('#ncErr'),name=$('#ncUser').value.trim();err.textContent='';
@@ -1650,7 +1940,7 @@ const UI={
     catch(e){err.textContent=e.status===404?'no user with that name':e.message}});
   $('#ncUser').addEventListener('keydown',e=>{if(e.key==='Enter')$('[data-m=go]').click()})},
  joinDiscord(){
-  this.modal('<h3>Join a Discord channel</h3><div class="note">Enter an invite code from a moderator of a Discord server that has the Marmot bot (they make one with /marmot invite). '+
+  this.modal('<h3>Join a Discord channel</h3><div class="note">Enter an invite code from a moderator of a Discord server that has the Marmot bot (use /marmot invite). '+
    'Discord chats are not end-to-end encrypted: the Marmot server and Discord can read them.</div>'+
    '<div class="field"><div class="lbl">INVITE CODE</div><input class="inp" id="dcCode" spellcheck="false" autocomplete="off" placeholder="XXXXX-XXXXX"></div>'+
    '<div class="err" id="dcErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">JOIN</button></div>',
@@ -1759,7 +2049,7 @@ document.addEventListener('click',async e=>{
  if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,UI.S.screen==='peers'?UI.S.peer:UI.S.chat);return}
  if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
  if(t.dataset.discard){M.discard(t.dataset.discard);return}
- if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.addPeer();return}
+ if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
  switch(t.dataset.act){
   case 'send':UI.send();break;
   case 'back':
@@ -1775,6 +2065,10 @@ document.addEventListener('click',async e=>{
   case 'call-open':if(M.voice.call)UI.open(M.voice.call.peer);break;
   case 'profile':UI.showPeer(UI.S.chat);break;
   case 'leave':UI.leaveDiscord(UI.S.dc);break;
+  case 'g-invite':UI.groupInvite(UI.S.chat);break;
+  case 'g-members':UI.groupMembers(UI.S.chat);break;
+  case 'g-rename':UI.groupRename(UI.S.chat);break;
+  case 'g-leave':UI.groupLeave(UI.S.chat);break;
   case 'open-settings':UI.S.set=true;UI.render();break;
   case 'goto-discovery':UI.screen('settings');UI.S.set=true;UI.renderNow();
    {const s=$('#secDiscovery');if(s)s.scrollIntoView({block:'start'})}break;

@@ -28,12 +28,13 @@ const MIN_ITER = 300000;
 const LIMITS = {
   body: '4mb', puts: 600, putBytes: 256 * 1024, sends: 32, payloadBytes: 128 * 1024,
   opksPerCommit: 200, opksTotal: 500, blobsTotal: 100000, inbox: 300,
-  peers: 2000, globalPage: 50
+  peers: 2000, globalPage: 50, groupMembers: 32, groups: 200
 };
 const PEER_ACTIONS = new Set(['request', 'accept', 'remove', 'block', 'unblock']);
 const USERNAME = /^[a-zA-Z0-9._-]{3,24}$/;
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const BLOBKEY = /^[0-9a-f]{32}$/;
+const GROUPID = /^[0-9a-f]{24}$/;
 
 /* ------------------------------------------------------------- helpers */
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
@@ -263,8 +264,8 @@ function createServer(opts) {
     const row = db.userRow(req.params.id);
     if (!row) throw new HttpError(404, 'no such user');
     if (row.id === me.id) throw bad('cannot open a session with yourself');
-    // Only friends can start a session, so strangers cannot drain someone's prekeys.
-    if (!db.isFriend(me.id, row.id)) throw new HttpError(403, 'you can only message friends');
+    // Only friends and fellow group members can start a session, so strangers cannot drain someone's prekeys.
+    if (!canReach(me.id, row.id)) throw new HttpError(403, 'you can only message friends');
     const u = db.publicUser(row);
     const opk = db.takePrekey(row.id);
     const left = db.prekeyCount(row.id);
@@ -323,7 +324,8 @@ function createServer(opts) {
    *   incoming  they asked me  (my side of their outgoing)
    *   blocked   I blocked them (their side is removed, and stays absent:
    *             their new requests sit as 'outgoing' and never reach me)
-   * Nothing else lets two users talk: commits and prekey bundles check 'friend'.
+   * Nothing else lets two users talk: commits and prekey bundles check 'friend',
+   * or a shared group chat (see canReach).
    */
   app.post('/api/peers', limiter(120), wrap(req => {
     const me = auth(req);
@@ -376,6 +378,77 @@ function createServer(opts) {
     return { peer: { userId: them, username: row.username, state: now ? now.state : 'none', since: now ? now.since : null } };
   }));
 
+  /* ------------------------------------------------------- group chats */
+  /**
+   * Friends can always reach each other. Two people who are not friends can
+   * when they share a group, unless either one has blocked the other.
+   */
+  function canReach(a, b) {
+    if (db.isFriend(a, b)) return true;
+    if (!db.shareGroup(a, b)) return false;
+    const ab = db.peer(a, b), ba = db.peer(b, a);
+    return !(ab && ab.state === 'blocked') && !(ba && ba.state === 'blocked');
+  }
+  const groupView = g => ({
+    groupId: g.id, created: g.created, createdBy: g.createdBy,
+    members: db.groupMembers(g.id).map(m => {
+      const row = db.userRow(m.userId);
+      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy };
+    }).filter(Boolean)
+  });
+  const pushGroup = groupId => { for (const m of db.groupMembers(groupId)) hub.push(m.userId, { t: 'groups' }); };
+  /** The invite list: distinct user ids, every one of them a friend of the inviter. */
+  function invitees(me, list) {
+    const ids = [...new Set(asArray(list, LIMITS.groupMembers, 'invitees').map(String))];
+    for (const id of ids) {
+      if (id === me.id) throw bad('that is you');
+      if (!db.isFriend(me.id, id)) throw new HttpError(403, 'you can only invite friends');
+    }
+    return ids;
+  }
+  function myGroup(me, id) {
+    id = String(id || '');
+    if (!GROUPID.test(id) || !db.inGroup(id, me.id)) throw new HttpError(404, 'you are not in that group');
+    return id;
+  }
+
+  app.get('/api/groups', wrap(req => {
+    const me = auth(req);
+    return { groups: db.groupIdsOf(me.id).map(db.group).filter(Boolean).map(groupView) };
+  }));
+
+  /** A new group with me in it, plus any friends invited straight away (none is fine). */
+  app.post('/api/groups', limiter(60), wrap(req => {
+    const me = auth(req);
+    const ids = invitees(me, (req.body || {}).invite);
+    if (ids.length + 1 > LIMITS.groupMembers) throw bad('groups are limited to ' + LIMITS.groupMembers + ' members');
+    if (db.groupIdsOf(me.id).length >= LIMITS.groups) throw new HttpError(507, 'you are in too many groups');
+    const id = db.createGroup(me.id, [me.id].concat(ids));
+    pushGroup(id);
+    return { group: groupView(db.group(id)) };
+  }));
+
+  /** Any member can invite their own friends. */
+  app.post('/api/groups/invite', limiter(120), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const id = myGroup(me, b.group);
+    const ids = invitees(me, b.invite).filter(u => !db.inGroup(id, u));
+    if (db.groupMemberCount(id) + ids.length > LIMITS.groupMembers) throw bad('groups are limited to ' + LIMITS.groupMembers + ' members');
+    const added = db.addGroupMembers(id, me.id, ids);
+    if (added.length) pushGroup(id);
+    return { group: groupView(db.group(id)), added };
+  }));
+
+  app.post('/api/groups/leave', wrap(req => {
+    const me = auth(req);
+    const id = myGroup(me, (req.body || {}).group);
+    db.leaveGroup(id, me.id);
+    pushGroup(id);
+    hub.push(me.id, { t: 'groups' });
+    return {};
+  }));
+
   /* ------------------------------------------------------ discord link */
   // Only present when the server has a bot token. See discord.js for what the server can read.
   let bridge = null;
@@ -421,7 +494,7 @@ function createServer(opts) {
         if (m.payload.length > LIMITS.payloadBytes) throw bad('envelope too large');
         if (m.to === me.id) throw bad('cannot send to yourself');
         if (!db.userRow(m.to)) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
-        if (!db.isFriend(me.id, m.to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
+        if (!canReach(me.id, m.to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
         return { to: m.to, payload: m.payload };
       }).filter(Boolean)
     };
@@ -438,7 +511,7 @@ function createServer(opts) {
     if (!b64bytes((req.body || {}).auth, 32) || !checkVerifier(me.verifier, req.body.auth)) throw new HttpError(401, 'wrong password');
     const others = db.deleteUser(me.id);
     hub.revoke(me.id);
-    for (const o of others) hub.push(o, { t: 'peers' });
+    for (const o of others) { hub.push(o, { t: 'peers' }); hub.push(o, { t: 'groups' }); }
     return {};
   }));
 

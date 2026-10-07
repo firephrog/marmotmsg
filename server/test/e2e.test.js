@@ -368,6 +368,76 @@ test('deleting an account removes the other side of its relationships', async ()
   assert.equal(srv.db.peers(val.me.userId).length, 0);
 });
 
+test('group chats: empty groups, invites, names, members who are not friends, leaving', async () => {
+  const gia = client(), hal = client(), kit = client(), joe = client();
+  await gia.signup('gia', PASS);
+  await hal.signup('hal', PASS);
+  await kit.signup('kit', PASS);
+  await joe.signup('joe', PASS);
+  await Promise.all([gia, hal, kit, joe].map(live));
+  await befriend(gia, hal);
+  await befriend(gia, kit);
+  await befriend(hal, joe);                        // joe knows hal, nobody else
+
+  // an empty group, named, then a friend invited into it
+  const gid = await gia.createGroup('rats', []);
+  const conv = 'g:' + gid;
+  assert.equal(gia.displayName(conv), 'rats');
+  assert.equal(gia.group(gid).members.length, 1);
+  await gia.sendText(conv, 'talking to myself');
+  assert.deepEqual(texts(gia, conv), ['talking to myself']);
+
+  // only friends can be invited, and outsiders cannot see in
+  await assert.rejects(gia.inviteToGroup(gid, [joe.me.userId]), /only invite friends/);
+  await assert.rejects(joe.api('POST', '/api/groups/invite', { group: gid, invite: [hal.me.userId] }), /not in that group/);
+  assert.deepEqual(await gia.inviteToGroup(gid, [hal.me.userId, kit.me.userId]), [hal.me.userId, kit.me.userId]);
+
+  // newcomers learn the name from the inviter, end to end
+  await waitFor(() => hal.displayName(conv) === 'rats' && kit.displayName(conv) === 'rats', 'name to reach the invitees');
+  assert.ok(hal.thread(conv).some(m => m.dir === 'sys' && m.text === 'gia added you'));
+  assert.ok(!hal.thread(conv).some(m => m.text === 'talking to myself'), 'history from before joining is not shared');
+
+  // hal and kit are not friends, but can talk inside the group
+  assert.equal(hal.relation(kit.me.userId), 'none');
+  await hal.sendText(conv, 'hi all');
+  await waitFor(() => texts(gia, conv).includes('hi all') && texts(kit, conv).includes('hi all'), 'group message fan-out');
+  assert.equal(kit.thread(conv).find(m => m.text === 'hi all').from, hal.me.userId);
+  assert.equal(kit.displayName(hal.me.userId), 'hal');
+  await waitFor(() => (hal.thread(conv).find(m => m.text === 'hi all').got || []).length === 2, 'receipts from both');
+  // ...but not outside it
+  await assert.rejects(hal.sendText(kit.me.userId, 'psst'), /only message friends/);
+
+  // hal invites his own friend joe, and renames the group for everyone
+  await hal.inviteToGroup(gid, [joe.me.userId]);
+  await waitFor(() => joe.displayName(conv) === 'rats', 'joe learns the name');
+  await waitFor(() => kit.thread(conv).some(m => m.text === 'hal added joe'), 'join line');
+  await hal.renameGroup(gid, 'burrow');
+  await waitFor(() => [gia, kit, joe].every(c => c.displayName(conv) === 'burrow'), 'rename');
+  assert.ok(gia.thread(conv).some(m => m.text === 'hal renamed the group to “burrow”'));
+  await joe.sendText(conv, 'thanks hal');
+  await waitFor(() => [gia, hal, kit].every(c => texts(c, conv).includes('thanks hal')), 'joe reaches everyone');
+
+  // the server never sees the name or the text
+  const dump = JSON.stringify(srv.db.raw.prepare('SELECT * FROM group_members').all()) + JSON.stringify(srv.db.raw.prepare('SELECT * FROM groups').all());
+  assert.ok(!/burrow|thanks hal/.test(dump));
+  assert.ok(!dump.includes(gia.me.userId) && !dump.includes(joe.me.userId), 'member ids are sealed');
+
+  // leaving: kit goes, and is then cut off from members she is not friends with
+  await kit.leaveGroup(gid);
+  assert.equal(kit.group(gid), null);
+  assert.ok(kit.thread(conv).some(m => m.text === 'you left this group'));
+  await assert.rejects(kit.sendText(conv, 'wait'), /not in this group/);
+  await assert.rejects(kit.api('GET', '/api/bundle/' + joe.me.userId), /only message friends/);
+  await waitFor(() => gia.group(gid).members.length === 3 && gia.thread(conv).some(m => m.text === 'kit left'), 'leave pushed');
+  await gia.sendText(conv, 'bye kit');
+  await waitFor(() => texts(joe, conv).includes('bye kit'), 'after kit left');
+  assert.ok(!texts(kit, conv).includes('bye kit'));
+
+  // the last one out deletes the group
+  for (const c of [gia, hal, joe]) await c.leaveGroup(gid);
+  assert.equal(srv.db.group(gid), undefined);
+});
+
 test('step 1 databases are migrated', async () => {
   const Database = require('better-sqlite3');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-mig-'));

@@ -94,6 +94,21 @@ CREATE TABLE IF NOT EXISTS discord_members (
   PRIMARY KEY (link_id, user_tag)
 );
 CREATE INDEX IF NOT EXISTS discord_members_user ON discord_members(user_tag);
+-- Group chats. The server knows who is in a group, because it must let
+-- members who are not friends reach each other; the group's name and its
+-- messages are end-to-end encrypted between the members and never stored here.
+CREATE TABLE IF NOT EXISTS groups (
+  id         TEXT PRIMARY KEY,
+  created    INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {createdBy}
+);
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id   TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_tag   TEXT NOT NULL,
+  body       TEXT NOT NULL,              -- sealed {userId, joined, invitedBy}
+  PRIMARY KEY (group_id, user_tag)
+);
+CREATE INDEX IF NOT EXISTS group_members_user ON group_members(user_tag);
 `;
 
 /** Columns added after a table first shipped; applied to older databases on open. */
@@ -171,7 +186,16 @@ function open(opts) {
     membersOf: db.prepare('SELECT user_tag, body FROM discord_members WHERE link_id = ?'),
     countMembers: db.prepare('SELECT COUNT(*) n FROM discord_members WHERE link_id = ?'),
     linksOfUser: db.prepare('SELECT link_id FROM discord_members WHERE user_tag = ?'),
-    delUserMemberships: db.prepare('DELETE FROM discord_members WHERE user_tag = ?')
+    delUserMemberships: db.prepare('DELETE FROM discord_members WHERE user_tag = ?'),
+    insertGroup: db.prepare('INSERT INTO groups (id, created, body) VALUES (?, ?, ?)'),
+    group: db.prepare('SELECT * FROM groups WHERE id = ?'),
+    deleteGroup: db.prepare('DELETE FROM groups WHERE id = ?'),
+    putGroupMember: db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_tag, body) VALUES (?, ?, ?)'),
+    groupMember: db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_tag = ?'),
+    delGroupMember: db.prepare('DELETE FROM group_members WHERE group_id = ? AND user_tag = ?'),
+    groupMembersOf: db.prepare('SELECT user_tag, body FROM group_members WHERE group_id = ?'),
+    countGroupMembers: db.prepare('SELECT COUNT(*) n FROM group_members WHERE group_id = ?'),
+    groupsOfUser: db.prepare('SELECT group_id FROM group_members WHERE user_tag = ?')
   };
 
   const memberTag = userId => S.tag('discord-member|' + userId);
@@ -180,6 +204,17 @@ function open(opts) {
   const insertEnvelope = (to, from, payload, now) => {
     const info = q.insertEnvelope.run(to, now, S.seal({ from, payload }, 'envelopes:' + to + ':' + now));
     return { id: Number(info.lastInsertRowid), to, from, ts: now, payload };
+  };
+
+  const gmTag = userId => S.tag('group-member|' + userId);
+  const gmCtx = (groupId, tag) => 'group_members:' + groupId + ':' + tag;
+  const groupMembers = groupId => q.groupMembersOf.all(groupId).map(r => S.open(r.body, gmCtx(groupId, r.user_tag)));
+  const groupIdsOf = userId => q.groupsOfUser.all(gmTag(userId)).map(r => r.group_id);
+  /** Removes one member; a group nobody is left in is deleted. Returns whether they were in it. */
+  const leaveGroup = (groupId, userId) => {
+    const gone = q.delGroupMember.run(groupId, gmTag(userId)).changes > 0;
+    if (gone && !q.countGroupMembers.get(groupId).n) q.deleteGroup.run(groupId);
+    return gone;
   };
 
   const peerTag = (owner, peer) => S.tag(owner + '|' + peer);
@@ -205,13 +240,18 @@ function open(opts) {
     vault: row => S.open(row.vault, 'users.vault:' + row.id),
     spk: row => S.open(row.spk, 'users.spk:' + row.id),
     touch: (id, ts) => q.touchUser.run(ts, id),
-    /** Also removes the other side of every relationship; returns those users' ids. */
+    /** Also removes the other side of every relationship and every group membership;
+        returns the ids of everyone affected. */
     deleteUser: db.transaction(id => {
-      const others = peersOf(id).map(p => p.peer);
+      const others = new Set(peersOf(id).map(p => p.peer));
       for (const o of others) q.delPeer.run(o, peerTag(o, id));
+      for (const g of groupIdsOf(id)) {
+        leaveGroup(g, id);
+        for (const m of groupMembers(g)) others.add(m.userId);
+      }
       q.delUserMemberships.run(memberTag(id));
       q.deleteUser.run(id);
-      return others;
+      return [...others];
     }),
 
     /* ---- peers ---- */
@@ -230,6 +270,38 @@ function open(opts) {
     },
     delPeer: (owner, peer) => q.delPeer.run(owner, peerTag(owner, peer)),
     isFriend: (a, b) => { const p = getPeer(a, b); return !!p && p.state === 'friend'; },
+
+    /* ---- group chats ---- */
+    /** Creates a group holding `members` (the creator first); returns its id. */
+    createGroup: db.transaction((createdBy, members) => {
+      const id = crypto.randomBytes(12).toString('hex'), now = Date.now();
+      q.insertGroup.run(id, now, S.seal({ createdBy }, 'groups:' + id));
+      for (const m of members) {
+        const tag = gmTag(m);
+        q.putGroupMember.run(id, tag, S.seal({ userId: m, joined: now, invitedBy: m === createdBy ? null : createdBy }, gmCtx(id, tag)));
+      }
+      return id;
+    }),
+    group(id) {
+      const row = q.group.get(String(id));
+      return row && Object.assign({ id: row.id, created: row.created }, S.open(row.body, 'groups:' + row.id));
+    },
+    groupMembers,
+    groupIdsOf,
+    groupMemberCount: groupId => q.countGroupMembers.get(groupId).n,
+    inGroup: (groupId, userId) => !!q.groupMember.get(groupId, gmTag(userId)),
+    /** Adds members; returns the ids that were not already in. */
+    addGroupMembers: db.transaction((groupId, invitedBy, ids) => {
+      const now = Date.now(), added = [];
+      for (const m of ids) {
+        const tag = gmTag(m);
+        if (q.putGroupMember.run(groupId, tag, S.seal({ userId: m, joined: now, invitedBy }, gmCtx(groupId, tag))).changes) added.push(m);
+      }
+      return added;
+    }),
+    leaveGroup: db.transaction(leaveGroup),
+    /** Whether two users are in at least one group together. */
+    shareGroup: (a, b) => { const tb = gmTag(b); return groupIdsOf(a).some(g => !!q.groupMember.get(g, tb)); },
     /** Runs fn inside one transaction. */
     tx: fn => db.transaction(fn)(),
 
