@@ -129,6 +129,7 @@ button:disabled{opacity:.4;cursor:default}
 /* overlays */
 .scrim{position:fixed;inset:0;background:rgba(10,9,8,.62);display:grid;place-items:center;z-index:20;padding:16px;animation:fade .2s ease both}
 .scrim.solid{background:var(--bg)}
+.scrim.top{z-index:50}
 .modal{width:440px;max-width:100%;max-height:90vh;overflow-y:auto;background:var(--rail);border:1px solid var(--line2);padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.35);animation:lift .28s cubic-bezier(.2,.85,.25,1) both}
 .modal h3{margin:0 0 4px;font-size:16px;font-weight:600}
 .modal-foot{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
@@ -287,6 +288,8 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 /** The GitHub Pages copy offers the raw page as a download, to run from disk. */
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
+/** Bump on every client release: copies older than the server's offer the new file. */
+const VERSION='0.4.0';
 
 /** The first configured server that answers at all (any HTTP status counts). */
 async function reachServer(){
@@ -1886,7 +1889,7 @@ const UI={
   mode=mode||'login';
   const saved=SERVER||(/^https?:$/.test(location.protocol)?location.origin:'')||store.get('server')||'http://localhost:8080';
   const o=$('#overlay');
-  o.innerHTML='<div class="scrim solid"><div class="modal"><div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v0.4</div></div>'+
+  o.innerHTML='<div class="scrim solid"><div class="modal"><div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+VERSION+'</div></div>'+
    '<div class="note" style="margin:8px 0 0">Create a password. Create a secure and memorable password. It cannot be recovered.</div>'+
    '<div class="auth-seg"><button data-mode="login" aria-pressed="'+(mode==='login')+'">LOG IN</button><button data-mode="signup" aria-pressed="'+(mode==='signup')+'">SIGN UP</button></div>'+
    '<form id="authForm" autocomplete="on">'+
@@ -2108,6 +2111,39 @@ M.on('signedout',reason=>{
  $('#search').value='';UI.render();
  UI.auth('login',reason||'')});
 
+/* ---------- updates ---------- */
+/* Asks the Marmot server for the client it serves; if that one carries a newer
+   VERSION, a popup offers it as a download (saved from the fetched text,
+   since <a download> is ignored across origins). */
+function newerVer(a,b){
+ const x=a.split('.').map(Number),y=b.split('.').map(Number);
+ for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0}
+ return false}
+async function checkUpdate(){
+ let html;
+ try{
+  const base=SERVER?await reachServer():store.get('server');
+  if(!base)return;
+  const r=await fetch(base.replace(/\/+$/,'')+'/index.html',{cache:'no-store'});if(!r.ok)return;html=await r.text()}
+ catch(e){console.warn('Marmot update check failed:',e.message);return}
+ const m=html.match(/const VERSION='([\d.]+)'/);
+ if(!m||!newerVer(m[1],VERSION))return;
+ const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+ const box=document.createElement('div');
+ box.innerHTML='<div class="scrim top"><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="updT">'+
+  '<div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+esc(VERSION)+'</div></div>'+
+  '<h3 id="updT" style="margin-top:16px">Update available</h3>'+
+  '<div class="note" style="margin:0">Version '+esc(m[1])+' is out. Download the new file and open it in place of this one.</div>'+
+  '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="later">LATER</button>'+
+  '<a class="send" style="text-decoration:none" data-u="get" href="'+url+'" download="marmot.html">DOWNLOAD v'+esc(m[1])+'</a></div></div></div>';
+ const scrim=box.firstChild;
+ const shut=()=>{scrim.classList.add('out');setTimeout(()=>scrim.remove(),180)};
+ scrim.addEventListener('click',e=>{const b=e.target.closest('[data-u]');
+  if(e.target===scrim||(b&&b.dataset.u==='later'))shut();
+  else if(b){toast('saved marmot.html — open it and close this tab',8000);shut()}});
+ document.body.appendChild(scrim);
+ scrim.querySelector('[data-u=get]').focus()}
+
 /* ---------- boot ---------- */
 (async function boot(){
  document.documentElement.dataset.theme=store.get('theme')||'dark';
@@ -2120,6 +2156,8 @@ M.on('signedout',reason=>{
    'If you opened this file from disk and see this, serve it over http://localhost or open it from the Marmot server instead.</div>';
   return}
  if(ON_PAGES)$('#dlHtml').classList.remove('hidden');
+ $('.rail .ver').textContent='v'+VERSION;
+ checkUpdate();
  UI.renderNow();
  const s=store.sget();
  if(s&&s.token){
