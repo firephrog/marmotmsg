@@ -35,6 +35,9 @@ const USERNAME = /^[a-zA-Z0-9._-]{3,24}$/;
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const BLOBKEY = /^[0-9a-f]{32}$/;
 const GROUPID = /^[0-9a-f]{24}$/;
+// A profile picture: already downscaled by the client to a small square image.
+const AVATAR = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const AVATAR_CHARS = 64 * 1024;
 
 /* ------------------------------------------------------------- helpers */
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
@@ -222,7 +225,7 @@ function createServer(opts) {
     const token = issueToken(row.id);
     db.deleteOtherSessions(row.id, sha256(token));
     hub.revoke(row.id);
-    return { token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable };
+    return { token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable, av: row.avatar_v };
   }));
 
   app.post('/api/logout', wrap(req => {
@@ -235,7 +238,34 @@ function createServer(opts) {
     const row = auth(req);
     const spk = db.spk(row);
     return { userId: row.id, username: row.username, created: row.created, spkId: spk.id,
-      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable };
+      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable, av: row.avatar_v };
+  }));
+
+  /**
+   * Profile pictures are public, like usernames: any signed-in user who can
+   * look someone up can fetch theirs. Views carry only the version (`av`), so
+   * clients fetch a picture once and again only when it changes.
+   */
+  app.post('/api/me/avatar', limiter(20), wrap(req => {
+    const me = auth(req);
+    const a = (req.body || {}).avatar;
+    if (a !== null && (typeof a !== 'string' || a.length > AVATAR_CHARS || !AVATAR.test(a))) {
+      throw bad('the picture must be a small JPEG, PNG or WebP image');
+    }
+    const v = db.setAvatar(me.id, a);
+    // everyone who might be showing it: my peers and the people I share a group with
+    const others = new Set(db.peers(me.id).map(p => p.peer));
+    for (const g of db.groupIdsOf(me.id)) for (const m of db.groupMembers(g)) others.add(m.userId);
+    others.add(me.id);
+    for (const o of others) hub.push(o, { t: 'avatar', userId: me.id, v });
+    return { av: v };
+  }));
+
+  app.get('/api/avatar/:id', wrap(req => {
+    auth(req);
+    const row = db.userRow(String(req.params.id));
+    if (!row) throw new HttpError(404, 'no such user');
+    return { userId: row.id, av: row.avatar_v, avatar: db.avatar(row) };
   }));
 
   /** Global discovery is opt-in: off until the user turns it on. */
@@ -255,7 +285,7 @@ function createServer(opts) {
     const row = req.query.id ? db.userRow(String(req.query.id)) : db.userRowByName(String(req.query.username || '').trim());
     if (!row) throw new HttpError(404, 'no such user');
     const u = db.publicUser(row);
-    return { user: { userId: u.userId, username: u.username, ik: u.ik, sk: u.sk } };
+    return { user: { userId: u.userId, username: u.username, ik: u.ik, sk: u.sk, av: row.avatar_v } };
   }));
 
   /** Full prekey bundle for starting a session. Consumes one one-time prekey. */
@@ -296,7 +326,7 @@ function createServer(opts) {
   /* ------------------------------------------------------------ peers */
   const peerView = p => {
     const row = db.userRow(p.peer);
-    return row && { userId: row.id, username: row.username, state: p.state, since: p.since };
+    return row && { userId: row.id, username: row.username, state: p.state, since: p.since, av: row.avatar_v };
   };
 
   /** Everyone I have a relationship with: friends, requests both ways, and people I blocked. */
@@ -393,7 +423,7 @@ function createServer(opts) {
     groupId: g.id, created: g.created, createdBy: g.createdBy,
     members: db.groupMembers(g.id).map(m => {
       const row = db.userRow(m.userId);
-      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy };
+      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy, av: row.avatar_v };
     }).filter(Boolean)
   });
   const pushGroup = groupId => { for (const m of db.groupMembers(groupId)) hub.push(m.userId, { t: 'groups' }); };

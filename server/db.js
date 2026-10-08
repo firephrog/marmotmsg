@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS users (
   identity   TEXT NOT NULL,              -- sealed {ik, sk}
   spk        TEXT NOT NULL,              -- sealed {id, pub, sig}
   vault      TEXT NOT NULL,              -- sealed, and already encrypted by the client
-  discoverable INTEGER NOT NULL DEFAULT 0 -- listed in everyone's global peers section
+  discoverable INTEGER NOT NULL DEFAULT 0, -- listed in everyone's global peers section
+  avatar     TEXT,                       -- sealed profile picture (a small data: URL), or NULL
+  avatar_v   INTEGER NOT NULL DEFAULT 0  -- when it last changed; 0 = none. Clients cache by it
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
@@ -114,7 +116,9 @@ CREATE INDEX IF NOT EXISTS group_members_user ON group_members(user_tag);
 /** Columns added after a table first shipped; applied to older databases on open. */
 const MIGRATIONS = [
   ['users', 'discoverable', 'ALTER TABLE users ADD COLUMN discoverable INTEGER NOT NULL DEFAULT 0'],
-  ['discord_links', 'public', 'ALTER TABLE discord_links ADD COLUMN public INTEGER NOT NULL DEFAULT 0']
+  ['discord_links', 'public', 'ALTER TABLE discord_links ADD COLUMN public INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'avatar', 'ALTER TABLE users ADD COLUMN avatar TEXT'],
+  ['users', 'avatar_v', 'ALTER TABLE users ADD COLUMN avatar_v INTEGER NOT NULL DEFAULT 0']
 ];
 
 function open(opts) {
@@ -159,7 +163,8 @@ function open(opts) {
     ackEnvelope: db.prepare('DELETE FROM envelopes WHERE id = ? AND to_id = ?'),
     expireEnvelopes: db.prepare('DELETE FROM envelopes WHERE ts < ?'),
     setDiscoverable: db.prepare('UPDATE users SET discoverable = ? WHERE id = ?'),
-    discoverable: db.prepare(`SELECT id, username FROM users WHERE discoverable = 1 AND id != ? AND uname LIKE ? ESCAPE '\\'
+    setAvatar: db.prepare('UPDATE users SET avatar = ?, avatar_v = ? WHERE id = ?'),
+    discoverable: db.prepare(`SELECT id, username, avatar_v FROM users WHERE discoverable = 1 AND id != ? AND uname LIKE ? ESCAPE '\\'
                               ORDER BY uname LIMIT ? OFFSET ?`),
     peer: db.prepare('SELECT body FROM peers WHERE owner_id = ? AND tag = ?'),
     putPeer: db.prepare(`INSERT INTO peers (owner_id, tag, body) VALUES (?, ?, ?)
@@ -258,8 +263,15 @@ function open(opts) {
     setDiscoverable: (id, on) => q.setDiscoverable.run(on ? 1 : 0, id),
     discoverable(excludeId, search, limit, offset) {
       const like = '%' + String(search || '').toLowerCase().replace(/[\\%_]/g, c => '\\' + c) + '%';
-      return q.discoverable.all(excludeId, like, limit, offset).map(r => ({ userId: r.id, username: r.username }));
+      return q.discoverable.all(excludeId, like, limit, offset).map(r => ({ userId: r.id, username: r.username, av: r.avatar_v }));
     },
+    /** Sets (or, with null, clears) a profile picture; returns its new version. */
+    setAvatar(id, data) {
+      const v = data ? Date.now() : 0;
+      q.setAvatar.run(data ? S.seal(data, 'users.avatar:' + id) : null, v, id);
+      return v;
+    },
+    avatar: row => row.avatar ? S.open(row.avatar, 'users.avatar:' + row.id) : null,
     /** One side of a relationship: {peer, state, since} or null. */
     peer: getPeer,
     peers: peersOf,

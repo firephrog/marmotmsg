@@ -438,6 +438,109 @@ test('group chats: empty groups, invites, names, members who are not friends, le
   assert.equal(srv.db.group(gid), undefined);
 });
 
+test('replies quote the original; deletes for me and for everyone', async () => {
+  const ivy = client(), max = client(), sol = client();
+  await ivy.signup('quill', PASS);
+  await max.signup('quoter', PASS);
+  await sol.signup('quoted', PASS);
+  await Promise.all([ivy, max, sol].map(live));
+  await befriend(ivy, max);
+  await befriend(ivy, sol);
+  const I = ivy.me.userId, X = max.me.userId;
+
+  // a reply carries the quoted message end to end
+  const q = await ivy.sendText(X, 'what time?');
+  await waitFor(() => texts(max, I).includes('what time?'), 'question');
+  await max.sendText(I, 'noon', undefined, q);
+  await waitFor(() => texts(ivy, X).includes('noon'), 'reply');
+  const got = ivy.thread(X).find(m => m.text === 'noon');
+  assert.deepEqual(got.re, { id: q, from: I, t: 'what time?' });
+  assert.deepEqual(max.thread(I).find(m => m.text === 'noon').re, got.re);
+
+  // delete for me touches only my copy
+  await ivy.deleteMessage(X, got.id, false);
+  assert.ok(!texts(ivy, X).includes('noon'));
+  assert.ok(texts(max, I).includes('noon'));
+
+  // delete for everyone leaves a placeholder on both sides; nobody can delete someone else's for everyone
+  const oops = await ivy.sendText(X, 'wrong chat');
+  await waitFor(() => texts(max, I).includes('wrong chat'), 'oops');
+  await assert.rejects(max.deleteMessage(I, oops, true), /your own/);
+  await ivy.deleteMessage(X, oops, true);
+  await waitFor(() => max.thread(I).some(m => m.id === oops && m.deleted && m.text === ''), 'tombstone at max');
+  assert.ok(ivy.thread(X).find(m => m.id === oops).deleted);
+  // a forged delete for a message the sender did not write is ignored
+  await max._sendInner(I, { k: 'del', id: q });
+  await max.sendText(I, 'still here');
+  await waitFor(() => texts(ivy, X).includes('still here'), 'after forged delete');
+  assert.equal(ivy.thread(X).find(m => m.id === q).text, 'what time?');
+
+  // groups: replies, and only the author can take a message back
+  const gid = await ivy.createGroup('plans', [X, sol.me.userId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => max.group(gid) && sol.group(gid), 'group');
+  const g1 = await max.sendText(conv, 'pizza?');
+  await waitFor(() => texts(sol, conv).includes('pizza?') && texts(ivy, conv).includes('pizza?'), 'group msg');
+  await sol.sendText(conv, 'yes', undefined, g1);
+  await waitFor(() => (ivy.thread(conv).find(m => m.text === 'yes') || {}).re, 'group reply');
+  assert.equal(ivy.thread(conv).find(m => m.text === 'yes').re.from, X);
+  await sol._sendGroup(gid, { k: 'del', g: gid, id: g1 });
+  await max.deleteMessage(conv, g1, true);
+  await waitFor(() => [ivy, sol].every(c => c.thread(conv).find(m => m.id === g1).deleted), 'group tombstones');
+  assert.ok(max.thread(conv).find(m => m.id === g1).deleted);
+
+  // the server never sees replies or deletes in the clear
+  const dump = JSON.stringify(srv.db.raw.prepare('SELECT * FROM envelopes').all()) + JSON.stringify(srv.db.raw.prepare('SELECT * FROM blobs').all());
+  assert.ok(!/pizza|what time|"del"/.test(dump));
+});
+
+test('profile pictures and group icons', async () => {
+  const PIC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const PIC2 = PIC.replace('ErkJggg==', 'ErkJgga=');
+  const una = client(), vic = client(), wes = client();
+  await una.signup('una', PASS);
+  await vic.signup('vic', PASS);
+  await wes.signup('wes', PASS);
+  await Promise.all([una, vic, wes].map(live));
+  await befriend(una, vic);
+  await befriend(una, wes);
+
+  // only small images are accepted
+  await assert.rejects(una.api('POST', '/api/me/avatar', { avatar: 'data:text/html;base64,PGI+' }), /small JPEG, PNG or WebP/);
+  await assert.rejects(una.api('POST', '/api/me/avatar', { avatar: 'data:image/png;base64,' + 'A'.repeat(70000) }), /small JPEG, PNG or WebP/);
+
+  // friends hear about a new picture over the socket, then fetch it once
+  assert.equal(vic.avatar(una.me.userId), null);
+  await una.setAvatar(PIC);
+  assert.equal(una.avatar(una.me.userId), PIC);
+  await waitFor(() => vic.avatar(una.me.userId) === PIC, 'vic to fetch the picture');
+  // it is sealed at rest
+  assert.ok(!JSON.stringify(srv.db.raw.prepare('SELECT avatar FROM users').all()).includes('iVBORw0KGgo'));
+  // a fresh sign-in learns it from the peer list
+  const vic2 = client();
+  await vic2.login('vic', PASS);
+  await vic2.loadPeers();
+  await waitFor(() => vic2.avatar(una.me.userId) === PIC, 'a new session to see it');
+  await una.setAvatar(null);
+  assert.equal(vic.me, null, 'signing in elsewhere ended the first session');
+  await waitFor(() => vic2.avatar(una.me.userId) === null, 'removal to reach friends');
+
+  // group icons travel end to end, like the name, including to people invited later
+  const gid = await una.createGroup('den', [vic2.me.userId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => vic2.displayName(conv) === 'den', 'vic joins');
+  await assert.rejects(una.setGroupIcon(gid, 'data:text/html;base64,PGI+'), /supported format/);
+  await una.setGroupIcon(gid, PIC2);
+  await waitFor(() => vic2.groupIcon(gid) === PIC2, 'icon to reach vic');
+  assert.ok(vic2.thread(conv).some(m => m.text === 'una changed the group icon'));
+  await una.inviteToGroup(gid, [wes.me.userId]);
+  await waitFor(() => wes.groupIcon(gid) === PIC2, 'a newcomer to learn the icon');
+  const dump = JSON.stringify(srv.db.raw.prepare('SELECT * FROM groups').all()) + JSON.stringify(srv.db.raw.prepare('SELECT * FROM group_members').all());
+  assert.ok(!dump.includes('iVBORw0KGgo'));
+  await vic2.setGroupIcon(gid, '');
+  await waitFor(() => una.groupIcon(gid) === null && wes.groupIcon(gid) === null, 'icon removal');
+});
+
 test('step 1 databases are migrated', async () => {
   const Database = require('better-sqlite3');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-mig-'));

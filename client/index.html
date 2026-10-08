@@ -45,6 +45,8 @@ button:disabled{opacity:.4;cursor:default}
 .av{flex:none;display:flex;align-items:center;justify-content:center;background:var(--avatar);color:var(--avatar-fg);font-family:'JetBrains Mono',monospace}
 .av-26{width:26px;height:26px;font-size:11px;background:var(--accent);color:var(--accent-ink)}
 .av-34{width:34px;height:34px;font-size:11px}
+.av-64{width:64px;height:64px;font-size:18px}
+.av{overflow:hidden}.av>img{width:100%;height:100%;object-fit:cover;display:block}
 .fp{margin-top:8px;font-size:9.5px;line-height:1.6;color:var(--dim);word-break:break-all}
 .live{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:9.5px;color:var(--ok)}
 .live i{width:5px;height:5px;background:currentColor}
@@ -88,7 +90,7 @@ button:disabled{opacity:.4;cursor:default}
 .tbtn{padding:7px 10px;border:1px solid var(--line2);font-size:10px;color:var(--muted);white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
 .tbtn:hover{border-color:var(--accent);color:var(--accent-soft)}
 .tbtn.danger:hover{border-color:var(--bad);color:var(--bad)}
-.thread{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:20px 22px;overflow-y:auto}
+.thread{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:20px 22px;overflow-y:auto;overflow-anchor:none}
 .day{display:flex;align-items:center;gap:12px}
 .day span{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--faint)}
 .day i{flex:1;height:1px;background:var(--line)}
@@ -163,6 +165,34 @@ button:disabled{opacity:.4;cursor:default}
 .pick .row-main{font-weight:500}
 .pick .chip{margin-left:auto}
 .picks .grouplbl{padding:12px 10px}
+/* replies and deletes */
+.msg{position:relative;outline:none}
+.bub{position:relative}
+.bub.has-re{min-width:min(240px,60vw)}
+.macts{position:absolute;top:-17px;z-index:2;display:flex;gap:2px;padding:3px;background:var(--rail);border:1px solid var(--line2);box-shadow:0 8px 22px rgba(0,0,0,.32);opacity:0;transform:translateY(4px) scale(.96);pointer-events:none;transition:opacity .14s ease,transform .14s ease}
+.msg.out .macts{right:8px;transform-origin:right bottom}.msg.in .macts{left:8px;transform-origin:left bottom}
+.msg:hover .macts,.msg:focus-within .macts{opacity:1;transform:none;pointer-events:auto}
+.macts button{width:30px;height:26px;display:grid;place-items:center;color:var(--muted);transition:background .12s,color .12s}
+.macts button:hover,.macts button:focus-visible{background:var(--accent-wash);color:var(--accent-soft);outline:none}
+.macts button.del:hover,.macts button.del:focus-visible{background:rgba(255,122,99,.12);color:var(--bad)}
+.macts svg,.replybar svg{width:15px;height:15px;flex:none}
+.quote{display:flex;flex-direction:column;gap:2px;width:100%;min-width:0;padding:7px 11px 7px 10px;background:var(--panel);border-left:2px solid var(--accent);font-size:12.5px;line-height:1.4;color:var(--muted);text-align:left;transition:background .15s}
+.msg .quote{width:0;min-width:100%;margin-bottom:2px}
+button.quote:hover{background:var(--row)}
+.quote b{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:9.5px;font-weight:500;letter-spacing:.04em;color:var(--accent-soft)}
+.quote span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quote span.gone,.msg.gone .body{font-style:italic;color:var(--faint)}
+.msg.gone .body,.msg.out.gone .body{background:none;color:var(--faint);border:1px dashed var(--line2);font-size:13px}
+.msg.replying .body{outline:1px solid var(--accent);outline-offset:3px}
+.replybar{display:flex;align-items:center;gap:10px;padding:9px 8px 9px 12px;background:var(--accent-wash);border-bottom:1px solid var(--line);box-shadow:inset 2px 0 0 var(--accent);animation:replyIn .18s ease both}
+.replybar>svg{color:var(--accent)}
+.replybar .grow{flex:1;min-width:0}
+.replybar .lbl{margin:0 0 3px;color:var(--accent-soft)}
+.replybar .rtext{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.replybar button{width:26px;height:26px;display:grid;place-items:center;color:var(--dim);transition:color .12s,background .12s}
+.replybar button:hover{color:var(--text);background:var(--row)}
+@keyframes replyIn{from{opacity:0;transform:translateY(4px)}}
+@media (hover:none){.macts button{width:36px;height:32px}.macts{top:-22px}}
 .tabs{display:none}
 .tabs button{flex:1;padding:11px 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--dim)}
 .tabs button[aria-current=page]{color:var(--accent-soft);box-shadow:inset 0 2px 0 var(--accent)}
@@ -316,10 +346,17 @@ function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart
 const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
 const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
+const PAGE=40;   // messages drawn per page of a thread; older pages load as you scroll up
+const AVSIZE=128,AVCHARS=48000;   // pictures are shrunk to AVSIZE² and at most AVCHARS of data: URL
+/** A picture as it may come off the wire: a small base64 JPEG, PNG or WebP data: URL. */
+const isPic=x=>typeof x==='string'&&x.length<=64*1024&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
 const isDiscord=id=>String(id).startsWith('dc:');
 const isGroup=id=>String(id).startsWith('g:');
 const GID=/^[0-9a-f]{24}$/,MAXNAME=64;
 const clock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+/** The quote a reply carries {id, from, t}, cleaned up when it comes off the wire. */
+const reOf=x=>x&&typeof x.id==='string'&&x.id&&x.id.length<=64
+ ?{id:x.id,from:typeof x.from==='string'?x.from.slice(0,64):'',t:typeof x.t==='string'?x.t.slice(0,200):''}:undefined;
 
 /* --------------------------------------------------------------- crypto */
 /* The Signal construction on WebCrypto primitives:
@@ -538,7 +575,9 @@ const Ratchet={
      opk:<id>          one-time prekey pair
      peer:<userId>     pinned identity {userId,username,ik,sk,verified}
      sess:<userId>     ratchet record {active,archived,eks}
-     msg:<userId>:<id> message {id,peer,dir,text,ts,state}
+     msg:<userId>:<id> message {id,peer,dir,text,ts,state,re?}; `re` {id,from,t} is the
+                       message it replies to, as quoted when it was sent. A message
+                       deleted for everyone stays as {..., text:'', deleted:true}
    Relationships (friends, requests, blocks) are not records: the server
    holds them, because it is the server that refuses traffic between
    strangers. They are kept in this.peers as {userId,username,state,since}.
@@ -553,6 +592,7 @@ const Ratchet={
    once per member over the ordinary pairwise ratchet, tagged with the group.
      grp:<groupId>     {members:[userId]} as last seen, to tell joins and leaves apart
      gname:<groupId>   {name,ts,by} the group's name, newest wins
+     gicon:<groupId>   {icon,ts,by} the group's icon (a small data: URL, '' for none), newest wins
      msg:g:<groupId>:<id>  message, with `from` on inbound ones and `got`
                        (who has confirmed delivery) on outbound ones */
 class Tx{
@@ -755,7 +795,7 @@ class MarmotClient{
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
    peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
-   groups:new Map()})}
+   groups:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set()})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -850,6 +890,7 @@ class MarmotClient{
    const r=await this.api('POST','/api/login',{username,auth:d.auth});
    this.token=r.token;this.vk=d.vkRaw;this.discoverable=!!r.discoverable;
    await this._openVault(r.vault,d.vaultKey,r.userId,r.username);
+   this._learnAv(r.userId,r.av);
   }catch(e){this._reset();throw e}
   this.connect();this.replenish().catch(()=>{});this.emit('change');
   return this.me}
@@ -861,7 +902,7 @@ class MarmotClient{
    const me=await this.api('GET','/api/me');
    const v=await this.api('GET','/api/vault');
    await this._openVault(v.vault,await CR.aesKey(ub64(s.vk)),me.userId,me.username);
-   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;
+   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._learnAv(me.userId,me.av);
   }catch(e){this._reset();throw e}
   this.connect();this.replenish().catch(()=>{});this.emit('change');
   return this.me}
@@ -909,6 +950,7 @@ class MarmotClient{
    else if(m.t==='groups')this.loadGroups().catch(()=>{});
    else if(m.t==='links')this.loadLinks().catch(()=>{});
    else if(m.t==='prekeys')this.replenish().catch(()=>{});
+   else if(m.t==='avatar'){if(this._learnAv(m.userId,m.v))this.emit('change')}
    else if(m.t==='revoked')this._signedOut('this account was signed in on another device')};
   ws.onerror=()=>{};
   ws.onclose=()=>{
@@ -919,23 +961,29 @@ class MarmotClient{
    this._wsTimer=setTimeout(()=>this.connect(),this._backoff)}}
 
  /** Pulls everything waiting in the mailbox. Envelopes the socket already
-     delivered are skipped, so the two paths never double-process a frame. */
+     delivered are skipped, so the two paths never double-process a frame.
+     Messages found this way are counted for one 'backlog' event instead of
+     each raising 'message'. */
  async drain(){
   if(this._draining)return this._draining;
   this._draining=(async()=>{
+   this.backlog={n:0,peers:new Set()};
    try{
     for(let round=0;round<20;round++){
      const r=await this.api('GET','/api/inbox');
-     r.envelopes.forEach(e=>this._enqueue(e));
+     r.envelopes.forEach(e=>this._enqueue(e,true));
      await this.inq;
      if(r.envelopes.length<300)break}
-   }finally{this._draining=null}})();
+   }finally{
+    // what piled up while we were away is one summary, not a toast per message
+    const b=this.backlog;this.backlog=null;this._draining=null;
+    if(b.n)this.emit('backlog',b.n,b.peers.size)}})();
   return this._draining}
 
- _enqueue(e){
+ _enqueue(e,quiet){
   if(!this.token||this.done.has(e.id)||this.queued.has(e.id))return;
   this.queued.add(e.id);
-  this.inq=this.inq.then(()=>this._handle(e)).catch(err=>{
+  this.inq=this.inq.then(()=>this._handle(e,quiet)).catch(err=>{
    console.warn('envelope '+e.id+' not processed yet:',err.message);
    this._retrySoon()}).finally(()=>this.queued.delete(e.id))}
 
@@ -945,16 +993,16 @@ class MarmotClient{
   const have=this.get('peer:'+peerId);if(have)return have;
   let p={userId:peerId,username:null,verified:false,added:Date.now()};
   try{const r=await this.api('GET','/api/users/lookup?id='+encodeURIComponent(peerId));
-   if(await Acct.userId(r.user.ik,r.user.sk)===peerId)p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk})}
+   if(await Acct.userId(r.user.ik,r.user.sk)===peerId){p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk});this._learnAv(peerId,r.user.av)}}
   catch(e){if(e.network)throw e}
   await tx.put('peer:'+peerId,p);return p}
 
  /** One inbound envelope → one atomic commit: the advanced ratchet, the stored
      message, the receipt going back, the spent prekey and the mailbox ack all
      land together, or nothing does and the envelope is retried. */
- async _handle(e){
+ async _handle(e,quiet){
   if(this.done.has(e.id)||!this.token)return;
-  if(isDiscord(e.from))return this._handleDiscord(e);
+  if(isDiscord(e.from))return this._handleDiscord(e,quiet);
   const peerId=e.from;
   let note=null,sig=null;
   await this.lock(peerId,async()=>{
@@ -980,10 +1028,12 @@ class MarmotClient{
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
       const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-      await tx.put(key,{id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received'});
+      await tx.put(key,{id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)});
       note={peer:peerId,text:inner.t}}
      const r=await Ratchet.encrypt(sess,{k:'receipt',ids:[inner.id]});
      sess=r.rec;tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
+    }else if(inner.k==='del'&&typeof inner.id==='string'){
+     await this._tombstone(tx,'msg:'+peerId+':'+inner.id,m=>m.dir==='in')
     }else if(inner.k==='receipt'&&Array.isArray(inner.ids)){
      for(const id of inner.ids.slice(0,100)){
       const key='msg:'+peerId+':'+id,m=this.get(key);
@@ -1002,7 +1052,7 @@ class MarmotClient{
    this.done.add(e.id);
    if(this.done.size>5000)this.done=new Set([...this.done].slice(-2500))});
   if(sig)this.voice._signal(peerId,sig,e.ts);
-  if(note){this.unread.set(note.peer,(this.unread.get(note.peer)||0)+1);this.emit('message',note.peer,note.text)}}
+  if(note)this._note(note.peer,note.text,quiet)}
 
  /** The group part of an inbound message: a text, a receipt for one of mine,
      or a new name. Only counts if the sender is in the group, as far as the
@@ -1018,11 +1068,15 @@ class MarmotClient{
    const key='msg:'+conv+':'+inner.id;let note=null;
    if(!this.get(key)){
     const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-    await tx.put(key,{id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received'});
+    await tx.put(key,{id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)});
     note={peer:conv,text:this.displayName(peerId)+': '+inner.t}}
    const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
    tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
    return {sess:r.rec,note}}
+  if(inner.k==='del'&&typeof inner.id==='string'){
+   // only whoever wrote a message can take it back
+   await this._tombstone(tx,'msg:'+conv+':'+inner.id,m=>m.dir==='in'&&m.from===peerId);
+   return none}
   if(inner.k==='receipt'&&Array.isArray(inner.ids)){
    for(const id of inner.ids.slice(0,100)){
     const key='msg:'+conv+':'+id,m=this.get(key);
@@ -1037,12 +1091,21 @@ class MarmotClient{
    if(inner.announce&&(!cur||cur.name!==name))
     await tx.put('msg:'+conv+':n'+e.id,{id:'n'+e.id,peer:conv,dir:'sys',ts:e.ts,
      text:this.displayName(peerId)+(name?' renamed the group to “'+name+'”':' removed the group name')})}
+  if(inner.k==='group'&&inner.t==='icon'&&(inner.icon===''||isPic(inner.icon))&&Number.isFinite(inner.ts)){
+   const cur=this.get('gicon:'+gid);
+   // same rule as the name: newest wins, a tie goes to the lower user id
+   if(cur&&(inner.ts<cur.ts||(inner.ts===cur.ts&&peerId>cur.by)))return none;
+   await tx.put('gicon:'+gid,{icon:inner.icon,ts:inner.ts,by:peerId});
+   if(inner.announce&&(!cur||cur.icon!==inner.icon))
+    await tx.put('msg:'+conv+':i'+e.id,{id:'i'+e.id,peer:conv,dir:'sys',ts:e.ts,
+     text:this.displayName(peerId)+(inner.icon?' changed the group icon':' removed the group icon')})}
   return none}
 
  /* ---- group chats ---- */
  group(gid){return this.groups.get(String(gid).replace(/^g:/,''))||null}
  inGroup(gid,userId){const g=this.group(gid);return !!g&&g.members.some(m=>m.userId===userId)}
  groupName(gid){gid=String(gid).replace(/^g:/,'');const n=this.get('gname:'+gid);return n&&n.name?n.name:''}
+ groupIcon(gid){gid=String(gid).replace(/^g:/,'');const n=this.get('gicon:'+gid);return n&&n.icon||null}
 
  /** Who is in which group, from the server. Joins and leaves since this account
      last looked become lines in the group's history. */
@@ -1052,7 +1115,7 @@ class MarmotClient{
    const r=await this.api('GET','/api/groups');
    if(!this.token)return;
    const now=new Map(r.groups.map(g=>[g.groupId,g]));
-   const known=new Map();for(const g of now.values())for(const m of g.members)known.set(m.userId,m.username);
+   const known=new Map();for(const g of now.values())for(const m of g.members){known.set(m.userId,m.username);this._learnAv(m.userId,m.av)}
    const name=id=>!id?'someone':id===this.me.userId?'you':known.get(id)||this.displayName(id);
    const tx=new Tx(this);
    let n=0;const line=async(gid,text)=>{const id='j'+Date.now().toString(36)+'-'+(n++);
@@ -1088,6 +1151,8 @@ class MarmotClient{
   // newcomers learn the current name from whoever invited them
   const n=this.get('gname:'+gid);
   if(n&&r.added.length)await this._sendGroup(gid,{k:'group',t:'name',g:gid,name:n.name,ts:n.ts},null,r.added).catch(()=>{});
+  const ic=this.get('gicon:'+gid);
+  if(ic&&r.added.length)await this._sendGroup(gid,{k:'group',t:'icon',g:gid,icon:ic.icon,ts:ic.ts},null,r.added).catch(()=>{});
   return r.added}
 
  async leaveGroup(gid){
@@ -1106,6 +1171,17 @@ class MarmotClient{
    await tx.put('gname:'+gid,{name,ts,by:this.me.userId});
    if(announce){const id='n'+uid();await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:Date.now(),
     text:name?'you renamed the group to “'+name+'”':'you removed the group name'})}})}
+
+ /** Sets (or, with '', removes) a group's icon for every member. `icon` is already shrunk. */
+ async setGroupIcon(gid,icon){
+  gid=String(gid).replace(/^g:/,'');icon=icon||'';
+  if(icon&&!isPic(icon))throw new Error('that picture is not in a supported format');
+  if(!this.group(gid))throw new Error('you are not in this group');
+  const ts=Math.max(Date.now(),((this.get('gicon:'+gid)||{}).ts||0)+1);
+  await this._sendGroup(gid,{k:'group',t:'icon',g:gid,icon,ts,announce:true},async tx=>{
+   await tx.put('gicon:'+gid,{icon,ts,by:this.me.userId});
+   const id='i'+uid();await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:Date.now(),
+    text:icon?'you changed the group icon':'you removed the group icon'})})}
 
  /** Encrypts `inner` to every other member (or just `only`) and commits it all at
      once with whatever `more(tx)` adds. Each member's ratchet is locked in a
@@ -1133,6 +1209,7 @@ class MarmotClient{
   const r=await this.api('GET','/api/users/lookup?username='+encodeURIComponent(username));
   const u=r.user;
   if(await Acct.userId(u.ik,u.sk)!==u.userId)throw new Error('the server returned keys that do not match this user');
+  this._learnAv(u.userId,u.av);
   const clash=[...this.recs.entries()].find(([k,p])=>k.startsWith('peer:')&&p.userId!==u.userId&&
    p.username&&p.username.toLowerCase()===u.username.toLowerCase());
   if(!this.get('peer:'+u.userId)){
@@ -1154,6 +1231,7 @@ class MarmotClient{
   const r=await this.api('GET','/api/peers');
   const before=this.peers,first=!this.peersLoaded;
   this.peers=new Map(r.peers.map(p=>[p.userId,p]));this.peersLoaded=true;
+  for(const p of r.peers)this._learnAv(p.userId,p.av);
   for(const p of this.peers.values()){
    const was=before.get(p.userId);
    if(!first&&p.state==='incoming'&&(!was||was.state!=='incoming'))this.emit('peer','request',p);
@@ -1182,7 +1260,31 @@ class MarmotClient{
  /** Users who opted into global discovery; q filters by username. */
  async discover(q,offset){
   const r=await this.api('GET','/api/peers/global?q='+encodeURIComponent(q||'')+'&offset='+(offset||0));
+  for(const u of r.users)this._learnAv(u.userId,u.av);
   return {users:r.users,more:r.more}}
+
+ /* ---- profile pictures ---- */
+ /** Notes the version of someone's picture the server last mentioned; true if it moved. */
+ _learnAv(id,v){if(!id||!Number.isFinite(v)||this.avv.get(id)===v)return false;this.avv.set(id,v);return true}
+ /** Someone's profile picture as a data: URL, or null. It is fetched the first time it is
+     asked for and again when its version moves on; 'change' fires once it arrives. */
+ avatar(id){
+  const v=this.avv.get(id),c=this.avc.get(id);
+  if(!v)return null;
+  if(c&&c.v===v)return c.src;
+  if(this.token&&!this._avReq.has(id)){
+   this._avReq.add(id);
+   this.api('GET','/api/avatar/'+encodeURIComponent(id)).then(r=>{
+    if(!this.token)return;
+    this.avc.set(id,{v:r.av,src:isPic(r.avatar)?r.avatar:null});
+    if(r.av>=(this.avv.get(id)||0))this.avv.set(id,r.av);
+    this.emit('change')}).catch(()=>{}).finally(()=>this._avReq.delete(id))}
+  return c?c.src:null}
+ /** Uploads my picture (already shrunk), or removes it with null. */
+ async setAvatar(src){
+  if(src&&!isPic(src))throw new Error('that picture is not in a supported format');
+  const r=await this.api('POST','/api/me/avatar',{avatar:src||null});
+  this.avc.set(this.me.userId,{v:r.av,src:src||null});this.avv.set(this.me.userId,r.av);this.emit('change')}
 
  relation(id){const p=this.peers.get(id);return p?p.state:'none'}
  isFriend(id){return this.relation(id)==='friend'}
@@ -1207,7 +1309,7 @@ class MarmotClient{
  link(id){return this.links.get(String(id).replace(/^dc:/,''))||null}
 
  /** Discord traffic is plaintext from the server: no ratchet, just store and ack. */
- async _handleDiscord(e){
+ async _handleDiscord(e,quiet){
   const peer=e.from;let p=null,note=null;
   try{p=JSON.parse(e.payload)}catch(x){}
   await this.lock(peer,async()=>{
@@ -1224,7 +1326,7 @@ class MarmotClient{
    await tx.commit();
    this.done.add(e.id)});
   if(p&&p.gone)this.loadLinks().catch(()=>{});
-  if(note){this.unread.set(peer,(this.unread.get(peer)||0)+1);this.emit('message',peer,note.text)}}
+  if(note)this._note(peer,note.text,quiet)}
 
  async _sendDiscord(peerId,text,reuseId){
   const linkId=peerId.slice(3);
@@ -1243,17 +1345,20 @@ class MarmotClient{
 
  /* ---- messaging ---- */
 
- async sendText(peerId,text,reuseId){
+ /** `replyTo` is the id of a message in the same conversation to quote. */
+ async sendText(peerId,text,reuseId,replyTo){
   text=String(text||'');
   if(!text.trim())return null;
   if(text.length>MAXTEXT)throw new Error('messages are limited to '+MAXTEXT+' characters');
   if(isDiscord(peerId))return this._sendDiscord(peerId,text,reuseId);
   const grp=isGroup(peerId);
   if(grp?!this.group(peerId):!this.isFriend(peerId))throw new Error(grp?'you are not in this group':'you can only message friends');
-  const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending'};
+  const q=replyTo&&this.get('msg:'+peerId+':'+replyTo);
+  const re=q&&q.dir!=='sys'&&!q.deleted?{id:q.id,from:q.dir==='out'?this.me.userId:q.from||peerId,t:q.text.slice(0,200)}:undefined;
+  const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending',re};
   this.pending.set(m.id,m);this.emit('change');
   try{
-   const inner={k:'text',id:m.id,t:text,ts:m.ts},save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
+   const inner={k:'text',id:m.id,t:text,ts:m.ts,re},save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
    if(grp)await this._sendGroup(peerId.slice(2),Object.assign(inner,{g:peerId.slice(2)}),save);
    else await this._sendInner(peerId,inner,save);
    this.pending.delete(m.id);
@@ -1284,6 +1389,13 @@ class MarmotClient{
   await tx.put('sess:'+peerId,out.rec);
   return out.env}
 
+ /** Counts an incoming message as unread and announces it, or, while
+     catching up on the mailbox, adds it to the backlog summary instead. */
+ _note(peer,text,quiet){
+  this.unread.set(peer,(this.unread.get(peer)||0)+1);
+  if(quiet&&this.backlog){this.backlog.n++;this.backlog.peers.add(peer)}
+  else this.emit('message',peer,text)}
+
  /** One line of call history in the chat; a missed call also counts as unread. */
  async _logCall(peer,id,ts,text,missed){
   const key='msg:'+peer+':'+id;
@@ -1295,8 +1407,27 @@ class MarmotClient{
   const m=this.pending.get(msgId);
   if(!m||m.state!=='failed')return;
   this.pending.delete(msgId);
-  return this.sendText(m.peer,m.text,m.id)}
+  return this.sendText(m.peer,m.text,m.id,m.re&&m.re.id)}
  discard(msgId){this.pending.delete(msgId);this.emit('change')}
+
+ /** Deletes a message. Just for me: it is gone from this account's history.
+     For everyone (only my own, in an encrypted chat): every copy becomes a
+     "message deleted" placeholder, sent the same way as the message was. */
+ async deleteMessage(peerId,msgId,everyone){
+  const key='msg:'+peerId+':'+msgId,m=this.get(key);
+  if(!m)return;
+  if(!everyone){const tx=new Tx(this);await tx.del(key);return tx.commit()}
+  if(m.dir!=='out'||m.deleted||isDiscord(peerId))throw new Error('you can only delete your own messages for everyone');
+  const tomb=tx=>this._tombstone(tx,key,()=>true);
+  if(isGroup(peerId)){const gid=peerId.slice(2);return this._sendGroup(gid,{k:'del',g:gid,id:msgId},tomb)}
+  if(!this.isFriend(peerId))throw new Error('you can only delete for everyone while you are friends');
+  return this._sendInner(peerId,{k:'del',id:msgId},tomb)}
+ /** Blanks the message at `key` into a placeholder, if there is one and ok(it) says so. */
+ async _tombstone(tx,key,ok){
+  const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
+  if(!m||m.dir==='sys'||m.deleted||!ok(m))return false;
+  const t=Object.assign({},m,{text:'',deleted:true});delete t.re;
+  await tx.put(key,t);return true}
 
  /** Tops the server back up with one-time prekeys when it runs low. */
  async replenish(){
@@ -1366,6 +1497,36 @@ function shortTime(ts){if(!ts)return '';const d=new Date(ts),n=new Date();
  if(d.toDateString()===n.toDateString())return hm(ts);
  if(n-d<6*864e5)return d.toLocaleDateString(undefined,{weekday:'short'}).toLowerCase();
  return d.toLocaleDateString(undefined,{month:'numeric',day:'numeric'})}
+/** Asks for an image file; resolves with it, or null if none was chosen. */
+function pickImage(){
+ return new Promise(res=>{
+  const i=document.createElement('input');i.type='file';i.accept='image/*';
+  i.addEventListener('change',()=>res(i.files&&i.files[0]||null));
+  i.addEventListener('cancel',()=>res(null));
+  i.click()})}
+/** Center-crops an image file to a square and shrinks it to AVSIZE², as a small data: URL.
+    WebP where the browser can encode it, else JPEG (on white, since JPEG has no transparency). */
+async function shrinkImage(file){
+ if(!file||!/^image\//.test(file.type))throw new Error('that file is not an image');
+ if(file.size>25*1024*1024)throw new Error('that image is too large');
+ const url=URL.createObjectURL(file);
+ try{
+  const img=new Image();img.src=url;
+  try{await img.decode()}catch(e){throw new Error('could not read that image')}
+  const w=img.naturalWidth,h=img.naturalHeight,side=Math.min(w,h);
+  if(!side)throw new Error('could not read that image');
+  const c=document.createElement('canvas');c.width=c.height=AVSIZE;
+  const x=c.getContext('2d');x.imageSmoothingQuality='high';
+  const draw=bg=>{x.clearRect(0,0,AVSIZE,AVSIZE);if(bg){x.fillStyle=bg;x.fillRect(0,0,AVSIZE,AVSIZE)}
+   x.drawImage(img,(w-side)/2,(h-side)/2,side,side,0,0,AVSIZE,AVSIZE)};
+  draw(null);
+  const webp=c.toDataURL('image/webp',.85).startsWith('data:image/webp');
+  if(!webp)draw('#fff');
+  for(const q of [.85,.7,.55,.4]){
+   const d=c.toDataURL(webp?'image/webp':'image/jpeg',q);
+   if(d.length<=AVCHARS)return d}
+  throw new Error('could not make that image small enough')}
+ finally{URL.revokeObjectURL(url)}}
 function toast(msg,ms){const t=document.createElement('div');t.className='toast';t.textContent=msg;$('#toasts').appendChild(t);
  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
 const store={
@@ -1376,9 +1537,14 @@ const store={
 };
 
 const M=new MarmotClient();
+const svg=d=>'<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">'+d+'</svg>';
+const ICON={
+ reply:svg('<path d="M6.5 3.5 2.5 7.5l4 4"/><path d="M3 7.5h5.5a5 5 0 0 1 5 5v.5"/>'),
+ trash:svg('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.75 7v4.5M9.25 7v4.5"/>'),
+ x:svg('<path d="M4 4l8 8M12 4l-8 8"/>')};
 
 const UI={
- S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',
+ S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',reply:null,
     global:{q:null,users:[],more:false,loading:false,err:'',seq:0}},
  _raf:0,
  /** Replays el's entrance animation: for when what it shows changes, not for every re-render. */
@@ -1401,7 +1567,7 @@ const UI={
   const total=unread+requests+dcUnread,vc=M.voice.call;
   document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+total+') ':'')+'Marmot';
   if(M.me){
-   $('#meAv').textContent=initials(M.me.username);$('#meName').textContent=M.me.username;
+   this.setAv($('#meAv'),M.me.userId,M.me.username);$('#meName').textContent=M.me.username;
    $('#meFp').textContent='id '+M.me.userId.slice(0,16)}
   else{$('#meAv').textContent='··';$('#meName').textContent='signed out';$('#meFp').textContent=''}
   const live=M.wsState==='live';
@@ -1437,15 +1603,22 @@ const UI={
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
   rows.innerHTML=list.length?list.map(c=>{
    const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last,grp=isGroup(c.id);
-   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+l.text:(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
+   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':l.text):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
    return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
-    '<div class="av av-34'+(grp?' grp':'')+'">'+(isDiscord(c.id)?'#':esc(initials(M.displayName(c.id))))+'</div>'+
+    this.av(c.id,'av-34')+
     '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+
     (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+
     (grp?'<span class="chip">'+(M.group(c.id)?'GROUP':'LEFT')+'</span>':'')+'</div>'+
     '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
     '<div class="row-right"><div class="time">'+esc(shortTime(c.ts))+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'}).join('')
    :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO START A GROUP')+'</div>'},
+ /** An avatar tile: the picture if there is one, else initials (# for a Discord channel). */
+ av(id,cls,name,attrs){return '<div class="av '+cls+(isGroup(id)?' grp':'')+'"'+(attrs||'')+'>'+this.avInner(id,name)+'</div>'},
+ avInner(id,name){
+  if(isDiscord(id))return '#';
+  const src=isGroup(id)?M.groupIcon(id):M.avatar(id);
+  return src?'<img src="'+esc(src)+'" alt="">':esc(initials(name||M.displayName(id)))},
+ setAv(el,id,name){const h=this.avInner(id,name);if(el&&el.innerHTML!==h)el.innerHTML=h},
  memberCount(id){const g=M.group(id),n=g?g.members.length:0;return n+' member'+(n===1?'':'s')},
 
  /* ---------- discord ---------- */
@@ -1479,7 +1652,7 @@ const UI={
    '<div class="row-right"><span class="chip">JOIN</span></div></button>'},
  dcRow(id,l){
   const t=M.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
-  const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+last.text:(l?'no messages yet':'');
+  const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+(last.deleted?'message deleted':last.text):(l?'no messages yet':'');
   return '<button class="row" data-dc="'+esc(id)+'"'+(id===this.S.dc?' aria-current="true"':'')+'>'+
    '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(id))+'</span></div>'+
    '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
@@ -1490,7 +1663,7 @@ const UI={
  peerRow(p,sub){
   const st=M.relation(p.userId),[label,cls]=st==='incoming'?['REQUEST','warn']:this.STATE[st];
   return '<button class="row" data-peer="'+esc(p.userId)+'"'+(p.userId===this.S.peer?' aria-current="true"':'')+'>'+
-   '<div class="av av-34">'+esc(initials(p.username))+'</div>'+
+   this.av(p.userId,'av-34',p.username)+
    '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(p.username)+'</span>'+
    (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</div>'+
    '<div class="row-sub">'+esc(sub)+'</div></div>'+
@@ -1549,7 +1722,7 @@ const UI={
    none:b('request','ADD FRIEND','send')+b('block','BLOCK','tbtn danger')}[st];
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
-   '<div class="av av-34">'+esc(initials(p.username))+'</div><div style="min-width:0"><div class="pane-title">'+name+
+   this.av(id,'av-34',p.username)+'<div style="min-width:0"><div class="pane-title">'+name+
    (pin.verified?' <span class="chip ok">VERIFIED</span>':'')+'</div><div class="meta">'+this.STATE[st][0].toLowerCase()+'</div></div></div>'+
    '<div class="sheet"><div class="sec"><div class="btnrow" style="margin-top:0">'+acts+'</div>'+
    '<div class="err" id="peerErr"></div></div>'+
@@ -1605,22 +1778,22 @@ const UI={
     pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
      '<div class="av av-34" id="chatAv"></div><div style="min-width:0"><div class="pane-title" id="chatName"></div><div class="meta" id="chatMeta"></div></div>'+
      '<div class="acts" id="chatActs">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
-      :isGroup(chat)?'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
+      :isGroup(chat)?'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-icon">ICON</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
       :'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
-     '<div class="composer" id="composerBox"><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
+     '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
      '<div class="composer-bar"><span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
   if(scr==='settings')this.fillSettings();
-  else if(chat)this.renderThread()},
+  else if(chat){this.renderThread();this.renderReply();this.more()}},
 
  renderThread(){
   const id=this.cur(),th=$('#thread');if(!id||!th)return;
   if(isDiscord(id))return this.renderDiscord(id,th);
   if(isGroup(id))return this.renderGroup(id,th);
   const p=M.peer(id),st=M.relation(id);
-  $('#chatAv').textContent=initials(M.displayName(id));
+  this.setAv($('#chatAv'),id);
   $('#chatName').innerHTML=esc(M.displayName(id))+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
   $('#chatMeta').textContent='id '+id.slice(0,16)+' · '+(st==='friend'?'session '+M.sessionState(id):this.STATE[st][0].toLowerCase());
   // only friends can be messaged: otherwise the composer gives way to the next step
@@ -1640,18 +1813,18 @@ const UI={
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
   const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
   let html='',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
   if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
   if(p.replaced)html+='<div class="sys" data-k="replaced">this username used to belong to a different identity. verify before trusting it.</div>';
-  for(const m of list){
+  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>'+html;
+  for(const m of shown){
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
    if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :' · '+m.state):'';
-   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
-    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend})}
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
@@ -1680,6 +1853,31 @@ const UI={
    else if(x)o.replaceChild(c,x);else o.appendChild(c)});
   while(oc.length>nc.length)o.lastChild.remove()},
 
+ /** The part of a thread that is drawn: the newest PAGE messages at first, a page more
+     each time the reader nears the top (more), and back to one page once they are at the
+     bottom again. The window starts at a timestamp, so new arrivals only add to it. */
+ win(id,list,atBottom){
+  if(this._winFor!==id){this._winFor=id;this._from=null}
+  let i=this._from==null?-1:list.findIndex(m=>m.ts>=this._from);
+  if(i<0||atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-PAGE);this._from=list.length?list[i].ts:null}
+  this._more=i>0;
+  return list.slice(i)},
+ /** Widens the window back to ts. What comes into view is history, not news, so it does not animate in. */
+ reveal(ts){
+  const seen=this._seen;
+  if(seen)for(const m of M.thread(this.cur()))if(m.ts>=ts&&m.ts<this._from)seen.add(m.id);
+  this._from=ts},
+ /** Draws the next page of older messages when the reader is near the top, keeping their place. */
+ more(){
+  const th=$('#thread'),id=this.cur();
+  if(!th||!id||id!==this._winFor||!this._more||th.scrollTop>200)return;
+  const list=M.thread(id),i=list.findIndex(m=>m.ts>=this._from);
+  if(i<=0)return;
+  this.reveal(list[Math.max(0,i-PAGE)].ts);
+  const h=th.scrollHeight,top=th.scrollTop;
+  this.renderThread();
+  th.scrollTop=top+th.scrollHeight-h},
+
  /** m => ' new' for messages that arrived since this thread was last drawn.
      Opening a thread animates the pane instead, so nothing counts as new then. */
  fresh(id,list){
@@ -1687,6 +1885,79 @@ const UI={
   if(first){this._seenFor=id;this._seen=new Set()}
   const seen=this._seen;
   return m=>{if(seen.has(m.id))return '';seen.add(m.id);return first?'':' new'}},
+
+ /** One chat bubble: who wrote it, the message it quotes, and the actions that
+     float over its corner on hover (or on tap, which focuses it).
+     o: {fresh, state (stamp suffix), who (html), reply (whether replying is possible)} */
+ bubble(conv,m,o){
+  const settled=m.state!=='sending'&&m.state!=='failed',r=this.S.reply;
+  const acts=settled?'<div class="macts">'+
+   (o.reply&&!m.deleted?'<button data-reply="'+esc(m.id)+'" title="Reply" aria-label="Reply">'+ICON.reply+'</button>':'')+
+   '<button class="del" data-del="'+esc(m.id)+'" title="Delete" aria-label="Delete">'+ICON.trash+'</button></div>':'';
+  return '<div class="msg '+m.dir+o.fresh+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+(m.deleted?' gone':'')+
+   (r&&r.conv===conv&&r.id===m.id?' replying':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1">'+(o.who||'')+
+   '<div class="bub'+(m.re&&!m.deleted?' has-re':'')+'">'+acts+(m.re&&!m.deleted?this.quoteHTML(conv,m.re,true):'')+
+   '<div class="body">'+(m.deleted?(m.dir==='out'?'you deleted this message':'message deleted'):esc(m.text))+'</div></div>'+
+   '<div class="stamp">'+hm(m.ts)+(m.deleted?'':o.state)+'</div></div>'},
+ /** The quoted message, as it reads now if it is still here, else as it was quoted. */
+ quoteHTML(conv,re,jump){
+  const live=M.get('msg:'+conv+':'+re.id),gone=!!(live&&live.deleted);
+  const name=re.from===M.me.userId?'you':M.displayName(re.from||conv);
+  const text=gone?'message deleted':live?live.text:re.t||'original message';
+  const tag=jump?'button':'div';
+  return '<'+tag+' class="quote"'+(jump?' data-jump="'+esc(re.id)+'" title="Jump to message"':'')+'><b>'+esc(name)+'</b>'+
+   '<span'+(gone?' class="gone"':'')+'>'+esc(text.slice(0,200))+'</span></'+tag+'>'},
+
+ /** The "replying to" strip on top of the composer. */
+ renderReply(){
+  const bar=$('#replyBar');if(!bar)return;
+  const r=this.S.reply,conv=this.cur();
+  const m=r&&r.conv===conv&&M.get('msg:'+conv+':'+r.id);
+  if(r&&r.conv===conv&&(!m||m.deleted))this.S.reply=null;
+  if(!m||m.deleted){bar.classList.add('hidden');bar.innerHTML='';return}
+  const name=m.dir==='out'?'yourself':M.displayName(m.from||conv);
+  const html=ICON.reply+'<div class="grow"><div class="lbl">REPLYING TO '+esc(name.toUpperCase())+'</div>'+
+   '<div class="rtext">'+esc(m.text.slice(0,200))+'</div></div>'+
+   '<button data-act="reply-cancel" title="Cancel reply (Esc)" aria-label="Cancel reply">'+ICON.x+'</button>';
+  bar.classList.remove('hidden');
+  if(bar.innerHTML!==html)bar.innerHTML=html},
+ startReply(id){
+  const conv=this.cur();if(!conv)return;
+  this.S.reply={conv,id};this.render();
+  const ta=$('#composer');if(ta)ta.focus()},
+ cancelReply(){if(!this.S.reply)return;this.S.reply=null;this.render()},
+
+ /** Scrolls to a quoted message and flashes it. */
+ jump(id){
+  const m=M.get('msg:'+this.cur()+':'+id);
+  if(m&&this._from!=null&&m.ts<this._from){this.reveal(m.ts);this.renderThread()}
+  const el=[...document.querySelectorAll('#thread .msg')].find(x=>x.dataset.k==='m'+id);
+  if(!el)return toast('that message is no longer in this chat');
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  const b=el.querySelector('.body'),c=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if(b&&b.animate)b.animate([{boxShadow:'0 0 0 2px '+c},{boxShadow:'0 0 0 2px '+c,offset:.5},{boxShadow:'0 0 0 2px transparent'}],{duration:1400,easing:'ease-out'})},
+
+ /** Delete for me, or — for my own messages in an encrypted chat — for everyone. */
+ askDelete(id){
+  const conv=this.cur(),m=conv&&M.get('msg:'+conv+':'+id);if(!m)return;
+  const all=m.dir==='out'&&!m.deleted&&!isDiscord(conv)&&(isGroup(conv)?!!M.group(conv):M.isFriend(conv));
+  const note=m.deleted?'This removes the placeholder from your history.'
+   :all?'Delete for everyone replaces it with “message deleted” on every copy in this chat, including people who have not opened it yet. Delete for me only removes it from your history.'
+   :isDiscord(conv)?'This removes it from your Marmot history only. It stays in the Discord channel.'
+   :'This removes it from your history only. '+(m.dir==='out'?'Others in the chat keep their copy.':'The sender and anyone else in the chat keep theirs.');
+  const preview=m.deleted?'':'<div class="quote" style="margin:0 0 4px"><b>'+esc(m.dir==='out'?'you':m.author||M.displayName(m.from||conv))+' · '+esc(hm(m.ts))+'</b><span>'+esc(m.text.slice(0,200))+'</span></div>';
+  this.modal('<h3>'+(m.deleted?'Remove placeholder?':'Delete message?')+'</h3>'+preview+'<div class="note">'+esc(note)+'</div>'+
+   '<div class="err" id="delMsgErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
+   '<button class="'+(all?'tbtn danger':'hang')+'" data-m="me">'+(m.deleted?'REMOVE':'DELETE FOR ME')+'</button>'+
+   (all?'<button class="hang" data-m="all">DELETE FOR EVERYONE</button>':'')+'</div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act!=='me'&&act!=='all')return;
+    const err=$('#delMsgErr');err.textContent='';
+    document.querySelectorAll('#overlay [data-m]').forEach(b=>b.disabled=true);
+    try{await M.deleteMessage(conv,id,act==='all');this.close()}
+    catch(e){err.textContent=e.message;document.querySelectorAll('#overlay [data-m]').forEach(b=>b.disabled=false)}});
+  const go=document.querySelector('#overlay [data-m='+(all?'all':'me')+']');if(go)go.focus()},
 
  /** A bridged Discord channel: not end-to-end encrypted, and says so. */
  renderDiscord(id,th){
@@ -1702,24 +1973,24 @@ const UI={
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
   const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
   let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
-  for(const m of list){
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
+  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
+  for(const m of shown){
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
    if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':''):'';
-   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
-    (m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':'')+
-    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:false,
+    who:m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':''})}
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
  /** A group chat: each message shows who sent it, and mine show how many members confirmed delivery. */
  renderGroup(id,th){
   const g=M.group(id);
-  $('#chatAv').textContent=initials(M.displayName(id));$('#chatAv').classList.add('grp');
+  this.setAv($('#chatAv'),id);$('#chatAv').classList.add('grp');
   $('#chatName').textContent=M.displayName(id);
   $('#chatMeta').textContent=g?this.memberCount(id)+' · end-to-end encrypted':'you are no longer in this group';
   const gate=$('#gate');
@@ -1731,8 +2002,9 @@ const UI={
   const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
   const others=g?g.members.length-1:0;
   let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list);
-  for(const m of list){
+  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
+  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
+  for(const m of shown){
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
    if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
@@ -1740,9 +2012,8 @@ const UI={
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':got?' · delivered to '+(others&&got>=others?'everyone':got):' · sent'):'';
-   html+='<div class="msg '+m.dir+fresh(m)+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+'" data-k="m'+esc(m.id)+'">'+
-    (m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':'')+
-    '<div class="body">'+esc(m.text)+'</div><div class="stamp">'+hm(m.ts)+state+'</div></div>'}
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,
+    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})}
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
@@ -1752,7 +2023,7 @@ const UI={
   if(!list.length)return '<div class="picks"><div class="grouplbl">'+((skip||[]).length>1?'EVERY FRIEND IS ALREADY IN THIS GROUP':'NO FRIENDS YET · ADD SOME IN PEERS')+'</div></div>';
   return '<input class="search" id="pickFilter" placeholder="filter friends…" autocomplete="off" style="margin:0 0 8px;width:100%">'+
    '<div class="picks" id="picks">'+list.map(p=>'<label class="pick" data-name="'+esc(p.username.toLowerCase())+'"><input type="checkbox" value="'+esc(p.userId)+'">'+
-    '<div class="av av-26" style="background:var(--avatar);color:var(--avatar-fg)">'+esc(initials(p.username))+'</div><span class="row-main">'+esc(p.username)+'</span>'+
+    this.av(p.userId,'av-26',p.username,' style="background:var(--avatar);color:var(--avatar-fg)"')+'<span class="row-main">'+esc(p.username)+'</span>'+
     (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</label>').join('')+'</div>'},
  /** Wires a friendPicker's filter box and calls onPick(count) whenever the selection changes. */
  wirePicker(onPick){
@@ -1811,12 +2082,37 @@ const UI={
     try{await M.renameGroup(id,name);this.close()}catch(e){err.textContent=e.message;btn.disabled=false}});
   const i=$('#gName');i.select();i.addEventListener('keydown',e=>{if(e.key==='Enter')$('#gGo').click()})},
 
+ /** Settings → profile picture: choose an image, shrink it here, upload it. */
+ async pickAvatar(){
+  const f=await pickImage();if(!f)return;
+  const say=m=>{const e=$('#avErr');if(e)e.textContent=m;else if(m)toast(m)};
+  say('');
+  try{await M.setAvatar(await shrinkImage(f))}catch(e){say(e.message)}},
+ async clearAvatar(){try{await M.setAvatar(null)}catch(e){toast(e.message)}},
+ /** The group icon dialog: choose an image for everyone in the group, or remove the current one. */
+ groupIcon(id){
+  if(!M.group(id))return;
+  this.modal('<h3>Group icon</h3><div class="note">Every member sees it. Like the group name, it is end-to-end encrypted, and it is resized to '+AVSIZE+'×'+AVSIZE+' first.</div>'+
+   '<div class="btnrow" style="align-items:center">'+this.av(id,'av-64')+'</div><div class="err" id="gIconErr"></div>'+
+   '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
+   (M.groupIcon(id)?'<button class="tbtn danger" data-m="clear">REMOVE</button>':'')+'<button class="send" data-m="pick">CHOOSE IMAGE</button></div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act!=='pick'&&act!=='clear')return;
+    const err=$('#gIconErr');err.textContent='';
+    try{
+     let icon='';
+     if(act==='pick'){const f=await pickImage();if(!f)return;icon=await shrinkImage(f)}
+     btn.disabled=true;
+     await M.setGroupIcon(id,icon);this.close()}
+    catch(e){err.textContent=e.message;btn.disabled=false}})},
+
  groupMembers(id){
   const g=M.group(id);if(!g)return;
   const name=u=>u===M.me.userId?'you':M.displayName(u);
   const rows=g.members.slice().sort((a,b)=>(b.userId===M.me.userId)-(a.userId===M.me.userId)||a.username.localeCompare(b.username)).map(m=>{
    const st=m.userId===M.me.userId?'':M.relation(m.userId);
-   return '<div class="pick" style="cursor:default"><div class="av av-26" style="background:var(--avatar);color:var(--avatar-fg)">'+esc(initials(m.username))+'</div>'+
+   return '<div class="pick" style="cursor:default">'+this.av(m.userId,'av-26',m.username,' style="background:var(--avatar);color:var(--avatar-fg)"')+''+
     '<div class="row-main"><div>'+esc(m.username)+(m.userId===M.me.userId?' <span class="chip">YOU</span>':'')+'</div>'+
     '<div class="meta">'+(m.invitedBy?'added by '+esc(name(m.invitedBy)):'started the group')+'</div></div>'+
     (st?'<button class="tbtn" data-m="peer:'+esc(m.userId)+'" style="margin-left:auto">'+(st==='friend'?'PROFILE':'VIEW')+'</button>':'')+'</div>'}).join('');
@@ -1847,6 +2143,9 @@ const UI={
  settingsHTML(){
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Account &amp; security</div><div class="meta">everything below is stored encrypted on the server</div></div></div>'+
    '<div class="sheet">'+
+   '<div class="sec"><h3>Profile picture</h3><div class="note">Anyone who can see your username can see it. It is resized to '+AVSIZE+'×'+AVSIZE+' before it is uploaded, and it is not end-to-end encrypted.</div>'+
+   '<div class="btnrow" style="align-items:center"><div class="av av-64" id="setAv"></div><button class="tbtn" data-act="av-pick">CHANGE PICTURE</button>'+
+   '<button class="tbtn danger" data-act="av-clear" id="avClear">REMOVE</button></div><div class="err" id="avErr"></div></div>'+
    '<div class="sec"><h3>Identity</h3><div class="note">Information about your account and keys.</div><div id="setIdent"></div></div>'+
    '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">When on, everyone on this server can find you in the global section of Peers and send you a friend request. When off, only people who know your exact username can. Either way, nobody can message you until you accept them.</div>'+
    '<div class="btnrow"><button class="tbtn" data-act="disc-off" id="discOff">HIDDEN</button><button class="tbtn" data-act="disc-on" id="discOn">LISTED</button></div><div class="err" id="discErr"></div></div>'+
@@ -1861,7 +2160,8 @@ const UI={
   if(!M.me)return;
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
   const msgs=[...M.recs.keys()].filter(k=>k.startsWith('msg:')).length;
-  const a=$('#setIdent'),b=$('#setConn');
+  const a=$('#setIdent'),b=$('#setConn'),pic=$('#setAv');
+  if(pic){this.setAv(pic,M.me.userId,M.me.username);$('#avClear').classList.toggle('hidden',!M.avatar(M.me.userId))}
   if(a)a.innerHTML=kv('username',M.me.username)+kv('user id',M.me.userId)+kv('identity key',M.me.ik.pub)+
    kv('signing key',M.me.sk.pub)+kv('created',M.me.created?new Date(M.me.created).toLocaleString():'—');
   if(b)b.innerHTML=kv('server',M.server)+kv('live socket',M.wsState)+
@@ -1974,15 +2274,16 @@ const UI={
   this.render()},
  open(id){
   if(isDiscord(id)){this.S.screen='discord';this.S.dc=id}else{this.S.screen='messages';this.S.chat=id}
-  M.unread.delete(id);this._stick=true;this.render()},
+  M.unread.delete(id);this._stick=true;this._winFor=null;this.render()},
  showPeer(id){if(this.S.screen!=='peers')this.screen('peers');this.S.peer=id;this.render()},
 
  async send(){
   const ta=$('#composer');if(!ta)return;
   const text=ta.value,id=this.cur();
   if(!text.trim())return;
-  ta.value='';this._stick=true;
-  try{await M.sendText(id,text)}catch(e){toast('not sent: '+e.message)}},
+  const r=this.S.reply,re=r&&r.conv===id?r.id:undefined;
+  ta.value='';this._stick=true;if(re){this.S.reply=null;this.render()}
+  try{await M.sendText(id,text,undefined,re)}catch(e){toast('not sent: '+e.message)}},
 
  notify(peer,text){
   if(document.hidden||this.cur()!==peer)toast(M.displayName(peer)+': '+text.slice(0,80),4000)},
@@ -2012,7 +2313,7 @@ const UI={
   const ringing=c.dir==='in'&&c.state==='ringing';
   const st=c.state==='active'?(c.unstable?'reconnecting… · ':'')+clock(Math.floor((Date.now()-c.started)/1000))+(c.muted?' · muted':'')
    :{calling:'calling…',ringing:'incoming voice call',connecting:'connecting…'}[c.state];
-  const html='<div class="av av-34">'+esc(initials(M.displayName(c.peer)))+'</div>'+
+  const html=this.av(c.peer,'av-34')+
    '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(M.displayName(c.peer))+
    (M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
    '<div class="meta'+(c.unstable?' warn':'')+'">'+esc(st)+' · end-to-end encrypted</div></div>'+
@@ -2052,9 +2353,13 @@ document.addEventListener('click',async e=>{
  if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,UI.S.screen==='peers'?UI.S.peer:UI.S.chat);return}
  if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
  if(t.dataset.discard){M.discard(t.dataset.discard);return}
+ if(t.dataset.reply){UI.startReply(t.dataset.reply);return}
+ if(t.dataset.del){UI.askDelete(t.dataset.del);return}
+ if(t.dataset.jump){UI.jump(t.dataset.jump);return}
  if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
  switch(t.dataset.act){
   case 'send':UI.send();break;
+  case 'reply-cancel':UI.cancelReply();{const ta=$('#composer');if(ta)ta.focus()}break;
   case 'back':
    if(UI.S.screen==='peers')UI.S.peer=null;else if(UI.S.screen==='settings')UI.S.set=false;
    else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
@@ -2071,6 +2376,9 @@ document.addEventListener('click',async e=>{
   case 'g-invite':UI.groupInvite(UI.S.chat);break;
   case 'g-members':UI.groupMembers(UI.S.chat);break;
   case 'g-rename':UI.groupRename(UI.S.chat);break;
+  case 'g-icon':UI.groupIcon(UI.S.chat);break;
+  case 'av-pick':UI.pickAvatar();break;
+  case 'av-clear':UI.clearAvatar();break;
   case 'g-leave':UI.groupLeave(UI.S.chat);break;
   case 'open-settings':UI.S.set=true;UI.render();break;
   case 'goto-discovery':UI.screen('settings');UI.S.set=true;UI.renderNow();
@@ -2088,16 +2396,20 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('keydown',e=>{
  if(e.target.id==='composer'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();UI.send()}
- if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close()});
+ if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
+ else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply()});
 let searchTimer=0;
 $('#search').addEventListener('input',e=>{
  UI.S.filter=e.target.value;UI.renderCol();
  if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}});
+// older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
+document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.more()},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
 
 M.on('change',()=>UI.render());
 M.on('status',()=>UI.render());
 M.on('message',(peer,text)=>UI.notify(peer,text));
+M.on('backlog',(n,chats)=>toast(n+' new message'+(n>1?'s':'')+(chats>1?' in '+chats+' chats':''),5000));
 M.on('call',()=>{UI.renderCall();UI.render()});
 // closing the tab mid-call would drop it without telling the other side
 window.addEventListener('beforeunload',e=>{const c=M.voice.call;if(c&&c.state!=='ringing'){e.preventDefault();e.returnValue=''}});
@@ -2106,7 +2418,7 @@ M.on('peer',(kind,p)=>{
  else if(kind==='accepted')toast(p.username+' accepted your friend request',6000);
  else if(kind==='changed')toast('warning: '+p.username+' now belongs to a different identity than before',9000)});
 M.on('signedout',reason=>{
- store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',
+ store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',reply:null,
   global:{q:null,users:[],more:false,loading:false,err:'',seq:UI.S.global.seq+1}});
  $('#search').value='';UI.render();
  UI.auth('login',reason||'')});
