@@ -541,6 +541,47 @@ test('profile pictures and group icons', async () => {
   await waitFor(() => una.groupIcon(gid) === null && wes.groupIcon(gid) === null, 'icon removal');
 });
 
+test('images in messages, end to end, at the largest size allowed', async () => {
+  const xan = client(), yul = client(), zed = client();
+  await xan.signup('xan', PASS);
+  await yul.signup('yul', PASS);
+  await zed.signup('zed', PASS);
+  await Promise.all([xan, yul, zed].map(live));
+  const yulId = await befriend(xan, yul);
+  await befriend(xan, zed);
+
+  // the worst case: an image at the size cap and a caption of 3-byte characters at its cap
+  const head = 'data:image/webp;base64,';
+  const big = { img: head + 'Q'.repeat(84000 - head.length), w: 1600, h: 1200 };
+  const caption = '€'.repeat(2000);
+  await xan.sendText(yulId, caption, undefined, undefined, big);
+  await waitFor(() => yul.thread(xan.me.userId).some(m => m.img === big.img), 'yul to get the image');
+  const got = yul.thread(xan.me.userId).find(m => m.img);
+  assert.equal(got.text, caption);
+  assert.equal(got.w, 1600);
+  assert.equal(xan.thread(yulId).find(m => m.img).state, 'delivered');
+
+  // too large, or not an image, is refused before anything is sent
+  await assert.rejects(xan.sendText(yulId, '', undefined, undefined, { img: big.img + 'QQQQ' }), /too large/);
+  await assert.rejects(xan.sendText(yulId, '', undefined, undefined, { img: 'data:text/html;base64,PGI+' }), /too large or not/);
+  await assert.rejects(xan.sendText(yulId, '€'.repeat(2001), undefined, undefined, big), /captions are limited/);
+
+  // a bare image (no caption) to a group; replies quote it as a photo
+  const gid = await xan.createGroup('pics', [yulId, zed.me.userId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => zed.group(gid), 'zed joins');
+  const small = { img: head + 'AAAA', w: 4, h: 3 };
+  const id = await xan.sendText(conv, '', undefined, undefined, small);
+  await waitFor(() => [yul, zed].every(c => c.thread(conv).some(m => m.img === small.img)), 'group image fan-out');
+  await zed.sendText(conv, 'nice', undefined, id);
+  await waitFor(() => xan.thread(conv).some(m => m.text === 'nice' && m.re && m.re.t === '📷 photo'), 'reply quoting the photo');
+
+  // deleting for everyone drops the image from every copy
+  await xan.deleteMessage(conv, id, true);
+  await waitFor(() => [yul, zed].every(c => { const m = c.thread(conv).find(x => x.id === id); return m && m.deleted && !m.img; }), 'image tombstoned');
+  assert.ok(!xan.thread(conv).find(x => x.id === id).img);
+});
+
 test('step 1 databases are migrated', async () => {
   const Database = require('better-sqlite3');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-mig-'));

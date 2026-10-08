@@ -111,6 +111,36 @@ button:disabled{opacity:.4;cursor:default}
 .composer textarea:focus{outline:none}
 .composer textarea::placeholder{color:var(--faint)}
 .composer-bar{display:flex;align-items:center;gap:10px;padding:0 10px 10px}
+.composer{position:relative}
+.cbtn{width:30px;height:30px;display:grid;place-items:center;color:var(--dim);transition:color .12s,background .12s}
+.cbtn:hover,.cbtn[aria-expanded=true]{color:var(--text);background:var(--row)}
+.cbtn svg{width:17px;height:17px}
+.composer-bar .cbtn+.cbtn{margin-left:-6px}
+/* an image waiting to be sent, above the composer */
+.attbar{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;background:var(--accent-wash);border-bottom:1px solid var(--line);animation:replyIn .18s ease both}
+.attbar img{width:44px;height:44px;object-fit:cover;display:block;flex:none}
+.attbar .grow{flex:1;min-width:0}
+.attbar .lbl{margin:0;color:var(--accent-soft)}
+.attbar button{width:26px;height:26px;display:grid;place-items:center;color:var(--dim)}
+.attbar button:hover{color:var(--text);background:var(--row)}
+.attbar svg{width:15px;height:15px}
+/* images in messages, and the full-size view */
+.msg .body.has-img{padding:4px}
+.mimg{display:block;max-width:100%;cursor:zoom-in}
+.mimg img{display:block;max-width:100%;height:auto;background:var(--panel)}
+.body .cap{padding:6px 9px 5px}
+.modal:has(.lightbox){width:auto;max-width:min(94vw,1100px)}
+.lightbox{display:block;max-width:100%;max-height:72vh;margin:0 auto}
+/* the emoji browser */
+.emojipop{position:absolute;left:-1px;bottom:calc(100% + 8px);z-index:20;width:min(352px,calc(100vw - 24px));height:340px;display:flex;flex-direction:column;background:var(--rail);border:1px solid var(--line2);box-shadow:0 18px 44px rgba(0,0,0,.34);animation:replyIn .16s ease both}
+.emojipop .search{margin:8px 8px 6px;width:auto}
+.etabs{display:flex;gap:2px;padding:0 6px 6px;border-bottom:1px solid var(--line)}
+.etabs button{flex:1;height:30px;font-size:16px;filter:grayscale(1);opacity:.6;transition:opacity .12s,filter .12s,background .12s}
+.etabs button:hover,.etabs button[aria-pressed=true]{filter:none;opacity:1;background:var(--row)}
+.egrid{flex:1;overflow-y:auto;padding:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));align-content:start;gap:2px}
+.egrid button{height:36px;font-size:22px;line-height:1;transition:background .1s,transform .1s}
+.egrid button:hover,.egrid button:focus-visible{background:var(--row);transform:scale(1.12);outline:none}
+.egrid .grouplbl{grid-column:1/-1;padding:6px 2px 2px}
 .hint{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint)}
 .send{padding:7px 14px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:500;transition:filter .15s,background .15s,opacity .15s}
 .send:hover{filter:brightness(1.08)}
@@ -221,6 +251,14 @@ button.quote:hover{background:var(--row)}
 .rows.enter{animation:rowsIn .22s ease both}
 .msg.new{animation:msgIn .26s cubic-bezier(.2,.85,.25,1) both}
 .msg.in.new{transform-origin:left bottom}.msg.out.new{transform-origin:right bottom}
+/* the sender's picture beside a bubble; only the last of a run shows it, the rest keep its space */
+.mrow{display:flex;align-items:flex-end;gap:8px}
+.msg.out .mrow{flex-direction:row-reverse}
+.mrow>.bub{min-width:0}
+.mav{width:28px;height:28px;font-size:10px}
+.mav.ghost{visibility:hidden}
+.msg.in .mrow~.stamp,.msg.in>.who{margin-left:36px}
+.msg.out .mrow~.stamp{margin-right:36px}
 .sys.new{animation:fade .3s ease both}
 /* theme switch: everything eases between palettes for a moment */
 .theme-fade,.theme-fade *,.theme-fade *::before,.theme-fade *::after{transition:background-color .3s ease,color .3s ease,border-color .3s ease,box-shadow .3s ease!important}
@@ -349,7 +387,17 @@ const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
 const PAGE=40;   // messages drawn per page of a thread; older pages load as you scroll up
 const AVSIZE=128,AVCHARS=48000;   // pictures are shrunk to AVSIZE² and at most AVCHARS of data: URL
 /** A picture as it may come off the wire: a small base64 JPEG, PNG or WebP data: URL. */
-const isPic=x=>typeof x==='string'&&x.length<=64*1024&&/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(x);
+const PICRE=/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const isPic=x=>typeof x==='string'&&x.length<=64*1024&&PICRE.test(x);
+/* A sent image travels inside the encrypted message, so it is shrunk to fit one
+   envelope (LIMITS.payloadBytes on the server) with room for a caption. */
+const IMGCHARS=84000,IMGTEXT=2000;
+const isImg=x=>typeof x==='string'&&x.length<=IMGCHARS&&PICRE.test(x);
+const dim=n=>Number.isInteger(n)&&n>0&&n<=8192?n:undefined;
+/** The image a message carries {img,w,h}, cleaned up when it comes off the wire, or {}. */
+const imgOf=x=>x&&isImg(x.img)?{img:x.img,w:dim(x.w),h:dim(x.h)}:{};
+/** A message in one line: its text, or that it is a photo. */
+const gist=m=>m.text||(m.img?'📷 photo':'');
 const isDiscord=id=>String(id).startsWith('dc:');
 const isGroup=id=>String(id).startsWith('g:');
 const GID=/^[0-9a-f]{24}$/,MAXNAME=64;
@@ -1028,8 +1076,9 @@ class MarmotClient{
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
       const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-      await tx.put(key,{id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)});
-      note={peer:peerId,text:inner.t}}
+      const m=Object.assign({id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)},imgOf(inner));
+      await tx.put(key,m);
+      note={peer:peerId,text:gist(m)}}
      const r=await Ratchet.encrypt(sess,{k:'receipt',ids:[inner.id]});
      sess=r.rec;tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
     }else if(inner.k==='del'&&typeof inner.id==='string'){
@@ -1068,8 +1117,9 @@ class MarmotClient{
    const key='msg:'+conv+':'+inner.id;let note=null;
    if(!this.get(key)){
     const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-    await tx.put(key,{id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)});
-    note={peer:conv,text:this.displayName(peerId)+': '+inner.t}}
+    const m=Object.assign({id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)},imgOf(inner));
+    await tx.put(key,m);
+    note={peer:conv,text:this.displayName(peerId)+': '+gist(m)}}
    const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
    tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
    return {sess:r.rec,note}}
@@ -1345,20 +1395,24 @@ class MarmotClient{
 
  /* ---- messaging ---- */
 
- /** `replyTo` is the id of a message in the same conversation to quote. */
- async sendText(peerId,text,reuseId,replyTo){
+ /** `replyTo` is the id of a message in the same conversation to quote; `pic` is an
+     image {img,w,h} already shrunk to fit (see fitImage), sent with `text` as its caption. */
+ async sendText(peerId,text,reuseId,replyTo,pic){
   text=String(text||'');
-  if(!text.trim())return null;
+  const im=pic?imgOf(pic):{};
+  if(pic&&!im.img)throw new Error('that image is too large or not in a supported format');
+  if(!text.trim()&&!im.img)return null;
+  if(im.img&&text.length>IMGTEXT)throw new Error('captions are limited to '+IMGTEXT+' characters');
   if(text.length>MAXTEXT)throw new Error('messages are limited to '+MAXTEXT+' characters');
-  if(isDiscord(peerId))return this._sendDiscord(peerId,text,reuseId);
+  if(isDiscord(peerId)){if(im.img)throw new Error('images cannot be sent to Discord');return this._sendDiscord(peerId,text,reuseId)}
   const grp=isGroup(peerId);
   if(grp?!this.group(peerId):!this.isFriend(peerId))throw new Error(grp?'you are not in this group':'you can only message friends');
   const q=replyTo&&this.get('msg:'+peerId+':'+replyTo);
-  const re=q&&q.dir!=='sys'&&!q.deleted?{id:q.id,from:q.dir==='out'?this.me.userId:q.from||peerId,t:q.text.slice(0,200)}:undefined;
-  const m={id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending',re};
+  const re=q&&q.dir!=='sys'&&!q.deleted?{id:q.id,from:q.dir==='out'?this.me.userId:q.from||peerId,t:gist(q).slice(0,200)}:undefined;
+  const m=Object.assign({id:reuseId||uid(),peer:peerId,dir:'out',text,ts:Date.now(),state:'sending',re},im);
   this.pending.set(m.id,m);this.emit('change');
   try{
-   const inner={k:'text',id:m.id,t:text,ts:m.ts,re},save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
+   const inner=Object.assign({k:'text',id:m.id,t:text,ts:m.ts,re},im),save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
    if(grp)await this._sendGroup(peerId.slice(2),Object.assign(inner,{g:peerId.slice(2)}),save);
    else await this._sendInner(peerId,inner,save);
    this.pending.delete(m.id);
@@ -1407,7 +1461,7 @@ class MarmotClient{
   const m=this.pending.get(msgId);
   if(!m||m.state!=='failed')return;
   this.pending.delete(msgId);
-  return this.sendText(m.peer,m.text,m.id,m.re&&m.re.id)}
+  return this.sendText(m.peer,m.text,m.id,m.re&&m.re.id,m.img?m:null)}
  discard(msgId){this.pending.delete(msgId);this.emit('change')}
 
  /** Deletes a message. Just for me: it is gone from this account's history.
@@ -1426,7 +1480,7 @@ class MarmotClient{
  async _tombstone(tx,key,ok){
   const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
   if(!m||m.dir==='sys'||m.deleted||!ok(m))return false;
-  const t=Object.assign({},m,{text:'',deleted:true});delete t.re;
+  const t=Object.assign({},m,{text:'',deleted:true});delete t.re;delete t.img;delete t.w;delete t.h;
   await tx.put(key,t);return true}
 
  /** Tops the server back up with one-time prekeys when it runs low. */
@@ -1504,29 +1558,44 @@ function pickImage(){
   i.addEventListener('change',()=>res(i.files&&i.files[0]||null));
   i.addEventListener('cancel',()=>res(null));
   i.click()})}
-/** Center-crops an image file to a square and shrinks it to AVSIZE², as a small data: URL.
-    WebP where the browser can encode it, else JPEG (on white, since JPEG has no transparency). */
-async function shrinkImage(file){
+/** Decodes an image file and hands it to fn(img). */
+async function withImage(file,fn){
  if(!file||!/^image\//.test(file.type))throw new Error('that file is not an image');
  if(file.size>25*1024*1024)throw new Error('that image is too large');
  const url=URL.createObjectURL(file);
  try{
   const img=new Image();img.src=url;
   try{await img.decode()}catch(e){throw new Error('could not read that image')}
-  const w=img.naturalWidth,h=img.naturalHeight,side=Math.min(w,h);
-  if(!side)throw new Error('could not read that image');
-  const c=document.createElement('canvas');c.width=c.height=AVSIZE;
-  const x=c.getContext('2d');x.imageSmoothingQuality='high';
-  const draw=bg=>{x.clearRect(0,0,AVSIZE,AVSIZE);if(bg){x.fillStyle=bg;x.fillRect(0,0,AVSIZE,AVSIZE)}
-   x.drawImage(img,(w-side)/2,(h-side)/2,side,side,0,0,AVSIZE,AVSIZE)};
-  draw(null);
-  const webp=c.toDataURL('image/webp',.85).startsWith('data:image/webp');
-  if(!webp)draw('#fff');
-  for(const q of [.85,.7,.55,.4]){
-   const d=c.toDataURL(webp?'image/webp':'image/jpeg',q);
-   if(d.length<=AVCHARS)return d}
-  throw new Error('could not make that image small enough')}
+  if(!img.naturalWidth||!img.naturalHeight)throw new Error('could not read that image');
+  return await fn(img)}
  finally{URL.revokeObjectURL(url)}}
+/** Draws (part of) img onto a w×h canvas and returns the smallest-enough data: URL: WebP where
+    the browser can encode it, else JPEG on white (JPEG has no transparency). null if none fits. */
+function encodeImage(img,src,w,h,max,qs){
+ const c=document.createElement('canvas');c.width=w;c.height=h;
+ const x=c.getContext('2d');x.imageSmoothingQuality='high';
+ const webp=c.toDataURL('image/webp',.5).startsWith('data:image/webp');
+ if(!webp){x.fillStyle='#fff';x.fillRect(0,0,w,h)}
+ x.drawImage(img,src[0],src[1],src[2],src[3],0,0,w,h);
+ for(const q of qs){const d=c.toDataURL(webp?'image/webp':'image/jpeg',q);if(d.length<=max)return d}
+ return null}
+/** Center-crops an image file to a square and shrinks it to AVSIZE², for a profile picture or group icon. */
+function shrinkImage(file){
+ return withImage(file,img=>{
+  const w=img.naturalWidth,h=img.naturalHeight,side=Math.min(w,h);
+  const d=encodeImage(img,[(w-side)/2,(h-side)/2,side,side],AVSIZE,AVSIZE,AVCHARS,[.85,.7,.55,.4]);
+  if(!d)throw new Error('could not make that image small enough');
+  return d})}
+/** Shrinks an image file to send in a message: at most 1600px on its longer side, then smaller
+    and at lower quality until it fits in IMGCHARS. Returns {img,w,h}. */
+function fitImage(file){
+ return withImage(file,img=>{
+  const w0=img.naturalWidth,h0=img.naturalHeight;
+  for(const edge of [1600,1280,1024,800,640,480,320]){
+   const k=Math.min(1,edge/Math.max(w0,h0)),w=Math.max(1,Math.round(w0*k)),h=Math.max(1,Math.round(h0*k));
+   const d=encodeImage(img,[0,0,w0,h0],w,h,IMGCHARS,[.82,.7,.58]);
+   if(d)return {img:d,w,h}}
+  throw new Error('could not make that image small enough')})}
 function toast(msg,ms){const t=document.createElement('div');t.className='toast';t.textContent=msg;$('#toasts').appendChild(t);
  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
 const store={
@@ -1538,7 +1607,20 @@ const store={
 
 const M=new MarmotClient();
 const svg=d=>'<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">'+d+'</svg>';
+/** The emoji browser's set: [tab icon, name, "emoji keywords, …"]. */
+const EMOJI=[
+ ['😀','Smileys',`😀 grinning,😃 smiley happy,😄 smile,😁 grin,😆 laughing,😅 sweat smile,🤣 rofl rolling,😂 joy tears laughing,🙂 slight smile,🙃 upside down,😉 wink,😊 blush,😇 innocent halo,🥰 love hearts,😍 heart eyes,🤩 star struck,😘 kiss,😗 kissing,😚 kissing closed eyes,😙 kissing smiling,😋 yum,😛 tongue,😜 wink tongue,🤪 zany crazy,😝 squint tongue,🤑 money,🤗 hug,🤭 hand over mouth,🤫 shush quiet,🤔 thinking,🤐 zipper mouth,🤨 raised eyebrow,😐 neutral,😑 expressionless,😶 no mouth,😏 smirk,😒 unamused,🙄 eye roll,😬 grimace,🤥 lying,😌 relieved,😔 pensive,😪 sleepy,🤤 drool,😴 sleeping,😷 mask sick,🤒 thermometer sick,🤕 bandage hurt,🤢 nauseated,🤮 vomit,🤧 sneeze,🥵 hot,🥶 cold,🥴 woozy,😵 dizzy,🤯 mind blown exploding,🤠 cowboy,🥳 party,😎 sunglasses cool,🤓 nerd,🧐 monocle,😕 confused,😟 worried,🙁 frown,😮 open mouth,😯 hushed,😲 astonished,😳 flushed,🥺 pleading,😦 frowning open,😧 anguished,😨 fearful,😰 anxious sweat,😥 sad relieved,😢 cry,😭 sob,😱 scream,😖 confounded,😣 persevere,😞 disappointed,😓 sweat,😩 weary,😫 tired,🥱 yawn,😤 triumph huff,😡 pout angry,😠 angry,🤬 cursing,😈 smiling devil,👿 imp,💀 skull dead,☠️ skull crossbones,💩 poop,🤡 clown,👹 ogre,👺 goblin,👻 ghost,👽 alien,👾 space invader,🤖 robot,😺 cat smile,😸 cat grin,😹 cat joy,😻 cat heart eyes,😼 cat smirk,🙀 cat weary,😿 cat cry,😾 cat pout,🙈 see no evil monkey,🙉 hear no evil,🙊 speak no evil`],
+ ['👋','People',`👋 wave hello,🤚 raised back hand,✋ raised hand,🖖 vulcan,👌 ok,🤌 pinched fingers,🤏 pinch small,✌️ victory peace,🤞 crossed fingers luck,🤟 love you,🤘 rock horns,🤙 call me,👈 point left,👉 point right,👆 point up,👇 point down,☝️ index up,👍 thumbs up yes like,👎 thumbs down no,✊ fist,👊 punch,🤛 left fist,🤜 right fist,👏 clap,🙌 raised hands hooray,👐 open hands,🤲 palms up,🤝 handshake deal,🙏 pray please thanks,✍️ writing,💅 nail polish,🤳 selfie,💪 muscle strong flex,🧠 brain,👀 eyes look,👁️ eye,👅 tongue,👄 lips mouth,💋 kiss mark,👶 baby,🧒 child,👦 boy,👧 girl,🧑 person,👨 man,👩 woman,🧓 older person,👴 old man,👵 old woman,🙋 raising hand,🙅 no gesture,🙆 ok gesture,💁 tipping hand,🤷 shrug,🤦 facepalm,🙇 bow,🧑‍💻 technologist coder,🕵️ detective,👮 police,👷 construction,🥷 ninja,🧙 mage wizard,🧛 vampire,🧟 zombie,🧜 merperson,🧚 fairy,👼 angel,🎅 santa,🏃 running,🚶 walking,💃 dancer,🕺 dancing man,👯 bunny dancers,🧘 yoga,🛌 in bed,👪 family,💑 couple heart,🗣️ speaking head,👤 silhouette`],
+ ['🐭','Nature',`🐭 mouse,🐀 rat,🐹 hamster,🐿️ chipmunk squirrel,🦫 beaver,🐰 rabbit bunny,🐶 dog,🐱 cat,🦊 fox,🐻 bear,🐼 panda,🐨 koala,🐯 tiger,🦁 lion,🐮 cow,🐷 pig,🐸 frog,🐵 monkey,🐔 chicken,🐧 penguin,🐦 bird,🐤 chick,🦆 duck,🦅 eagle,🦉 owl,🦇 bat,🐺 wolf,🐗 boar,🐴 horse,🦄 unicorn,🐝 bee,🐛 bug,🦋 butterfly,🐌 snail,🐞 ladybug,🐜 ant,🕷️ spider,🐢 turtle,🐍 snake,🦎 lizard,🦖 t-rex dinosaur,🐙 octopus,🦑 squid,🦀 crab,🐠 tropical fish,🐟 fish,🐬 dolphin,🐳 whale,🦈 shark,🐊 crocodile,🐘 elephant,🦒 giraffe,🦘 kangaroo,🦔 hedgehog,🦦 otter,🦥 sloth,🐾 paw prints,🌵 cactus,🎄 christmas tree,🌲 evergreen,🌳 tree,🌴 palm,🌱 seedling,🌿 herb,☘️ shamrock,🍀 four leaf clover luck,🍁 maple leaf,🍂 fallen leaves autumn,🍄 mushroom,🌷 tulip,🌹 rose,🥀 wilted,🌺 hibiscus,🌸 cherry blossom,🌼 blossom,🌻 sunflower,🌞 sun face,🌝 full moon face,🌚 new moon face,🌙 crescent moon,⭐ star,🌟 glowing star,✨ sparkles,⚡ lightning zap,🔥 fire lit,🌈 rainbow,☀️ sun,⛅ partly cloudy,☁️ cloud,🌧️ rain,⛈️ storm,❄️ snowflake,☃️ snowman,🌊 wave ocean,💧 droplet,🌍 earth globe`],
+ ['🍕','Food',`🍏 green apple,🍎 apple,🍐 pear,🍊 orange,🍋 lemon,🍌 banana,🍉 watermelon,🍇 grapes,🍓 strawberry,🫐 blueberries,🍒 cherries,🍑 peach,🥭 mango,🍍 pineapple,🥥 coconut,🥝 kiwi,🍅 tomato,🥑 avocado,🍆 eggplant,🥔 potato,🥕 carrot,🌽 corn,🌶️ hot pepper,🥒 cucumber,🥦 broccoli,🧄 garlic,🧅 onion,🥜 peanuts,🧀 cheese,🍞 bread,🥐 croissant,🥖 baguette,🥨 pretzel,🥯 bagel,🥞 pancakes,🧇 waffle,🥓 bacon,🍗 poultry leg,🍖 meat,🌭 hot dog,🍔 burger,🍟 fries,🍕 pizza,🥪 sandwich,🌮 taco,🌯 burrito,🥗 salad,🍝 spaghetti,🍜 ramen noodles,🍲 stew,🍛 curry,🍣 sushi,🍱 bento,🥟 dumpling,🍤 shrimp,🍙 rice ball,🍚 rice,🍦 ice cream,🍩 doughnut,🍪 cookie,🎂 birthday cake,🍰 cake,🧁 cupcake,🥧 pie,🍫 chocolate,🍬 candy,🍭 lollipop,🍿 popcorn,🥛 milk,☕ coffee,🍵 tea,🧃 juice,🥤 soda cup,🧋 bubble tea,🍺 beer,🍻 cheers beers,🥂 champagne toast,🍷 wine,🍸 cocktail,🍹 tropical drink,🧊 ice`],
+ ['⚽','Activity',`⚽ soccer football,🏀 basketball,🏈 american football,⚾ baseball,🎾 tennis,🏐 volleyball,🏉 rugby,🎱 8 ball pool,🏓 ping pong,🏸 badminton,🥅 goal,⛳ golf,🏹 bow arrow,🎣 fishing,🥊 boxing,🥋 martial arts,⛸️ ice skate,🎿 ski,🛹 skateboard,🏆 trophy,🥇 gold medal first,🥈 silver medal,🥉 bronze medal,🏅 medal,🎖️ military medal,🎗️ ribbon,🎫 ticket,🎪 circus,🎭 theater,🎨 art palette,🎬 clapper film,🎤 microphone sing,🎧 headphones,🎼 score,🎹 piano,🥁 drum,🎷 saxophone,🎺 trumpet,🎸 guitar,🎻 violin,🎲 dice,♟️ chess,🎯 bullseye dart,🎳 bowling,🎮 video game controller,🕹️ joystick,🧩 puzzle,🎉 tada party,🎊 confetti,🎈 balloon,🎁 gift present,🎀 bow ribbon,🎃 jack o lantern halloween,🎆 fireworks,🎇 sparkler,🧨 firecracker,🚗 car,🚕 taxi,🚌 bus,🏎️ race car,🚓 police car,🚑 ambulance,🚒 fire engine,🚲 bicycle,🛵 scooter,🏍️ motorcycle,🚂 train,🚇 metro,✈️ airplane,🚀 rocket,🛸 ufo,🚁 helicopter,⛵ sailboat,🚢 ship,⚓ anchor,🗺️ map,🏔️ mountain,🏕️ camping,🏖️ beach,🏝️ island,🏠 house home,🏢 office,🏰 castle,🗽 statue of liberty,🗼 tower,🌋 volcano,🌃 night city,🌅 sunrise,🎡 ferris wheel,🎢 roller coaster`],
+ ['💡','Objects',`⌚ watch,📱 phone mobile,💻 laptop computer,⌨️ keyboard,🖥️ desktop,🖨️ printer,🖱️ mouse computer,💾 floppy disk save,💿 cd,📷 camera photo,📸 camera flash,🎥 movie camera,📺 tv,📻 radio,🎙️ studio mic,⏰ alarm clock,⏳ hourglass,🔋 battery,🔌 plug,💡 bulb idea,🔦 flashlight,🕯️ candle,🧯 extinguisher,💸 money wings,💵 dollar,💰 money bag,💳 credit card,💎 gem diamond,⚖️ scales,🔧 wrench,🔨 hammer,🛠️ tools,⛏️ pick,🔩 nut bolt,⚙️ gear,🧲 magnet,🔫 water pistol,💣 bomb,🔪 knife,🗡️ dagger,⚔️ swords,🛡️ shield,🔮 crystal ball,🧿 nazar,💈 barber,🔭 telescope,🔬 microscope,💊 pill,💉 syringe,🧬 dna,🧪 test tube,🌡️ thermometer,🧹 broom,🧻 toilet paper,🧼 soap,🔑 key,🗝️ old key,🚪 door,🛋️ couch,🛏️ bed,🧸 teddy bear,🖼️ framed picture,🛍️ shopping bags,🛒 cart,✉️ envelope,📧 email,📨 incoming envelope,📦 package box,📫 mailbox,📝 memo note,📄 page,📅 calendar,📆 tear off calendar,🗒️ notepad,📊 bar chart,📈 chart up,📉 chart down,📋 clipboard,📌 pin,📍 round pin,📎 paperclip,✂️ scissors,🗑️ wastebasket,🔒 lock,🔓 unlock,🔏 lock pen,🔐 lock key,📚 books,📖 open book,🔗 link,🧷 safety pin,✏️ pencil,🖊️ pen,🖍️ crayon`],
+ ['❤️','Symbols',`❤️ red heart love,🧡 orange heart,💛 yellow heart,💚 green heart,💙 blue heart,💜 purple heart,🖤 black heart,🤍 white heart,🤎 brown heart,💔 broken heart,❣️ heart exclamation,💕 two hearts,💞 revolving hearts,💓 beating heart,💗 growing heart,💖 sparkling heart,💘 cupid,💝 heart ribbon,💯 hundred 100,💢 anger,💥 boom collision,💫 dizzy star,💦 sweat drops,💨 dash,💬 speech bubble,💭 thought bubble,🗯️ anger bubble,💤 zzz sleep,✅ check mark yes,☑️ ballot check,✔️ check,❌ cross no,❎ cross button,➕ plus,➖ minus,➗ divide,✖️ multiply,❓ question,❔ white question,❗ exclamation,❕ white exclamation,‼️ double exclamation,⁉️ interrobang,⚠️ warning,🚫 prohibited,⛔ no entry,🔞 18,📵 no phones,🔴 red circle,🟠 orange circle,🟡 yellow circle,🟢 green circle,🔵 blue circle,🟣 purple circle,⚫ black circle,⚪ white circle,🟥 red square,🟩 green square,🟦 blue square,⬛ black square,⬜ white square,🔶 orange diamond,🔷 blue diamond,🔺 red triangle up,🔻 red triangle down,⬆️ up arrow,⬇️ down arrow,⬅️ left arrow,➡️ right arrow,↩️ return,🔄 counterclockwise refresh,🔁 repeat,🔀 shuffle,▶️ play,⏸️ pause,⏹️ stop,⏺️ record,⏩ fast forward,⏪ rewind,🔊 loud speaker,🔇 mute,🔔 bell,🔕 no bell,📣 megaphone,♻️ recycle,⚜️ fleur de lis,🔰 beginner,✳️ eight spoked,❇️ sparkle,©️ copyright,®️ registered,™️ trademark,🆗 ok button,🆕 new,🆒 cool button,🆓 free,🆘 sos,🏳️ white flag,🏴 black flag,🏁 checkered flag,🚩 red flag,🏳️‍🌈 rainbow flag pride,🏴‍☠️ pirate flag`]
+].map(([icon,name,list])=>({icon,name,list:list.split(',').map(x=>{const i=x.indexOf(' ');return {e:x.slice(0,i),k:x.slice(i+1)}})}));
+
 const ICON={
+ smile:svg('<circle cx="8" cy="8" r="6"/><path d="M5.5 9.75c.6.8 1.45 1.25 2.5 1.25s1.9-.45 2.5-1.25"/><path d="M6 6.25v.5M10 6.25v.5"/>'),
+ image:svg('<rect x="2" y="3" width="12" height="10"/><path d="m2.5 11.5 3.5-3.5 3 3 2-2 2.5 2.5"/><path d="M10.25 5.75h.5v.5h-.5z"/>'),
  reply:svg('<path d="M6.5 3.5 2.5 7.5l4 4"/><path d="M3 7.5h5.5a5 5 0 0 1 5 5v.5"/>'),
  trash:svg('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.75 7v4.5M9.25 7v4.5"/>'),
  x:svg('<path d="M4 4l8 8M12 4l-8 8"/>')};
@@ -1603,7 +1685,7 @@ const UI={
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
   rows.innerHTML=list.length?list.map(c=>{
    const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last,grp=isGroup(c.id);
-   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':l.text):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
+   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':gist(l)):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
    return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
     this.av(c.id,'av-34')+
     '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+
@@ -1781,12 +1863,14 @@ const UI={
       :isGroup(chat)?'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-icon">ICON</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
       :'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
-     '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
-     '<div class="composer-bar"><span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
+     '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><div class="attbar hidden" id="attBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
+     '<div class="composer-bar"><button class="cbtn" data-act="emoji" title="Emoji" aria-label="Emoji" aria-expanded="false">'+ICON.smile+'</button>'+
+     (isDiscord(chat)?'':'<button class="cbtn" data-act="attach" title="Send an image (or paste or drop one)" aria-label="Send an image">'+ICON.image+'</button>')+
+     '<span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
   if(scr==='settings')this.fillSettings();
-  else if(chat){this.renderThread();this.renderReply();this.more()}},
+  else if(chat){this.renderThread();this.renderReply();this.renderAtt();this.more()}},
 
  renderThread(){
   const id=this.cur(),th=$('#thread');if(!id||!th)return;
@@ -1817,14 +1901,14 @@ const UI={
   if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
   if(p.replaced)html+='<div class="sys" data-k="replaced">this username used to belong to a different identity. verify before trusting it.</div>';
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>'+html;
-  for(const m of shown){
+  shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
-   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';return}
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :' · '+m.state):'';
-   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend})}
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend,av:this.runEnd(id,shown,i)})});
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
@@ -1888,7 +1972,8 @@ const UI={
 
  /** One chat bubble: who wrote it, the message it quotes, and the actions that
      float over its corner on hover (or on tap, which focuses it).
-     o: {fresh, state (stamp suffix), who (html), reply (whether replying is possible)} */
+     o: {fresh, state (stamp suffix), who (html), reply (whether replying is possible),
+         av (true: the sender's picture beside it; false: the space for it; absent: neither)} */
  bubble(conv,m,o){
   const settled=m.state!=='sending'&&m.state!=='failed',r=this.S.reply;
   const acts=settled?'<div class="macts">'+
@@ -1896,14 +1981,99 @@ const UI={
    '<button class="del" data-del="'+esc(m.id)+'" title="Delete" aria-label="Delete">'+ICON.trash+'</button></div>':'';
   return '<div class="msg '+m.dir+o.fresh+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+(m.deleted?' gone':'')+
    (r&&r.conv===conv&&r.id===m.id?' replying':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1">'+(o.who||'')+
+   (o.av==null?'':'<div class="mrow">'+(o.av?this.av(this.sender(conv,m),'mav'):'<div class="av mav ghost"></div>'))+
    '<div class="bub'+(m.re&&!m.deleted?' has-re':'')+'">'+acts+(m.re&&!m.deleted?this.quoteHTML(conv,m.re,true):'')+
-   '<div class="body">'+(m.deleted?(m.dir==='out'?'you deleted this message':'message deleted'):esc(m.text))+'</div></div>'+
+   (m.img&&!m.deleted?'<div class="body has-img">'+this.imgHTML(m)+(m.text?'<div class="cap">'+esc(m.text)+'</div>':'')+'</div></div>'
+    :'<div class="body">'+(m.deleted?(m.dir==='out'?'you deleted this message':'message deleted'):esc(m.text))+'</div></div>')+
+   (o.av==null?'':'</div>')+
    '<div class="stamp">'+hm(m.ts)+(m.deleted?'':o.state)+'</div></div>'},
+ /** A message's image at most 320×360, sized up front so the thread does not jump as it decodes. */
+ imgHTML(m){
+  const w=m.w||320,h=m.h||240,k=Math.min(1,320/w,360/h);
+  return '<button class="mimg" data-view="'+esc(m.id)+'" title="View image" aria-label="View image">'+
+   '<img src="'+esc(m.img)+'" width="'+Math.max(1,Math.round(w*k))+'" height="'+Math.max(1,Math.round(h*k))+'" alt=""></button>'},
+ /** The full-size view of a message's image, with a way to save it. */
+ viewImage(id){
+  const conv=this.cur();
+  const m=conv&&(M.get('msg:'+conv+':'+id)||[...M.pending.values()].find(x=>x.id===id));
+  if(!m||!m.img)return;
+  const ext=(m.img.match(/^data:image\/(\w+)/)||[])[1]||'img';
+  this.modal('<img class="lightbox" src="'+esc(m.img)+'" alt="">'+(m.text?'<div class="note" style="white-space:pre-wrap">'+esc(m.text)+'</div>':'')+
+   '<div class="modal-foot"><span class="grow note" style="margin:0">'+(m.w&&m.h?m.w+'×'+m.h+' · ':'')+esc(m.dir==='out'?'you':M.displayName(m.from||conv))+' · '+esc(hm(m.ts))+'</span>'+
+   '<a class="tbtn" href="'+esc(m.img)+'" download="marmot-'+esc(m.id)+'.'+ext+'">SAVE</a><button class="send" data-m="close">CLOSE</button></div>',
+   act=>{if(act==='close')this.close()})},
+
+ /* ---- sending images ---- */
+ async attach(){const f=await pickImage();if(f)this.attachFile(f)},
+ /** Shrinks an image to send and parks it above the composer until SEND. */
+ async attachFile(f){
+  const conv=this.cur();if(!conv||isDiscord(conv)||!$('#composer'))return;
+  try{const r=await fitImage(f);this.S.att=Object.assign({conv},r);this.render();const ta=$('#composer');if(ta)ta.focus()}
+  catch(e){toast(e.message)}},
+ renderAtt(){
+  const bar=$('#attBar');if(!bar)return;
+  const a=this.S.att;
+  if(!a||a.conv!==this.cur()){bar.classList.add('hidden');bar.innerHTML='';return}
+  const html='<img src="'+esc(a.img)+'" alt=""><div class="grow"><div class="lbl">IMAGE · '+a.w+'×'+a.h+' · '+Math.ceil(a.img.length*3/4/1024)+' KB</div></div>'+
+   '<button data-act="att-cancel" title="Remove image" aria-label="Remove image">'+ICON.x+'</button>';
+  bar.classList.remove('hidden');
+  if(bar.innerHTML!==html)bar.innerHTML=html},
+
+ /* ---- emoji browser ---- */
+ emojiOpen(){return !!$('#emojiPop')},
+ emojiClose(){const p=$('#emojiPop');if(p)p.remove();const b=document.querySelector('[data-act=emoji]');if(b)b.setAttribute('aria-expanded','false')},
+ emojiToggle(){
+  if(this.emojiOpen())return this.emojiClose();
+  const box=$('#composerBox');if(!box)return;
+  const pop=document.createElement('div');pop.className='emojipop';pop.id='emojiPop';
+  pop.innerHTML='<input class="search" placeholder="search emoji…" aria-label="Search emoji" spellcheck="false">'+
+   '<div class="etabs">'+(this.recentEmoji().length?'<button data-ecat="-1" title="Recent">🕘</button>':'')+
+   EMOJI.map((c,i)=>'<button data-ecat="'+i+'" title="'+c.name+'">'+c.icon+'</button>').join('')+'</div><div class="egrid"></div>';
+  box.appendChild(pop);
+  document.querySelector('[data-act=emoji]').setAttribute('aria-expanded','true');
+  const q=pop.querySelector('input');
+  q.addEventListener('input',()=>this.emojiFill(q.value));
+  q.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const b=pop.querySelector('.egrid [data-emoji]');if(b)this.putEmoji(b.dataset.emoji)}});
+  this.emojiFill('');
+  if(matchMedia('(hover:hover)').matches)q.focus()},
+ /** Fills the grid: every category with its heading, or the matches for q. */
+ emojiFill(q){
+  const grid=$('#emojiPop .egrid');if(!grid)return;
+  q=q.trim().toLowerCase();
+  const btn=x=>'<button data-emoji="'+x.e+'" title="'+esc(x.k.split(' ')[0])+'">'+x.e+'</button>';
+  if(q){
+   const hits=[];for(const c of EMOJI)for(const x of c.list)if(x.k.includes(q))hits.push(x);
+   grid.innerHTML=hits.length?hits.map(btn).join(''):'<div class="grouplbl">NO EMOJI MATCH</div>';return}
+  const rec=this.recentEmoji();
+  grid.innerHTML=(rec.length?'<div class="grouplbl" data-sec="-1">RECENT</div>'+rec.map(e=>btn({e,k:''})).join(''):'')+
+   EMOJI.map((c,i)=>'<div class="grouplbl" data-sec="'+i+'">'+c.name.toUpperCase()+'</div>'+c.list.map(btn).join('')).join('');
+  grid.scrollTop=0},
+ emojiJump(i){
+  const q=$('#emojiPop input');if(q&&q.value){q.value='';this.emojiFill('')}
+  const h=$('#emojiPop .egrid [data-sec="'+i+'"]'),grid=$('#emojiPop .egrid');
+  if(h)grid.scrollTop=h.offsetTop-grid.offsetTop-4;
+  document.querySelectorAll('#emojiPop .etabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ecat===String(i))))},
+ recentEmoji(){try{const r=JSON.parse(store.get('emoji.recent')||'[]');return Array.isArray(r)?r.filter(x=>typeof x==='string').slice(0,24):[]}catch(e){return []}},
+ /** Types an emoji at the caret; the browser stays open for more. */
+ putEmoji(e){
+  const ta=$('#composer');if(!ta)return;
+  const a=ta.selectionStart,b=ta.selectionEnd;
+  ta.setRangeText(e,a==null?ta.value.length:a,b==null?ta.value.length:b,'end');
+  ta.focus();
+  store.set('emoji.recent',JSON.stringify([e].concat(this.recentEmoji().filter(x=>x!==e)).slice(0,24)))},
+
+ /** Who wrote m: me, the group member it came from, or the person a direct chat is with. */
+ sender(conv,m){return m.dir==='out'?M.me.userId:m.from||conv},
+ /** Whether shown[i] ends a run of messages from one sender (the next is someone else,
+     a system line, or more than five minutes or a day later), so it carries their picture. */
+ runEnd(conv,shown,i){
+  const m=shown[i],n=shown[i+1];
+  return !n||n.dir==='sys'||this.sender(conv,n)!==this.sender(conv,m)||n.ts-m.ts>5*60000||dayLabel(n.ts)!==dayLabel(m.ts)},
  /** The quoted message, as it reads now if it is still here, else as it was quoted. */
  quoteHTML(conv,re,jump){
   const live=M.get('msg:'+conv+':'+re.id),gone=!!(live&&live.deleted);
   const name=re.from===M.me.userId?'you':M.displayName(re.from||conv);
-  const text=gone?'message deleted':live?live.text:re.t||'original message';
+  const text=gone?'message deleted':live?gist(live):re.t||'original message';
   const tag=jump?'button':'div';
   return '<'+tag+' class="quote"'+(jump?' data-jump="'+esc(re.id)+'" title="Jump to message"':'')+'><b>'+esc(name)+'</b>'+
    '<span'+(gone?' class="gone"':'')+'>'+esc(text.slice(0,200))+'</span></'+tag+'>'},
@@ -1917,7 +2087,7 @@ const UI={
   if(!m||m.deleted){bar.classList.add('hidden');bar.innerHTML='';return}
   const name=m.dir==='out'?'yourself':M.displayName(m.from||conv);
   const html=ICON.reply+'<div class="grow"><div class="lbl">REPLYING TO '+esc(name.toUpperCase())+'</div>'+
-   '<div class="rtext">'+esc(m.text.slice(0,200))+'</div></div>'+
+   '<div class="rtext">'+esc(gist(m).slice(0,200))+'</div></div>'+
    '<button data-act="reply-cancel" title="Cancel reply (Esc)" aria-label="Cancel reply">'+ICON.x+'</button>';
   bar.classList.remove('hidden');
   if(bar.innerHTML!==html)bar.innerHTML=html},
@@ -1945,7 +2115,7 @@ const UI={
    :all?'Delete for everyone replaces it with “message deleted” on every copy in this chat, including people who have not opened it yet. Delete for me only removes it from your history.'
    :isDiscord(conv)?'This removes it from your Marmot history only. It stays in the Discord channel.'
    :'This removes it from your history only. '+(m.dir==='out'?'Others in the chat keep their copy.':'The sender and anyone else in the chat keep theirs.');
-  const preview=m.deleted?'':'<div class="quote" style="margin:0 0 4px"><b>'+esc(m.dir==='out'?'you':m.author||M.displayName(m.from||conv))+' · '+esc(hm(m.ts))+'</b><span>'+esc(m.text.slice(0,200))+'</span></div>';
+  const preview=m.deleted?'':'<div class="quote" style="margin:0 0 4px"><b>'+esc(m.dir==='out'?'you':m.author||M.displayName(m.from||conv))+' · '+esc(hm(m.ts))+'</b><span>'+esc(gist(m).slice(0,200))+'</span></div>';
   this.modal('<h3>'+(m.deleted?'Remove placeholder?':'Delete message?')+'</h3>'+preview+'<div class="note">'+esc(note)+'</div>'+
    '<div class="err" id="delMsgErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
    '<button class="'+(all?'tbtn danger':'hang')+'" data-m="me">'+(m.deleted?'REMOVE':'DELETE FOR ME')+'</button>'+
@@ -2004,16 +2174,16 @@ const UI={
   let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
   const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
-  for(const m of shown){
+  shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
-   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';return}
    const got=(m.got||[]).length;
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':got?' · delivered to '+(others&&got>=others?'everyone':got):' · sent'):'';
-   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,
-    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})}
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,av:this.runEnd(id,shown,i),
+    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
   this.patch(th,html);
   if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
 
@@ -2280,10 +2450,13 @@ const UI={
  async send(){
   const ta=$('#composer');if(!ta)return;
   const text=ta.value,id=this.cur();
-  if(!text.trim())return;
   const r=this.S.reply,re=r&&r.conv===id?r.id:undefined;
-  ta.value='';this._stick=true;if(re){this.S.reply=null;this.render()}
-  try{await M.sendText(id,text,undefined,re)}catch(e){toast('not sent: '+e.message)}},
+  const a=this.S.att&&this.S.att.conv===id?this.S.att:null;
+  if(!text.trim()&&!a)return;
+  if(a&&text.length>IMGTEXT)return toast('captions are limited to '+IMGTEXT+' characters');
+  ta.value='';this._stick=true;this.emojiClose();
+  if(re||a){this.S.reply=null;this.S.att=null;this.render()}
+  try{await M.sendText(id,text,undefined,re,a)}catch(e){toast('not sent: '+e.message)}},
 
  notify(peer,text){
   if(document.hidden||this.cur()!==peer)toast(M.displayName(peer)+': '+text.slice(0,80),4000)},
@@ -2356,10 +2529,16 @@ document.addEventListener('click',async e=>{
  if(t.dataset.reply){UI.startReply(t.dataset.reply);return}
  if(t.dataset.del){UI.askDelete(t.dataset.del);return}
  if(t.dataset.jump){UI.jump(t.dataset.jump);return}
+ if(t.dataset.view){UI.viewImage(t.dataset.view);return}
+ if(t.dataset.emoji){UI.putEmoji(t.dataset.emoji);return}
+ if(t.dataset.ecat){UI.emojiJump(t.dataset.ecat);return}
  if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
  switch(t.dataset.act){
   case 'send':UI.send();break;
   case 'reply-cancel':UI.cancelReply();{const ta=$('#composer');if(ta)ta.focus()}break;
+  case 'att-cancel':UI.S.att=null;UI.render();{const ta=$('#composer');if(ta)ta.focus()}break;
+  case 'attach':UI.attach();break;
+  case 'emoji':UI.emojiToggle();break;
   case 'back':
    if(UI.S.screen==='peers')UI.S.peer=null;else if(UI.S.screen==='settings')UI.S.set=false;
    else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
@@ -2396,12 +2575,26 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('keydown',e=>{
  if(e.target.id==='composer'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();UI.send()}
- if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
+ if(e.key==='Escape'&&UI.emojiOpen()){UI.emojiClose();const ta=$('#composer');if(ta)ta.focus()}
+ else if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
  else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply()});
 let searchTimer=0;
 $('#search').addEventListener('input',e=>{
  UI.S.filter=e.target.value;UI.renderCol();
  if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}});
+// the emoji browser closes on a click anywhere else
+document.addEventListener('mousedown',e=>{if(UI.emojiOpen()&&!e.target.closest('#emojiPop,[data-act=emoji]'))UI.emojiClose()});
+// images can be pasted into the composer, or dropped anywhere on an open chat
+const imageIn=list=>[...(list||[])].find(f=>/^image\//.test(f.type));
+document.addEventListener('paste',e=>{
+ if(e.target.id!=='composer')return;
+ const f=imageIn(e.clipboardData&&e.clipboardData.files);if(!f||isDiscord(UI.cur()))return;
+ e.preventDefault();UI.attachFile(f)});
+document.addEventListener('dragover',e=>{if(UI.cur()&&$('#composer')&&e.dataTransfer&&[...e.dataTransfer.types].includes('Files'))e.preventDefault()});
+document.addEventListener('drop',e=>{
+ const f=e.dataTransfer&&imageIn(e.dataTransfer.files);
+ if(!f||!UI.cur()||!$('#composer'))return;
+ e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
 document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.more()},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.render();if(M.token&&M.wsState!=='live')M.connect()}});

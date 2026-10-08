@@ -26,7 +26,7 @@ const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;
 const LIMITS = {
-  body: '4mb', puts: 600, putBytes: 256 * 1024, sends: 32, payloadBytes: 128 * 1024,
+  body: '6mb', puts: 600, putBytes: 256 * 1024, sends: 32, payloadBytes: 128 * 1024,
   opksPerCommit: 200, opksTotal: 500, blobsTotal: 100000, inbox: 300,
   peers: 2000, globalPage: 50, groupMembers: 32, groups: 200
 };
