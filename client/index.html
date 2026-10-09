@@ -357,7 +357,7 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.4.0';
+const VERSION='0.4.2';
 
 /** The first configured server that answers at all (any HTTP status counts). */
 async function reachServer(){
@@ -1052,7 +1052,7 @@ class MarmotClient{
   if(this.done.has(e.id)||!this.token)return;
   if(isDiscord(e.from))return this._handleDiscord(e,quiet);
   const peerId=e.from;
-  let note=null,sig=null;
+  let note=null,sig=null,after=null;
   await this.lock(peerId,async()=>{
    if(this.done.has(e.id))return;
    let env=null;try{env=JSON.parse(e.payload)}catch(x){}
@@ -1071,7 +1071,7 @@ class MarmotClient{
     if(out.opk!=null)await tx.del('opk:'+out.opk);
     if(inner.g!=null){
      const r=await this._groupInner(peerId,inner,e,tx,sess);
-     sess=r.sess;note=r.note}
+     sess=r.sess;note=r.note;after=r.after||null}
     else if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
@@ -1101,6 +1101,8 @@ class MarmotClient{
    this.done.add(e.id);
    if(this.done.size>5000)this.done=new Set([...this.done].slice(-2500))});
   if(sig)this.voice._signal(peerId,sig,e.ts);
+  // after the lock: it sends to this same peer
+  if(after)after();
   if(note)this._note(note.peer,note.text,quiet)}
 
  /** The group part of an inbound message: a text, a receipt for one of mine,
@@ -1122,7 +1124,13 @@ class MarmotClient{
     note={peer:conv,text:this.displayName(peerId)+': '+gist(m)}}
    const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
    tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
-   return {sess:r.rec,note}}
+   // the sender has a newer name or icon than this account: ask them for it
+   const gs=Array.isArray(inner.gs)?inner.gs:[],mine=this._groupStamp(gid);
+   const behind=Number(gs[0])>mine[0]||Number(gs[1])>mine[1];
+   return {sess:r.rec,note,after:behind?()=>this._once('want:'+gid+':'+peerId,
+    ()=>this._sendGroup(gid,{k:'group',t:'want',g:gid},null,[peerId])):null}}
+  if(inner.k==='group'&&inner.t==='want')
+   return {sess,note:null,after:()=>this._once('give:'+gid+':'+peerId,()=>this._sendGroupMeta(gid,[peerId]))};
   if(inner.k==='del'&&typeof inner.id==='string'){
    // only whoever wrote a message can take it back
    await this._tombstone(tx,'msg:'+conv+':'+inner.id,m=>m.dir==='in'&&m.from===peerId);
@@ -1201,9 +1209,28 @@ class MarmotClient{
   // newcomers learn the current name from whoever invited them
   const n=this.get('gname:'+gid);
   if(n&&r.added.length)await this._sendGroup(gid,{k:'group',t:'name',g:gid,name:n.name,ts:n.ts},null,r.added).catch(()=>{});
-  const ic=this.get('gicon:'+gid);
-  if(ic&&r.added.length)await this._sendGroup(gid,{k:'group',t:'icon',g:gid,icon:ic.icon,ts:ic.ts},null,r.added).catch(()=>{});
+  if(r.added.length)await this._sendGroupMeta(gid,r.added);
   return r.added}
+
+ /** [name ts, icon ts] of the group as this account has it, sent along with each group text. */
+ _groupStamp(gid){gid=String(gid).replace(/^g:/,'');
+  return [(this.get('gname:'+gid)||{}).ts||0,(this.get('gicon:'+gid)||{}).ts||0]}
+
+ /** Sends some members the group's current name and icon. The name and icon are one-off
+     messages, so a member who missed one (a tab still running an older client acks what it
+     does not understand) would otherwise never get it. */
+ async _sendGroupMeta(gid,to){
+  const n=this.get('gname:'+gid),ic=this.get('gicon:'+gid);
+  if(n)await this._sendGroup(gid,{k:'group',t:'name',g:gid,name:n.name,ts:n.ts},null,to).catch(()=>{});
+  if(ic)await this._sendGroup(gid,{k:'group',t:'icon',g:gid,icon:ic.icon,ts:ic.ts},null,to).catch(()=>{})}
+
+ /** Runs fn at most once a minute per key, so a busy group does not repeat the same repair. */
+ _once(key,fn){
+  const seen=this._recent||(this._recent=new Map()),now=Date.now();
+  if(now-(seen.get(key)||0)<60000)return;
+  seen.set(key,now);
+  if(seen.size>500)for(const [k,t] of seen)if(now-t>=60000)seen.delete(k);
+  fn().catch(()=>{})}
 
  async leaveGroup(gid){
   gid=String(gid).replace(/^g:/,'');
@@ -1413,7 +1440,7 @@ class MarmotClient{
   this.pending.set(m.id,m);this.emit('change');
   try{
    const inner=Object.assign({k:'text',id:m.id,t:text,ts:m.ts,re},im),save=tx=>tx.put('msg:'+peerId+':'+m.id,Object.assign({},m,{state:'sent'},grp?{got:[]}:{}));
-   if(grp)await this._sendGroup(peerId.slice(2),Object.assign(inner,{g:peerId.slice(2)}),save);
+   if(grp)await this._sendGroup(peerId.slice(2),Object.assign(inner,{g:peerId.slice(2),gs:this._groupStamp(peerId)}),save);
    else await this._sendInner(peerId,inner,save);
    this.pending.delete(m.id);
   }catch(e){m.state='failed';m.error=e.message;this.emit('change');throw e}
@@ -1870,7 +1897,7 @@ const UI={
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
   if(scr==='settings')this.fillSettings();
-  else if(chat){this.renderThread();this.renderReply();this.renderAtt();this.more()}},
+  else if(chat){this.renderThread();this.renderReply();this.renderAtt();if(!this._follow)this.more()}},
 
  renderThread(){
   const id=this.cur(),th=$('#thread');if(!id||!th)return;
@@ -1895,7 +1922,7 @@ const UI={
    const html='<span class="grow">'+g[0]+'</span>'+(g[1]?'<button class="send" data-peer-act="'+g[1]+'">'+g[2]+'</button>':'');
    if(gate.innerHTML!==html)gate.innerHTML=html}
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
-  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  const atBottom=this.following(th);
   let html='',lastDay='';
   const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
   if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
@@ -1910,7 +1937,7 @@ const UI={
      :' · '+m.state):'';
    html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend,av:this.runEnd(id,shown,i)})});
   this.patch(th,html);
-  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+  this.settle(th,atBottom,opened)},
 
  /** Makes el's children match html while keeping the nodes that stay (matched by data-k),
      so a bubble that is still animating in, or easing from sending to sent, is not cut short. */
@@ -1946,6 +1973,29 @@ const UI={
   if(i<0||atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-PAGE);this._from=list.length?list[i].ts:null}
   this._more=i>0;
   return list.slice(i)},
+ /** Whether the thread stays pinned to the newest message: the reader has not scrolled up
+     since they were last at the bottom. The scroll position alone cannot tell: when a burst
+     arrives (catching up after being offline), a smooth scroll to the bottom is still running
+     when the next batch is drawn, so the thread would look scrolled away, stop following, and
+     never trim its window, drawing every message that came in. */
+ following(th){
+  if(this._followFor!==this.cur()){this._followFor=this.cur();this._follow=true;this._lastTop=0}
+  return this._follow||th.scrollHeight-th.scrollTop-th.clientHeight<60},
+ /** After a redraw: back to the bottom when following (at once if it is far, or the thread just opened). */
+ settle(th,atBottom,opened){
+  this._lastTop=th.scrollTop;
+  if(!atBottom&&!this._stick)return;
+  const far=th.scrollHeight-th.scrollTop-th.clientHeight>th.clientHeight;
+  th.scrollTo({top:th.scrollHeight,behavior:opened||far?'auto':'smooth'});
+  this._stick=false;this._follow=true},
+ /** The reader scrolled: up means they stopped following, reaching the bottom picks it up again.
+     Older pages load only once they have scrolled up themselves, not while a redraw scrolls down. */
+ scrolled(th){
+  const t=th.scrollTop;
+  if(t<this._lastTop-4)this._follow=false;
+  if(th.scrollHeight-t-th.clientHeight<60)this._follow=true;
+  this._lastTop=t;
+  if(!this._follow)this.more()},
  /** Widens the window back to ts. What comes into view is history, not news, so it does not animate in. */
  reveal(ts){
   const seen=this._seen;
@@ -1960,7 +2010,7 @@ const UI={
   this.reveal(list[Math.max(0,i-PAGE)].ts);
   const h=th.scrollHeight,top=th.scrollTop;
   this.renderThread();
-  th.scrollTop=top+th.scrollHeight-h},
+  th.scrollTop=top+th.scrollHeight-h;this._lastTop=th.scrollTop},
 
  /** m => ' new' for messages that arrived since this thread was last drawn.
      Opening a thread animates the pane instead, so nothing counts as new then. */
@@ -2141,7 +2191,7 @@ const UI={
   if(!l&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   const leave=document.querySelector('[data-act=leave]');if(leave)leave.classList.toggle('hidden',!l);
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
-  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  const atBottom=this.following(th);
   let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
   const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
@@ -2155,7 +2205,7 @@ const UI={
    html+=this.bubble(id,m,{fresh:fresh(m),state,reply:false,
     who:m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':''})}
   this.patch(th,html);
-  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+  this.settle(th,atBottom,opened)},
 
  /** A group chat: each message shows who sent it, and mine show how many members confirmed delivery. */
  renderGroup(id,th){
@@ -2169,7 +2219,7 @@ const UI={
   if(!g&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   document.querySelectorAll('#chatActs button').forEach(b=>b.classList.toggle('hidden',!g));
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
-  const atBottom=th.scrollHeight-th.scrollTop-th.clientHeight<60;
+  const atBottom=this.following(th);
   const others=g?g.members.length-1:0;
   let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
   const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
@@ -2185,7 +2235,7 @@ const UI={
    html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,av:this.runEnd(id,shown,i),
     who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
   this.patch(th,html);
-  if(atBottom||this._stick){th.scrollTo({top:th.scrollHeight,behavior:opened?'auto':'smooth'});this._stick=false}},
+  this.settle(th,atBottom,opened)},
 
  /** A checklist of friends for starting or growing a group; `skip` are ids already in it. */
  friendPicker(skip){
@@ -2596,7 +2646,7 @@ document.addEventListener('drop',e=>{
  if(!f||!UI.cur()||!$('#composer'))return;
  e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
-document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.more()},true);
+document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target)},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
 
 M.on('change',()=>UI.render());

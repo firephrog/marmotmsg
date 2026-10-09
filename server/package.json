@@ -1,6 +1,6 @@
 {
   "name": "marmot-server",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

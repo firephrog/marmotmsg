@@ -14,7 +14,7 @@ const { createServer } = require('../server');
 
 const html = fs.readFileSync(path.join(__dirname, '..', '..', 'client', 'index.html'), 'utf8');
 const core = html.split('/*<marmot-core>*/')[1].split('/*</marmot-core>*/')[0];
-const { MarmotClient, Ratchet, Acct } = new Function(core + '\nreturn {MarmotClient,Ratchet,Acct};')();
+const { MarmotClient, Ratchet, Acct, Tx } = new Function(core + '\nreturn {MarmotClient,Ratchet,Acct,Tx};')();
 
 const PASS = 'correct horse battery';
 const ITER = 300000;   // the server's floor; real clients use 600k
@@ -537,6 +537,15 @@ test('profile pictures and group icons', async () => {
   await waitFor(() => wes.groupIcon(gid) === PIC2, 'a newcomer to learn the icon');
   const dump = JSON.stringify(srv.db.raw.prepare('SELECT * FROM groups').all()) + JSON.stringify(srv.db.raw.prepare('SELECT * FROM group_members').all());
   assert.ok(!dump.includes('iVBORw0KGgo'));
+  // a member who missed the icon (an older client acked it unread) gets it back from the next text
+  const tx = new Tx(vic2);
+  await tx.del('gicon:' + gid);
+  await tx.commit();
+  assert.equal(vic2.groupIcon(gid), null);
+  await una.sendText(conv, 'still here?');
+  await waitFor(() => vic2.groupIcon(gid) === PIC2, 'the missed icon to be resent');
+  assert.equal(vic2.thread(conv).filter(m => m.text === 'una changed the group icon').length, 1, 'a resend is not announced again');
+
   await vic2.setGroupIcon(gid, '');
   await waitFor(() => una.groupIcon(gid) === null && wes.groupIcon(gid) === null, 'icon removal');
 });

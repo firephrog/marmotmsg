@@ -21,7 +21,7 @@ const { WebSocketServer } = require('ws');
 const store = require('./db');
 const { Discord, Bridge } = require('./discord');
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.2';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;

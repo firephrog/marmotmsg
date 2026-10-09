@@ -12,7 +12,7 @@
 set -e
 cd "$(dirname "$0")"
 APP=marmot ENV=marmot-beta STACK="64bit Amazon Linux 2023 v6.11.9 running Node.js 22"
-LABEL="v0.4.0-$(date +%Y%m%d%H%M%S)"
+LABEL="v0.4.2-$(date +%Y%m%d%H%M%S)"
 TMP=$(mktemp -d)
 # Git Bash on Windows: aws.exe needs a Windows path inside file://… (plain arguments are converted, file:// ones are not)
 FTMP=$(cygpath -m "$TMP" 2>/dev/null || echo "$TMP")
