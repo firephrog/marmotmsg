@@ -1,3 +1,10 @@
+## Installation
+
+Most of you people are probably here just to download the latest version of Marmot, and do not care about any of the code. If you wish to do that, go to https://github.com/firephrog/marmotmsg/releases and download the HTML file of the latest one. 
+
+Or, you can choose to use the Github Pages site, which is at firephrog.github.io/marmotmsg
+
+
 # Marmot
 
 A browser messenger using the Signal protocol. The client is one standalone HTML file. The server is a
