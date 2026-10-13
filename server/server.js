@@ -20,8 +20,9 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const store = require('./db');
 const { Discord, Bridge } = require('./discord');
+const admin = require('./admin');
 
-const VERSION = '0.4.2';
+const VERSION = '0.5.0';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;
@@ -103,10 +104,28 @@ function limiter(perMinute) {
   };
 }
 
+/** Reads the client file and the VERSION it declares, again only when the file changes. */
+function clientReader(file) {
+  let cached = null;
+  return () => {
+    let st;
+    try { st = fs.statSync(file); } catch (e) { throw new HttpError(404, 'client not found'); }
+    if (!cached || cached.mtime !== st.mtimeMs || cached.size !== st.size) {
+      const html = fs.readFileSync(file, 'utf8');
+      const m = /const VERSION='([\d.]+)'/.exec(html);
+      if (!m) throw new HttpError(404, 'client has no version');
+      cached = { mtime: st.mtimeMs, size: st.size, html, v: m[1] };
+    }
+    return cached;
+  };
+}
+
 /* ---------------------------------------------------------------- app */
 function createServer(opts) {
   opts = opts || {};
   const db = opts.db || store.open(opts);
+  const dataDir = opts.dataDir || process.env.MARMOT_DATA || path.join(__dirname, 'data');
+  const staff = opts.staff || new admin.Staff(opts.adminFile || process.env.MARMOT_ADMIN || path.join(dataDir, 'admin.json'));
   const app = express();
   // A number is a hop count (CloudFront → nginx → here is 2); anything else is Express's own syntax.
   const tp = process.env.TRUST_PROXY;
@@ -125,13 +144,19 @@ function createServer(opts) {
   });
   app.use(express.json({ limit: LIMITS.body }));
 
+  // An IP-banned address gets nothing but this. `banned` tells a signed-in client to sign out.
+  app.use('/api', (req, res, next) => {
+    if (db.ipBanned(admin.normIp(req.ip))) return res.status(403).json({ ok: false, error: 'this network is banned from this server', banned: true });
+    next();
+  });
+
   const wrap = fn => (req, res) => {
     Promise.resolve().then(() => fn(req, res)).then(out => {
       if (!res.headersSent) res.json(Object.assign({ ok: true }, out));
     }).catch(err => {
       const status = err.status || (err.type === 'entity.too.large' ? 413 : 500);
       if (status === 500) console.error(err);
-      res.status(status).json({ ok: false, error: status === 500 ? 'server error' : err.message });
+      res.status(status).json(Object.assign({ ok: false, error: status === 500 ? 'server error' : err.message }, status === 500 ? {} : err.extra));
     });
   };
 
@@ -147,7 +172,31 @@ function createServer(opts) {
     const row = db.userRow(s.user_id);
     if (!row) throw new HttpError(401, 'account no longer exists');
     req.tokenHash = hash;
+    seenAt(row, req);
     return row;
+  }
+  /** Remembers the address each account last used, which is what an IP ban bans. Written only when it changes. */
+  const lastIp = new Map();
+  function seenAt(row, req) {
+    const ip = admin.normIp(req.ip);
+    if (!ip || lastIp.get(row.id) === ip) return;
+    if (lastIp.size > 50000) lastIp.clear();
+    lastIp.set(row.id, ip);
+    if (db.lastIp(row) !== ip) db.setLastIp(row.id, ip);
+  }
+  /** 'admin' or 'mod' for staff, so clients can tag them in chats; undefined for everyone else. */
+  const roleOf = row => { const s = staff.of(row.username); return s ? s.role : undefined; };
+  /** When a user's mute ends (0 = permanent), so clients can tag them; undefined if they are not muted. */
+  const mutedOf = row => { const m = db.mute(row.id); return m ? m.until : undefined; };
+  /** What the signed-in user should know about their standing: staff role and any mute. */
+  function standing(row) {
+    const m = db.mute(row.id);
+    return { staff: staff.of(row.username), mute: m && { until: m.until, reason: m.reason } };
+  }
+  /** Muted users cannot send anything that says something; see 'say' in /api/commit. */
+  function checkMute(row) {
+    const m = db.mute(row.id);
+    if (m) throw Object.assign(new HttpError(403, m.until ? 'you are muted until ' + new Date(m.until).toUTCString() : 'you are muted permanently'), { extra: { muted: m.until } });
   }
   function issueToken(userId) {
     const token = crypto.randomBytes(32).toString('base64url');
@@ -203,6 +252,8 @@ function createServer(opts) {
       if (/UNIQUE/.test(e.message)) throw new HttpError(409, 'that username is taken');
       throw e;
     }
+    lastIp.delete(userId);
+    seenAt(db.userRow(userId), req);
     return { token: issueToken(userId), userId, username };
   }));
 
@@ -225,7 +276,8 @@ function createServer(opts) {
     const token = issueToken(row.id);
     db.deleteOtherSessions(row.id, sha256(token));
     hub.revoke(row.id);
-    return { token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable, av: row.avatar_v };
+    seenAt(row, req);
+    return Object.assign({ token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row));
   }));
 
   app.post('/api/logout', wrap(req => {
@@ -237,8 +289,8 @@ function createServer(opts) {
   app.get('/api/me', wrap(req => {
     const row = auth(req);
     const spk = db.spk(row);
-    return { userId: row.id, username: row.username, created: row.created, spkId: spk.id,
-      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable, av: row.avatar_v };
+    return Object.assign({ userId: row.id, username: row.username, created: row.created, spkId: spk.id,
+      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row));
   }));
 
   /**
@@ -285,7 +337,7 @@ function createServer(opts) {
     const row = req.query.id ? db.userRow(String(req.query.id)) : db.userRowByName(String(req.query.username || '').trim());
     if (!row) throw new HttpError(404, 'no such user');
     const u = db.publicUser(row);
-    return { user: { userId: u.userId, username: u.username, ik: u.ik, sk: u.sk, av: row.avatar_v } };
+    return { user: { userId: u.userId, username: u.username, ik: u.ik, sk: u.sk, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) } };
   }));
 
   /** Full prekey bundle for starting a session. Consumes one one-time prekey. */
@@ -326,7 +378,7 @@ function createServer(opts) {
   /* ------------------------------------------------------------ peers */
   const peerView = p => {
     const row = db.userRow(p.peer);
-    return row && { userId: row.id, username: row.username, state: p.state, since: p.since, av: row.avatar_v };
+    return row && { userId: row.id, username: row.username, state: p.state, since: p.since, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) };
   };
 
   /** Everyone I have a relationship with: friends, requests both ways, and people I blocked. */
@@ -423,7 +475,7 @@ function createServer(opts) {
     groupId: g.id, created: g.created, createdBy: g.createdBy,
     members: db.groupMembers(g.id).map(m => {
       const row = db.userRow(m.userId);
-      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy, av: row.avatar_v };
+      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) };
     }).filter(Boolean)
   });
   const pushGroup = groupId => { for (const m of db.groupMembers(groupId)) hub.push(m.userId, { t: 'groups' }); };
@@ -505,6 +557,7 @@ function createServer(opts) {
   app.post('/api/discord/send', limiter(120), wrap(req => {
     const me = auth(req);
     const b = req.body || {};
+    checkMute(me);
     return needBridge().send(me, String(b.link || ''), b.text);
   }));
 
@@ -519,15 +572,19 @@ function createServer(opts) {
       // An envelope marked optional (a delivery receipt) is dropped rather than
       // failing the commit when its recipient is no longer a friend, so the
       // rest of the commit — the ratchet, the stored message, the ack — still lands.
+      // `say` marks an envelope that carries something the sender wrote (a text, an image,
+      // a call, a group rename); a muted sender cannot send those. The server cannot see
+      // inside an envelope, so this is the client's own label, which current clients set.
       send: asArray(b.send, LIMITS.sends, 'envelopes').map(m => {
         if (!m || typeof m.to !== 'string' || typeof m.payload !== 'string') throw bad('malformed envelope');
         if (m.payload.length > LIMITS.payloadBytes) throw bad('envelope too large');
         if (m.to === me.id) throw bad('cannot send to yourself');
         if (!db.userRow(m.to)) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
         if (!canReach(me.id, m.to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
-        return { to: m.to, payload: m.payload };
+        return { to: m.to, payload: m.payload, say: m.say === true };
       }).filter(Boolean)
     };
+    if (c.send.some(m => m.say)) checkMute(me);
     if (c.opks.length && db.prekeyCount(me.id) + c.opks.length > LIMITS.opksTotal) throw bad('too many prekeys outstanding');
     if (c.puts.length && db.blobCount(me.id) + c.puts.length > LIMITS.blobsTotal) throw new HttpError(507, 'storage quota reached');
     const sent = db.commit(me.id, c);
@@ -541,16 +598,37 @@ function createServer(opts) {
     if (!b64bytes((req.body || {}).auth, 32) || !checkVerifier(me.verifier, req.body.auth)) throw new HttpError(401, 'wrong password');
     const others = db.deleteUser(me.id);
     hub.revoke(me.id);
+    // a moderator's appointment is by username: it must not pass to whoever takes the name next
+    const was = staff.of(me.username);
+    if (was && was.role === 'mod') {
+      try { staff.setMod(me.username, []); } catch (e) { console.error('[marmot] could not remove deleted moderator ' + me.username + ':', e.message); }
+    }
     for (const o of others) { hub.push(o, { t: 'peers' }); hub.push(o, { t: 'groups' }); }
     return {};
   }));
 
-  app.use('/api', (req, res) => res.status(404).json({ ok: false, error: 'unknown endpoint' }));
+  admin.mount(app, { db, hub: { push: (u, m) => hub.push(u, m), pushAll: m => hub.pushAll(m), revoke: (u, why) => hub.revoke(u, why) }, staff, wrap, auth, HttpError });
 
   // Serving the client is a convenience; the same file works opened from disk.
   // ../client in the repo; ./client in a deployment bundle, where the server directory is the root.
-  const clientFile = [path.join(__dirname, 'client', 'index.html'), path.join(__dirname, '..', 'client', 'index.html')]
+  const clientFile = opts.clientFile || [path.join(__dirname, 'client', 'index.html'), path.join(__dirname, '..', 'client', 'index.html')]
     .find(f => fs.existsSync(f)) || path.join(__dirname, '..', 'client', 'index.html');
+
+  // Auto-update: a client older than the one served here swaps itself for it at boot.
+  // The version is read out of the file itself, so it always matches the html handed out.
+  const readClient = clientReader(clientFile);
+  app.get('/api/client/version', limiter(120), wrap((req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return { v: readClient().v };
+  }));
+  app.get('/api/client', limiter(30), wrap((req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const c = readClient();
+    return { v: c.v, html: c.html };
+  }));
+
+  app.use('/api', (req, res) => res.status(404).json({ ok: false, error: 'unknown endpoint' }));
+
   app.get(['/', '/index.html', '/Marmot.html'], (req, res) => {
     if (!fs.existsSync(clientFile)) return res.status(404).send('client not found');
     res.set('Cache-Control', 'no-cache');
@@ -574,13 +652,14 @@ function createServer(opts) {
       const data = JSON.stringify(msg);
       for (const set of this.sockets.values()) for (const ws of set) if (ws.readyState === 1) ws.send(data);
     },
-    /** Revoked sockets get one notice before closing; they must not reconnect. */
-    revoke(userId) {
+    /** Revoked sockets get one notice before closing; they must not reconnect.
+        `why` is 'banned' or 'ipban' when staff did it, so the client can say so. */
+    revoke(userId, why) {
       const set = this.sockets.get(userId);
       if (!set) return;
       for (const ws of set) {
         if (ws.tokenHash && db.session(ws.tokenHash)) continue;   // the session that just logged in
-        try { ws.send(JSON.stringify({ t: 'revoked' })); ws.close(4001, 'revoked'); } catch (e) {}
+        try { ws.send(JSON.stringify(why ? { t: 'revoked', why } : { t: 'revoked' })); ws.close(4001, 'revoked'); } catch (e) {}
       }
     }
   };
@@ -633,7 +712,7 @@ function createServer(opts) {
 
   server.on('close', () => { clearInterval(heartbeat); clearInterval(sweeper); wss.close(); if (bridge) bridge.stop(); });
 
-  return { app, server, db, hub, get bridge() { return bridge; } };
+  return { app, server, db, hub, staff, get bridge() { return bridge; } };
 }
 
 if (require.main === module) {

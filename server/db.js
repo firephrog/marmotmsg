@@ -111,6 +111,25 @@ CREATE TABLE IF NOT EXISTS group_members (
   PRIMARY KEY (group_id, user_tag)
 );
 CREATE INDEX IF NOT EXISTS group_members_user ON group_members(user_tag);
+-- Moderation (see admin.js). A mute's end is plaintext so expired ones can be
+-- swept; who set it and why are sealed. An IP ban is found by a keyed tag of
+-- the address; the address itself is sealed, so a leaked database does not
+-- list them. The log is every staff action, sealed.
+CREATE TABLE IF NOT EXISTS mutes (
+  user_id    TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  until      INTEGER NOT NULL,           -- ms epoch; 0 = permanent
+  body       TEXT NOT NULL               -- sealed {by, reason, ts}
+);
+CREATE TABLE IF NOT EXISTS ip_bans (
+  tag        TEXT PRIMARY KEY,           -- keyed HMAC of the address
+  created    INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {ip, userId, username, by, reason}
+);
+CREATE TABLE IF NOT EXISTS mod_log (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts         INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {by, action, target, detail}
+);
 `;
 
 /** Columns added after a table first shipped; applied to older databases on open. */
@@ -118,7 +137,8 @@ const MIGRATIONS = [
   ['users', 'discoverable', 'ALTER TABLE users ADD COLUMN discoverable INTEGER NOT NULL DEFAULT 0'],
   ['discord_links', 'public', 'ALTER TABLE discord_links ADD COLUMN public INTEGER NOT NULL DEFAULT 0'],
   ['users', 'avatar', 'ALTER TABLE users ADD COLUMN avatar TEXT'],
-  ['users', 'avatar_v', 'ALTER TABLE users ADD COLUMN avatar_v INTEGER NOT NULL DEFAULT 0']
+  ['users', 'avatar_v', 'ALTER TABLE users ADD COLUMN avatar_v INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'last_ip', 'ALTER TABLE users ADD COLUMN last_ip TEXT']   // sealed; what an IP ban bans
 ];
 
 function open(opts) {
@@ -200,7 +220,22 @@ function open(opts) {
     delGroupMember: db.prepare('DELETE FROM group_members WHERE group_id = ? AND user_tag = ?'),
     groupMembersOf: db.prepare('SELECT user_tag, body FROM group_members WHERE group_id = ?'),
     countGroupMembers: db.prepare('SELECT COUNT(*) n FROM group_members WHERE group_id = ?'),
-    groupsOfUser: db.prepare('SELECT group_id FROM group_members WHERE user_tag = ?')
+    groupsOfUser: db.prepare('SELECT group_id FROM group_members WHERE user_tag = ?'),
+    searchUsers: db.prepare(`SELECT * FROM users WHERE uname LIKE ? ESCAPE '\\' ORDER BY uname LIMIT ? OFFSET ?`),
+    setLastIp: db.prepare('UPDATE users SET last_ip = ? WHERE id = ?'),
+    deleteSessions: db.prepare('DELETE FROM sessions WHERE user_id = ?'),
+    mute: db.prepare('SELECT * FROM mutes WHERE user_id = ?'),
+    putMute: db.prepare(`INSERT INTO mutes (user_id, until, body) VALUES (?, ?, ?)
+                         ON CONFLICT (user_id) DO UPDATE SET until = excluded.until, body = excluded.body`),
+    delMute: db.prepare('DELETE FROM mutes WHERE user_id = ?'),
+    expireMutes: db.prepare('DELETE FROM mutes WHERE until != 0 AND until < ?'),
+    ipBan: db.prepare('SELECT 1 FROM ip_bans WHERE tag = ?'),
+    putIpBan: db.prepare(`INSERT INTO ip_bans (tag, created, body) VALUES (?, ?, ?)
+                          ON CONFLICT (tag) DO UPDATE SET created = excluded.created, body = excluded.body`),
+    delIpBan: db.prepare('DELETE FROM ip_bans WHERE tag = ?'),
+    ipBans: db.prepare('SELECT * FROM ip_bans ORDER BY created DESC'),
+    insertLog: db.prepare('INSERT INTO mod_log (ts, body) VALUES (?, ?)'),
+    log: db.prepare('SELECT * FROM mod_log ORDER BY id DESC LIMIT ?')
   };
 
   const memberTag = userId => S.tag('discord-member|' + userId);
@@ -432,10 +467,40 @@ function open(opts) {
       for (const p of puts) q.putBlob.run(u.id, p.k, S.seal(p.v, 'blobs:' + u.id + ':' + p.k), now);
     }),
 
+    /* ---- moderation ---- */
+    /** Every account whose username contains `search`, for the admin panel. */
+    searchUsers(search, limit, offset) {
+      const like = '%' + String(search || '').toLowerCase().replace(/[\\%_]/g, c => '\\' + c) + '%';
+      return q.searchUsers.all(like, limit, offset);
+    },
+    setLastIp: (id, ip) => q.setLastIp.run(ip ? S.seal(ip, 'users.last_ip:' + id) : null, id),
+    lastIp: row => row.last_ip ? S.open(row.last_ip, 'users.last_ip:' + row.id) : null,
+    deleteSessions: userId => q.deleteSessions.run(userId),
+    /** The user's mute as {until, by, reason, ts} (until 0 = permanent), or null if none is in force. */
+    mute(userId, now) {
+      const r = q.mute.get(userId);
+      if (!r || (r.until && r.until <= (now || Date.now()))) return null;
+      return Object.assign({ until: r.until }, S.open(r.body, 'mutes:' + userId));
+    },
+    setMute: (userId, until, info) => q.putMute.run(userId, until, S.seal(info, 'mutes:' + userId)),
+    clearMute: userId => q.delMute.run(userId).changes > 0,
+    ipTag: ip => S.tag('ip|' + ip),
+    ipBanned: ip => !!ip && !!q.ipBan.get(S.tag('ip|' + ip)),
+    banIp: (ip, info) => { const tag = S.tag('ip|' + ip); q.putIpBan.run(tag, Date.now(), S.seal(Object.assign({ ip }, info), 'ip_bans:' + tag)); return tag; },
+    unbanIp: tag => q.delIpBan.run(String(tag)).changes > 0,
+    ipBans: () => q.ipBans.all().map(r => Object.assign({ id: r.tag, created: r.created }, S.open(r.body, 'ip_bans:' + r.tag))),
+    /** Appends to the moderation log; `entry` is {by, action, target, detail}. */
+    log(entry) {
+      const ts = Date.now(), info = q.insertLog.run(ts, S.seal(entry, 'mod_log:' + ts));
+      return Number(info.lastInsertRowid);
+    },
+    logs: limit => q.log.all(limit).map(r => Object.assign({ id: r.id, ts: r.ts }, S.open(r.body, 'mod_log:' + r.ts))),
+
     sweep(now, envelopeTtl) {
       q.expireSessions.run(now);
       q.expireEnvelopes.run(now - envelopeTtl);
       q.expireInvites.run(now);
+      q.expireMutes.run(now);
     }
   };
 }

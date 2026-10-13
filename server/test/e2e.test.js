@@ -591,6 +591,48 @@ test('images in messages, end to end, at the largest size allowed', async () => 
   assert.ok(!xan.thread(conv).find(x => x.id === id).img);
 });
 
+test('polls: every copy keeps the same count, votes change and come back, and close at the end', async () => {
+  const pam = client(), quin = client(), ros = client();
+  await pam.signup('pollpam', PASS);
+  await quin.signup('pollquin', PASS);
+  await ros.signup('pollros', PASS);
+  await Promise.all([pam, quin, ros].map(live));
+  const quinId = await befriend(pam, quin);
+  await befriend(pam, ros);
+  const gid = await pam.createGroup('votes', [quinId, ros.me.userId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => ros.group(gid) && quin.group(gid), 'both join');
+
+  const poll = { q: 'Lunch?', opts: ['pizza', 'tacos', 'sushi'], ends: pam.serverNow() + 3600000 };
+  const id = await pam.sendText(conv, 'pam used /poll\n📊 Lunch?', undefined, undefined, undefined, poll);
+  await waitFor(() => [quin, ros].every(c => c.get('msg:' + conv + ':' + id)), 'poll fan-out');
+  assert.deepEqual(ros.get('msg:' + conv + ':' + id).poll.opts, ['pizza', 'tacos', 'sushi']);
+
+  const tally = c => c.get('msg:' + conv + ':' + id).votes || {};
+  await quin.vote(conv, id, 1);
+  await ros.vote(conv, id, 1);
+  await pam.vote(conv, id, 0);
+  const want = { [quinId]: 1, [ros.me.userId]: 1, [pam.me.userId]: 0 };
+  await waitFor(() => [pam, quin, ros].every(c => require('util').isDeepStrictEqual(tally(c), want)), 'everyone sees the same three votes');
+
+  // changing a vote, and taking one back
+  await ros.vote(conv, id, 2);
+  await quin.vote(conv, id, -1);
+  await waitFor(() => [pam, quin, ros].every(c => tally(c)[ros.me.userId] === 2 && !(quinId in tally(c))), 'vote changed and withdrawn');
+
+  // a poll in a direct chat, already over: no more votes
+  const old = { q: 'Done?', opts: ['yes', 'no'], ends: pam.serverNow() + 1500 };
+  const id2 = await pam.sendText(quinId, 'pam used /poll\n📊 Done?', undefined, undefined, undefined, old);
+  await waitFor(() => quin.get('msg:' + pam.me.userId + ':' + id2), 'direct poll');
+  await quin.vote(pam.me.userId, id2, 0);
+  await waitFor(() => (pam.get('msg:' + quinId + ':' + id2).votes || {})[quinId] === 0, 'direct vote');
+  await new Promise(r => setTimeout(r, 1600));
+  await assert.rejects(quin.vote(pam.me.userId, id2, 1), /ended/);
+
+  // nonsense polls are refused before anything is sent
+  await assert.rejects(pam.sendText(conv, 'x', undefined, undefined, undefined, { q: 'one?', opts: ['only'], ends: Date.now() + 1000 }), /not valid/);
+});
+
 test('step 1 databases are migrated', async () => {
   const Database = require('better-sqlite3');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-mig-'));

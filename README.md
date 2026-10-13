@@ -154,11 +154,19 @@ should run the bot (see step 6).
 Friends can call each other: **CALL** in a chat header or on their profile. One call at a time. While
 a call is up, a bar across the top of the window shows it, so it stays in place when you switch screens.
 
-- **Audio** is WebRTC, which always encrypts media as **DTLS-SRTP**: SRTP with keys from a DTLS
-  handshake between the two browsers.
+- **Audio and video** are WebRTC, which always encrypts media as **DTLS-SRTP**: SRTP with keys
+  from a DTLS handshake between the two browsers.
+- **Camera and screen share**: **CAMERA** and **SCREEN** in the call bar switch either on at any
+  point in a call, and both can be on at once. Video shows in a panel under the bar: the biggest
+  feed fills it and the rest sit as thumbnails you can click to swap in. **EXPAND** fills the
+  window, **FULLSCREEN** the screen. Every call sets up one audio and two video channels (camera,
+  then screen) from the start, so switching video on only swaps a track in; there is no second
+  offer and answer. A `{t:'media', cam, screen}` signal tells the other side what to show. Screen
+  share is video only (no tab or system audio), and most mobile browsers can't share a screen,
+  so the button is hidden there. Calls with an older, voice-only client stay voice only.
 - **Why the server can't listen in**: each side's DTLS certificate fingerprint is in its offer or
   answer, and those travel as ordinary Double Ratchet messages (`{k:'call', t:'offer'|'answer'|
-  'decline'|'busy'|'end'}`). The server relays them but can't read or change them, so it can't
+  'decline'|'busy'|'end'|'media'}`). The server relays them but can't read or change them, so it can't
   swap in its own certificate and sit in the middle. If you have verified someone's safety number,
   that covers your calls with them too.
 - **Network**: browsers connect directly when they can, using STUN to find their public
@@ -171,13 +179,26 @@ a call is up, a bar across the top of the window shows it, so it stays in place 
 - **Busy and crossed calls**: a second caller gets "busy". If two friends call each other at the
   same moment, the call from the lower user id goes ahead and the other side answers it
   automatically.
-- **Requirements**: the microphone needs a secure page, so open Marmot over `https://` or from
+- **Requirements**: the microphone and camera need a secure page, so open Marmot over `https://` or from
   `http://localhost`. Closing the tab mid-call drops the call; the other side
   notices within about 10 seconds.
 
 Without a TURN relay, some calls won't connect: for example, both people behind strict NATs, or
 on some mobile networks. Run [coturn](https://github.com/coturn/coturn) with `use-auth-secret`
 before relying on calls in production.
+
+## Updates
+
+When a client starts, it asks its server for `GET /api/client/version`. That version is read out of the
+`client/index.html` the server serves. If the server's copy is newer and auto-update is on (the
+default; Settings → Updates), the client gets the whole file from `GET /api/client` and writes it over
+the page. The new copy then shows its patch notes and offers itself as a download. With auto-update
+off, a newer client is only offered as a download.
+
+To release: bump `VERSION` in `client/index.html`, `server/server.js` and `server/package.json`
+(`npm test` checks they match), and put a new entry at the top of the `#patchNotes` JSON block in
+the client. The client script is wrapped in a single `{ }` block so that a newer copy can be
+written into the same window. Keep new code inside it.
 
 ## Accounts and storage
 

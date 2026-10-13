@@ -24,19 +24,44 @@ let srv, base, dataDir;
 const clients = [];
 const pushed = [];   // every envelope payload the server pushed
 
-/** Connects as soon as both descriptions are set, like two browsers on one LAN. */
+class FakeTx {
+  constructor(kind, direction) {
+    this.kind = kind; this.direction = direction; this.currentDirection = null;
+    this.receiver = { track: { kind } };
+    const sender = this.sender = { track: null, async replaceTrack(t) { sender.track = t; } };
+  }
+}
+/** Connects as soon as both descriptions are set, like two browsers on one LAN.
+    Transceivers follow unified plan closely enough for the camera/screen wiring:
+    one m= line each, matched by position, addTrack reusing an offered audio section. */
 class FakePC {
   constructor(cfg) {
     this.cfg = cfg; this.connectionState = 'new'; this.iceGatheringState = 'new';
-    this.localDescription = null; this.remoteDescription = null; this.tracks = [];
+    this.localDescription = null; this.remoteDescription = null; this.tracks = []; this.tx = [];
     this.fp = crypto.randomBytes(16).toString('hex').toUpperCase().match(/../g).join(':');
   }
-  addTrack(t) { this.tracks.push(t); }
-  _sdp(type) { return 'v=0\r\no=- ' + type + '\r\na=fingerprint:sha-256 ' + this.fp + '\r\na=setup:actpass\r\n'; }
+  addTrack(t) {
+    this.tracks.push(t);
+    let x = this.tx.find(x => x.kind === 'audio' && !x.sender.track);
+    if (!x) this.tx.push(x = new FakeTx('audio', 'sendrecv'));
+    x.sender.track = t; x.direction = 'sendrecv';
+  }
+  addTransceiver(kind, o) { const x = new FakeTx(kind, o.direction); this.tx.push(x); return x; }
+  getTransceivers() { return this.tx; }
+  _sdp(type) {
+    return 'v=0\r\no=- ' + type + '\r\na=fingerprint:sha-256 ' + this.fp + '\r\na=setup:actpass\r\n' +
+      this.tx.map(x => 'm=' + x.kind + ' ' + x.direction + '\r\n').join('');
+  }
   async createOffer() { return { type: 'offer', sdp: this._sdp('offer') }; }
   async createAnswer() { return { type: 'answer', sdp: this._sdp('answer') }; }
   async setLocalDescription(d) { this._open(); this.localDescription = d; this.iceGatheringState = 'complete'; this._connect(); }
-  async setRemoteDescription(d) { this._open(); this.remoteDescription = d; this._connect(); }
+  async setRemoteDescription(d) {
+    this._open(); this.remoteDescription = d;
+    const m = [...d.sdp.matchAll(/^m=(\w+) (\w+)/gm)];
+    if (d.type === 'offer') for (const [, kind] of m) this.tx.push(new FakeTx(kind, 'recvonly'));
+    else this.tx.forEach((x, i) => { x.currentDirection = m[i] && m[i][2] === 'sendrecv' && x.direction === 'sendrecv' ? 'sendrecv' : 'sendonly'; });
+    this._connect();
+  }
   _open() { if (this.connectionState === 'closed') throw new Error('peer connection is closed'); }
   _connect() {
     if (!this.localDescription || !this.remoteDescription) return;
@@ -52,15 +77,22 @@ class FakePC {
   close() { this.connectionState = 'closed'; }
 }
 const mics = [];
+const fakeTrack = kind => ({ kind, enabled: true, stopped: false, stop() { this.stopped = true; } });
 async function getUserMedia(c) {
+  if (c.video) { assert.equal(c.audio, false); const t = fakeTrack('camera'); return { getTracks: () => [t] }; }
   assert.equal(c.audio && typeof c.audio, 'object');
-  const track = { enabled: true, stopped: false, stop() { this.stopped = true; } };
+  const track = fakeTrack('audio');
   mics.push(track);
   return { getTracks: () => [track] };
 }
+async function getDisplayMedia(c) {
+  assert.ok(c.video);
+  const t = fakeTrack('screen');
+  return { getTracks: () => [t] };
+}
 
 function client(opts) {
-  const c = new MarmotClient(Object.assign({ WebSocket, iter: 300000, RTCPeerConnection: FakePC, getUserMedia }, opts));
+  const c = new MarmotClient(Object.assign({ WebSocket, iter: 300000, RTCPeerConnection: FakePC, getUserMedia, getDisplayMedia }, opts));
   c.setServer(base);
   clients.push(c);
   return c;
@@ -236,6 +268,65 @@ test('two friends calling each other at once end up in one call', async () => {
   await waitFor(() => sys(kai, lou.me.userId).length && sys(lou, kai.me.userId).length, 'history');
   assert.equal(sys(kai, lou.me.userId).length, 1);
   assert.equal(sys(lou, kai.me.userId).length, 1);
+});
+
+test('camera and screen share switch on and off mid-call without renegotiating', async () => {
+  const [mo, ned] = await pair('moe', 'ned');
+  await mo.voice.start(ned.me.userId);
+  await waitFor(() => state(ned) === 'ringing', 'ringing');
+  await ned.voice.accept();
+  await waitFor(() => state(mo) === 'active' && state(ned) === 'active', 'connected');
+  const pa = mo.voice.call.pc, pb = ned.voice.call.pc;
+  const offer = pb.remoteDescription.sdp;
+  assert.deepEqual(pa.tx.map(x => x.kind), ['audio', 'video', 'video']);
+  assert.deepEqual(pb.tx.map(x => x.kind), ['audio', 'video', 'video'], 'the answer reuses the offered sections');
+  assert.ok(mo.voice.canVideo() && ned.voice.canVideo() && ned.voice.canScreen());
+
+  await mo.voice.setCamera(true);
+  assert.equal(pa.tx[1].sender.track.kind, 'camera');
+  await waitFor(() => ned.voice.call.peerCam, 'ned sees the camera');
+  assert.equal(ned.voice.call.peerScreen, false);
+
+  await ned.voice.setScreen(true);
+  const screen = pb.tx[2].sender.track;
+  assert.equal(screen.kind, 'screen');
+  await waitFor(() => mo.voice.call.peerScreen, 'moe sees the screen');
+  // stopping from the browser's own "stop sharing" control
+  screen.onended();
+  await waitFor(() => !mo.voice.call.peerScreen, 'share ended');
+  assert.equal(ned.voice.call.screen, false);
+  assert.ok(screen.stopped);
+  assert.equal(pb.tx[2].sender.track, null);
+
+  const cam = pa.tx[1].sender.track;
+  await mo.voice.setCamera(false);
+  assert.ok(cam.stopped, 'camera light goes off');
+  assert.equal(pa.tx[1].sender.track, null);
+  await waitFor(() => !ned.voice.call.peerCam, 'camera off');
+  assert.equal(pb.remoteDescription.sdp, offer, 'no second offer');
+
+  await mo.voice.setCamera(true);
+  const cam2 = pa.tx[1].sender.track;
+  await mo.voice.hangup();
+  await waitFor(() => !ned.voice.call, 'ended');
+  assert.ok(cam2.stopped, 'hanging up releases the camera');
+});
+
+test('a voice-only answer from an older client keeps video off', async () => {
+  // older clients only ever addTrack the microphone, and never touch transceiver directions
+  class OldPC extends FakePC {}
+  OldPC.prototype.getTransceivers = undefined;
+  const [oz, pip] = await pair('ozz', 'pip');
+  pip.voice.RTC = OldPC;
+  await oz.voice.start(pip.me.userId);
+  await waitFor(() => state(pip) === 'ringing', 'ringing');
+  await pip.voice.accept();
+  await waitFor(() => state(oz) === 'active' && state(pip) === 'active', 'connected');
+  await waitFor(() => !oz.voice.canVideo(), 'video dropped');
+  assert.equal(pip.voice.canVideo(), false);
+  await assert.rejects(oz.voice.setCamera(true), /voice only/);
+  await oz.voice.hangup();
+  await waitFor(() => !pip.voice.call, 'ended');
 });
 
 test('ICE config without a relay', async () => {

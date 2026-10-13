@@ -142,6 +142,36 @@ button:disabled{opacity:.4;cursor:default}
 .egrid button:hover,.egrid button:focus-visible{background:var(--row);transform:scale(1.12);outline:none}
 .egrid .grouplbl{grid-column:1/-1;padding:6px 2px 2px}
 .hint{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint)}
+.hint.warn{color:var(--warn)}
+.ping{color:var(--accent);font-weight:600}
+.msg.out .body .ping{color:inherit;text-decoration:underline}
+.ping.me{background:var(--accent);color:var(--accent-ink);padding:0 3px}
+.msg.out .body .ping.me{background:var(--accent-ink);color:var(--accent);text-decoration:none}
+.msg.pinged .body{box-shadow:inset 3px 0 0 var(--accent)}
+.badge.at{background:var(--warn)}
+.acpop{position:absolute;left:-1px;bottom:calc(100% + 8px);z-index:21;width:min(340px,calc(100vw - 24px));max-height:300px;overflow-y:auto;display:flex;flex-direction:column;padding:4px;background:var(--rail);border:1px solid var(--line2);box-shadow:0 18px 44px rgba(0,0,0,.34);animation:replyIn .14s ease both}
+.acpop button{display:flex;align-items:center;gap:10px;padding:6px 8px;text-align:left;font-size:13px;min-width:0}
+.acpop button[aria-selected=true]{background:var(--row)}
+.acpop .d{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acpop .grouplbl{padding:4px 6px 2px}
+.poll{margin-top:8px;display:flex;flex-direction:column;gap:5px;min-width:220px;white-space:normal}
+.poll .pq{font-weight:600}
+.popt{position:relative;display:flex;align-items:center;gap:8px;padding:6px 9px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);color:inherit;text-align:left;overflow:hidden}
+.popt:not([disabled]):hover,.popt.mine{border-color:currentColor}
+.popt.mine,.popt.won{font-weight:600}
+.popt .bar{position:absolute;left:0;top:0;bottom:0;background:currentColor;opacity:.16;transition:width .3s}
+.popt .ot{position:relative;flex:1;overflow-wrap:anywhere}
+.popt .oc{position:relative;font-family:'JetBrains Mono',monospace;font-size:11px}
+.poll .pf{font-family:'JetBrains Mono',monospace;font-size:10px;opacity:.7}
+.cmdhelp{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:var(--muted)}
+.cmdhelp b{color:var(--text);font-weight:500}
+select.inp{cursor:pointer}
+.perm{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12px;border-bottom:1px solid var(--line);max-width:640px;cursor:pointer}
+.perm input{flex:none}
+.perm .chip{margin-left:auto}
+.logrow{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px;max-width:760px}
+.logrow b{flex:none;width:150px;font-weight:400;color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:10px}
+.logrow span{color:var(--muted);word-break:break-word}
 .send{padding:7px 14px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:500;transition:filter .15s,background .15s,opacity .15s}
 .send:hover{filter:brightness(1.08)}
 .empty{flex:1;display:grid;place-items:center;font-size:11px;color:var(--faint);text-align:center;line-height:2;padding:20px}
@@ -162,6 +192,11 @@ button:disabled{opacity:.4;cursor:default}
 .scrim{position:fixed;inset:0;background:rgba(10,9,8,.62);display:grid;place-items:center;z-index:20;padding:16px;animation:fade .2s ease both}
 .scrim.solid{background:var(--bg)}
 .scrim.top{z-index:50}
+.pnotes{margin-top:12px;max-height:46vh;overflow-y:auto}
+.pnote+.pnote{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.pnote-v{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:6px}
+.pnote .lbl{margin-top:8px}
+.pnote ol{margin:4px 0 0;padding-left:22px;font-size:13px;line-height:1.5}
 .modal{width:440px;max-width:100%;max-height:90vh;overflow-y:auto;background:var(--rail);border:1px solid var(--line2);padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.35);animation:lift .28s cubic-bezier(.2,.85,.25,1) both}
 .modal h3{margin:0 0 4px;font-size:16px;font-weight:600}
 .modal-foot{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
@@ -212,7 +247,11 @@ button.quote:hover{background:var(--row)}
 .quote b{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:9.5px;font-weight:500;letter-spacing:.04em;color:var(--accent-soft)}
 .quote span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .quote span.gone,.msg.gone .body{font-style:italic;color:var(--faint)}
-.msg.gone .body,.msg.out.gone .body{background:none;color:var(--faint);border:1px dashed var(--line2);font-size:13px}
+.msg .body.veil{display:block;width:100%;text-align:left;font-style:italic;cursor:pointer}
+.msg .body.unveiled{outline:1px dotted var(--muted);outline-offset:2px;cursor:pointer}
+.msg .body.unveiled:hover{outline-color:var(--accent)}
+.msg .body.veil:hover{color:var(--muted);border-color:var(--accent)}
+.msg.gone .body,.msg.out.gone .body,.msg .body.veil{background:none;color:var(--faint);border:1px dashed var(--line2);font-size:13px}
 .msg.replying .body{outline:1px solid var(--accent);outline-offset:3px}
 .replybar{display:flex;align-items:center;gap:10px;padding:9px 8px 9px 12px;background:var(--accent-wash);border-bottom:1px solid var(--line);box-shadow:inset 2px 0 0 var(--accent);animation:replyIn .18s ease both}
 .replybar>svg{color:var(--accent)}
@@ -243,6 +282,26 @@ button.quote:hover{background:var(--row)}
 .hang{transition:filter .15s}
 .hang:hover{filter:brightness(1.08)}
 .callbar.out{animation:rise .18s ease both;pointer-events:none}
+/* video: a floating panel under the call bar, or the whole window below it when expanded.
+   The biggest feed fills it; the rest sit as thumbnails in the corner, and a click swaps one in */
+.stage{position:fixed;top:70px;right:16px;width:min(460px,calc(100vw - 32px));aspect-ratio:16/10;z-index:29;background:#000;border:1px solid var(--line2);box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;animation:drop .22s ease both;--tw:112px;--th:63px}
+.stage[hidden]{display:none}
+.stage.big{top:58px;left:0;right:0;bottom:0;width:auto;aspect-ratio:auto;border:0;box-shadow:none;--tw:208px;--th:117px}
+.stage:fullscreen{--tw:240px;--th:135px}
+.stage .tile{position:absolute;display:block;padding:0;background:#000;overflow:hidden}
+.stage .tile[hidden]{display:none}
+.stage .tile.main{inset:0;cursor:default}
+.stage .tile.thumb{right:8px;bottom:calc(8px + var(--i) * (var(--th) + 6px));width:var(--tw);height:var(--th);z-index:1;border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 12px rgba(0,0,0,.5);transition:border-color .15s}
+.stage .tile.thumb:hover{border-color:var(--accent)}
+.stage video{width:100%;height:100%;object-fit:contain;display:block}
+.stage .tile.thumb video{object-fit:cover}
+.stage [data-tile=mycam] video{transform:scaleX(-1)}
+.stage .tag{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 16px);padding:2px 6px;background:rgba(0,0,0,.6);color:#fff;font:10px 'JetBrains Mono',ui-monospace,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage .thumb .tag{left:4px;bottom:4px;font-size:9px}
+.stage-ctl{position:absolute;top:8px;right:8px;z-index:2;display:flex;gap:6px;opacity:0;transition:opacity .15s}
+.stage:hover .stage-ctl,.stage:focus-within .stage-ctl{opacity:1}
+.stage-ctl .tbtn{background:rgba(0,0,0,.6);color:#fff;border-color:rgba(255,255,255,.25)}
+@media (hover:none){.stage-ctl{opacity:1}}
 .scrim.out{animation:fadeout .18s ease both;pointer-events:none}
 .scrim.out .modal{animation:sink .18s ease both}
 .toast.out{animation:slideout .25s ease both}
@@ -287,6 +346,10 @@ button.quote:hover{background:var(--row)}
  .gate{margin:0 12px 12px}
  .pane-head .meta,.pane-head .pane-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .callbar .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .callbar{gap:6px;padding:0 10px 0 12px}
+ .callbar .tbtn,.callbar .hang{padding:7px 8px}
+ .stage{right:8px;width:calc(100vw - 16px);--tw:88px;--th:50px}
+ .stage.big{right:0;width:auto}
  .msg{max-width:86%}
  .thread{padding:16px}
  .composer{margin:0 12px 12px}
@@ -305,6 +368,7 @@ button.quote:hover{background:var(--row)}
       <button data-screen="peers"><i class="dot"></i>Peers<span class="n" id="navPeers"></span></button>
       <button data-screen="discord" id="navDiscord" class="hidden"><i class="dot"></i>Discord<span class="n" id="navDc"></span></button>
       <button data-screen="settings"><i class="dot"></i>Settings<span class="n"></span></button>
+      <button data-screen="admin" id="navAdmin" class="hidden"><i class="dot"></i>Moderation<span class="n"></span></button>
     </div>
     <div class="spacer"></div>
     <div class="me">
@@ -328,6 +392,7 @@ button.quote:hover{background:var(--row)}
       <button data-screen="peers">PEERS<span class="n" id="tabPeers"></span></button>
       <button data-screen="discord" id="tabDiscord" class="hidden">DISCORD<span class="n" id="tabDc"></span></button>
       <button data-screen="settings">SETTINGS</button>
+      <button data-screen="admin" id="tabAdmin" class="hidden">ADMIN</button>
     </div>
     <div class="status"><i id="statusDot" class="idle"></i><span id="statusText">not connected</span></div>
   </div>
@@ -337,10 +402,26 @@ button.quote:hover{background:var(--row)}
 <div class="toasts" id="toasts"></div>
 <div id="callbar" role="status" aria-live="polite"></div>
 <audio id="callAudio" autoplay playsinline></audio>
+<div id="stage" class="stage" hidden>
+  <button class="tile" data-act="stage-pin" data-tile="pscreen" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
+  <button class="tile" data-act="stage-pin" data-tile="pcam" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
+  <button class="tile" data-act="stage-pin" data-tile="myscreen" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
+  <button class="tile" data-act="stage-pin" data-tile="mycam" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
+  <div class="stage-ctl"><button class="tbtn" data-act="stage-full">FULLSCREEN</button><button class="tbtn" data-act="stage-size"></button></div>
+</div>
 <div id="overlay"></div>
 
+<script type="application/json" id="patchNotes">
+[
+ {"v": "0.5.0", "features": ["Added auto updating (longer start times, can download latest html for faster start times).", "Added Video and Screenshare to calls", "Added admin panel, moderators, and muting", "Added customizable chat filter (completely client side, disableable)", "Added patch notes display"], "fixes": ["Fixed Burst loading, where messages would load in a burst after inactivity"]}
+]
+</script>
 <script>
 'use strict';
+/* Everything below sits in one block, so this script declares nothing global. Auto-update
+   (see "updates") writes a newer copy over this page in the same window, and that copy
+   must be able to declare the same names again. Keep new code inside the block. */
+{
 /* ==========================================================================
    SERVER — the Marmot server everyone using this file connects to.
    Leave blank and the login screen asks for it (and remembers the answer).
@@ -357,7 +438,10 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.4.2';
+const VERSION='0.5.0';
+/** What each release changed, newest first; the top entry is VERSION. The list itself is
+    the #patchNotes data block above this script, where an older copy can read it too. */
+const PATCH_NOTES=JSON.parse(document.getElementById('patchNotes').textContent);
 
 /** The first configured server that answers at all (any HTTP status counts). */
 async function reachServer(){
@@ -397,11 +481,170 @@ const dim=n=>Number.isInteger(n)&&n>0&&n<=8192?n:undefined;
 /** The image a message carries {img,w,h}, cleaned up when it comes off the wire, or {}. */
 const imgOf=x=>x&&isImg(x.img)?{img:x.img,w:dim(x.w),h:dim(x.h)}:{};
 /** A message in one line: its text, or that it is a photo. */
-const gist=m=>m.text||(m.img?'📷 photo':'');
+const gist=m=>m.text||(m.img?'sent a photo':'');
+
+/* The chat filter: the reader's own setting, applied on this device to what other
+   people send, since nobody else can read an end-to-end encrypted message. Each
+   level includes the one before:
+     none    nothing
+     slurs   slurs
+     swears  slurs and swearing
+     strict  also abbreviations (wtf, stfu, fml…), starred-out words (f**k, sh*t) and
+             words spelled out in pieces (f u c k, s.h.i.t)
+   Matching folds case, look-alike characters (4→a, $→s, …) and stretched letters
+   ("fuuuck"), on whole words, or the start of a word for an entry ending in *, so
+   "class" and "Scunthorpe" get through. Built like server/filter.js. */
+const FILTER_LEVELS=['none','slurs','swears','strict'],FILTER_ACTIONS=['hide','delete'];
+const FILTER_LISTS={
+ slurs:['nigger*','nigga*','sandnigger*','faggot*','fag','fags','fagg*','retard','retards','retarded','kike','kikes','kyke','kykes',
+  'spic','spics','spick','spicks','chink','chinks','tranny','trannies','trannie','wetback*','coon','coons','gook','gooks','dyke','dykes',
+  'beaner','beaners','jigaboo*','raghead*','towelhead*','paki','pakis','golliwog*','zipperhead*','shemale*','chingchong'],
+ swears:['fuck*','motherfuck*','shit*','bullshit*','cunt*','bitch*','whore*','slut*','cock','cocks','cocksuck*','dick','dicks','dickhead*',
+  'pussy','pussies','twat*','wank*','bastard*','ass','asses','asshole*','arse','arses','arsehole*','jackass*','dumbass*','damn*','goddamn*',
+  'piss','pissed','pissing','prick','pricks','bollock*','douche*','skank*','crap','crappy','porn*','rape','raped','rapist*','kys'],
+ strict:['wtf','stfu','gtfo','fml','ffs','omfg','lmfao','af','mf','mfs','mfer*','mofo*','fk','fks','fkd','fkn','fkin','fking','fkr*',
+  'fck*','fuk*','fuq*','fuc','fux','fuxk*','fvck*','phuck*','phuk*','fcuk*','sht','shyt*','bs','pos','smd','stfd','bish','biatch*','btch*',
+  'azz','azzhole*','dafuq','nig','nigs','niga','nigg','nibba*','fgt','fgts','fggt*','tard','tards']
+};
+const chatFilter=(()=>{
+ const LEET={'0':'o','1':'i','!':'i','3':'e','4':'a','@':'a','5':'s','$':'s','7':'t','8':'b','9':'g'};
+ const fold=w=>w.normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[0-9!@$]/g,c=>LEET[c]||c);
+ /** An entry as a pattern where each letter may be stretched: "ass" → a+s{2,}, so "asss" is caught but "as" is not. */
+ const stretch=e=>e.replace(/(.)\1*/g,run=>run[0]+(run.length>1?'{'+run.length+',}':'+'));
+ // a word as typed: letters and digits, plus the symbols people swap in for letters ("!" only inside a word)
+ const WORD=/[\p{L}\p{N}@$]+(?:!+[\p{L}\p{N}@$]+)*/gu;
+ const MASKED=/[\p{L}\p{N}@$]*[*#]+[\p{L}\p{N}@$*#]*/gu;
+ // three or more single characters with gaps between them: "f u c k", "s.h.i.t"
+ const SPACED=/(?<![\p{L}\p{N}@$])[\p{L}\p{N}@$](?:[\s.\-_]+[\p{L}\p{N}@$]){2,}(?![\p{L}\p{N}@$])/gu;
+ const cache=new Map();
+ function compile(level){
+  let c=cache.get(level);if(c)return c;
+  const list=[];
+  for(const l of FILTER_LEVELS.slice(1,FILTER_LEVELS.indexOf(level)+1))list.push(...FILTER_LISTS[l]);
+  const exact=[],prefix=[];
+  for(const e of new Set(list))(e.endsWith('*')?prefix:exact).push(stretch(e.replace(/\*$/,'')));
+  const alts=[];
+  if(exact.length)alts.push('(?:'+exact.join('|')+')$');
+  if(prefix.length)alts.push('(?:'+prefix.join('|')+')');
+  c={re:alts.length?new RegExp('^(?:'+alts.join('|')+')','u'):null,strict:level==='strict',bases:[...new Set(list.map(e=>e.replace(/\*$/,'')))]};
+  cache.set(level,c);return c}
+ const bad=(c,w)=>{w=fold(w).replace(/[^\p{L}\p{N}]/gu,'');return !!w&&c.re.test(w)};
+ /** A starred-out word is caught when some listed word fits it, with or without an ending ("f***ing"). */
+ function masked(c,tok){
+  const t=fold(tok).replace(/[^a-z0-9*#]/g,'');
+  if(t.length<3||!/[a-z]/.test(t)||!/[*#]/.test(t))return false;
+  const forms=[t],s=t.replace(/(?:ing|in|ers|er|ed|es|s|y)$/,'');
+  if(s!==t&&/[*#]/.test(s))forms.push(s);
+  return forms.some(f=>{const re=new RegExp('^'+f.replace(/[*#]+/g,r=>'[a-z]{'+r.length+',}')+'$');return c.bases.some(b=>re.test(b))})}
+ /** True if text has anything the level filters. */
+ function test(level,text){
+  const c=compile(FILTER_LEVELS.includes(level)?level:'none');
+  if(!c.re||!text)return false;
+  text=String(text);
+  if((text.match(WORD)||[]).some(w=>bad(c,w)))return true;
+  if(!c.strict)return false;
+  return (text.match(MASKED)||[]).some(t=>masked(c,t))||(text.match(SPACED)||[]).some(t=>bad(c,t))||
+   // pieces glued with punctuation: "fu-ck", "sh.it"
+   text.split(/\s+/).some(t=>bad(c,t.replace(/^[^\p{L}\p{N}@$]+|[^\p{L}\p{N}@$]+$/gu,'')))}
+ return {test}
+})();
 const isDiscord=id=>String(id).startsWith('dc:');
 const isGroup=id=>String(id).startsWith('g:');
 const GID=/^[0-9a-f]{24}$/,MAXNAME=64;
 const clock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+/** Whether an outgoing inner message says something (a text, image, call or group rename).
+    The server holds those back from a muted account; it cannot see inside, so the client labels them. */
+/** @username pings. Usernames may contain dots, so a dot ending a sentence is trimmed off. */
+const MENTION=/(^|[^\w@])@([A-Za-z0-9._-]{3,24})/g;
+const mentions=t=>{const out=new Set();String(t||'').replace(MENTION,(all,p,n)=>{out.add(n.replace(/\.+$/,'').toLowerCase());return all});return out};
+/** Mute lengths: 30m, 2h, 1d, 1w, 3mo, 1y, or perm. Returns minutes, 'perm', or null. */
+const DURS={m:1,min:1,h:60,hr:60,d:1440,w:10080,mo:43200,y:525600};
+function parseDur(a){
+ if(/^(perm|permanent|permanently|forever)$/i.test(a))return 'perm';
+ const m=/^(\d+)(m|min|h|hr|d|w|mo|y)$/i.exec(a);return m&&Number(m[1])>0?Number(m[1])*DURS[m[2].toLowerCase()]:null}
+function fmtDur(min){
+ for(const [n,l] of [[525600,'year'],[43200,'month'],[10080,'week'],[1440,'day'],[60,'hour'],[1,'minute']])
+  if(min%n===0)return min/n+' '+l+(min/n===1?'':'s');
+ return min+' minutes'}
+/** Chat commands for staff. They run against the admin API and are never sent as messages. */
+const COMMANDS=['help','mute','unmute','ban','ipban','purge'];
+/** "/mute 1w @ann \"spamming\"" → {cmd:'mute', user:'ann', dur:10080, n:null, reason:'spamming'}, or null if
+    it is not a command. The order of the parts does not matter; words in quotes stay together. */
+function parseCommand(text){
+ const m=/^\/(\w+)(?:\s+([\s\S]*))?$/.exec(String(text||'').trim());
+ if(!m||!COMMANDS.includes(m[1].toLowerCase()))return null;
+ const o={cmd:m[1].toLowerCase(),user:null,dur:null,n:null,reason:''},rest=[];
+ (m[2]||'').replace(/"([^"]*)"|'([^']*)'|(\S+)/g,(all,a,b,c)=>{
+  const w=a!=null?a:b!=null?b:c,quoted=c==null;
+  if(!quoted&&!o.user&&/^@[A-Za-z0-9._-]{3,24}$/.test(w))o.user=w.slice(1);
+  else if(!quoted&&o.cmd==='mute'&&o.dur==null&&parseDur(w)!=null)o.dur=parseDur(w);
+  else if(!quoted&&o.cmd==='purge'&&o.n==null&&/^\d+$/.test(w))o.n=Number(w);
+  else rest.push(w);
+  return all});
+ o.reason=rest.join(' ').trim().slice(0,300);
+ return o}
+/** A uniformly random integer in [lo, hi], from the crypto RNG. The span must fit in 32 bits. */
+function randInt(lo,hi){
+ const span=hi-lo+1,lim=Math.floor(0x100000000/span)*span,b=new Uint32Array(1);
+ do crypto.getRandomValues(b);while(b[0]>=lim);
+ return lo+b[0]%span}
+const EIGHTBALL=['It is certain.','Without a doubt.','Yes, definitely.','You may rely on it.','Most likely.','Outlook good.','Signs point to yes.',
+ 'Reply hazy, try again.','Ask again later.','Better not tell you now.','Cannot predict now.',
+ "Don't count on it.",'My reply is no.','My sources say no.','Outlook not so good.','Very doubtful.'];
+/** Fun commands anyone can use: [name, usage, what it does]. The result is sent to the chat as a normal message. */
+const FUN=[['coinflip','','flip a coin'],['rng','1 100','a random number (default 1–100)'],
+ ['roll','2d6','roll dice (default 1d6)'],['8ball','question','ask the magic 8-ball'],['choose','pizza, tacos, sushi','pick one for you'],
+ ['poll','"Lunch?" pizza tacos 2h','a poll everyone here can vote in (lasts 1d unless you say)']];
+/** Polls: up to POLLOPTS options, open for at most POLLMAX minutes. */
+const POLLOPTS=10,POLLMAX=43200,POLLDEF=1440;
+/** The poll a message carries {q, opts, ends}, cleaned up when it comes off the wire; `cap` is the
+    latest it may end (the sender's clock is not trusted to keep it open longer than allowed). */
+function pollOf(x,cap){
+ if(!x||typeof x.q!=='string'||!Array.isArray(x.opts)||!Number.isFinite(x.ends))return undefined;
+ const opts=x.opts.filter(o=>typeof o==='string'&&o.trim()).map(o=>o.trim().slice(0,80)).slice(0,POLLOPTS);
+ if(opts.length<2||!x.q.trim())return undefined;
+ return {q:x.q.trim().slice(0,200),opts,ends:Math.min(x.ends,cap)}}
+/** "/rng 1 10" as `user` → {text} to send, e.g. "ann used /rng\n🎲 1 to 10: 7", plus {poll} for /poll;
+    null if text is not a fun command. Throws with a readable reason when the arguments are wrong. */
+function funCommand(text,user){
+ const m=/^\/(\w+)(?:\s+([\s\S]*))?$/.exec(String(text||'').trim());
+ if(!m||!FUN.some(f=>f[0]===m[1].toLowerCase()))return null;
+ const cmd=m[1].toLowerCase(),arg=(m[2]||'').trim(),said=t=>({text:user+' used /'+cmd+'\n'+t});
+ if(cmd==='coinflip')return said('🪙 '+(randInt(0,1)?'heads':'tails'));
+ if(cmd==='rng'){
+  const n=arg?arg.split(/[\s,]+|(?<=\d)-(?=-?\d)/).filter(Boolean):[];
+  if(n.length>2||n.some(x=>!/^-?\d{1,10}$/.test(x)))throw new Error('use /rng, /rng 20, or /rng 5 50');
+  let [lo,hi]=n.length===2?n.map(Number):[1,n.length?Number(n[0]):100];
+  if(lo>hi)[lo,hi]=[hi,lo];
+  if(lo<-1e9||hi>1e9)throw new Error('keep the numbers within ±1,000,000,000');
+  return said('🎲 '+lo+' to '+hi+': '+randInt(lo,hi))}
+ if(cmd==='roll'){
+  const d=/^(\d{0,3})d(\d{1,4})$/i.exec(arg||'1d6');
+  const k=d?Number(d[1]||1):0,s=d?Number(d[2]):0;
+  if(!d||k<1||k>20||s<2||s>1000)throw new Error('use /roll 2d6 (1–20 dice, 2–1000 sides)');
+  const r=Array.from({length:k},()=>randInt(1,s)),sum=r.reduce((a,b)=>a+b,0);
+  return said('🎲 '+k+'d'+s+': '+(k>1?r.join(' + ')+' = '+sum:sum))}
+ if(cmd==='8ball'){
+  if(!arg)throw new Error('ask a question: /8ball will it rain?');
+  return said('🎱 '+arg.slice(0,200)+'\n'+EIGHTBALL[randInt(0,EIGHTBALL.length-1)])}
+ if(cmd==='choose'){
+  const o=arg.split(arg.includes(',')?',':arg.includes('|')?'|':/\s+/).map(x=>x.trim().slice(0,100)).filter(Boolean).slice(0,50);
+  if(o.length<2)throw new Error('give at least two options: /choose pizza, tacos, sushi');
+  return said('Picking from: '+o.join(', ')+'\n'+o[randInt(0,o.length-1)])}
+ if(cmd==='poll'){
+  const w=[];arg.replace(/"([^"]*)"|'([^']*)'|(\S+)/g,(all,a,b,c)=>{w.push({t:a!=null?a:b!=null?b:c,q:c==null});return all});
+  // a last word like 2h is the duration; quote it to make it an option instead
+  const last=w.length>1&&!w[w.length-1].q&&parseDur(w[w.length-1].t);
+  if(last==='perm')throw new Error('polls need an end: up to 30d');
+  const min=last||POLLDEF;if(last)w.pop();
+  if(min>POLLMAX)throw new Error('polls can last up to 30d');
+  const q=(w.shift()||{t:''}).t.trim(),opts=w.map(x=>x.t.trim()).filter(Boolean);
+  if(!q||opts.length<2)throw new Error('use /poll "title" option1 option2 … [duration], e.g. /poll "Lunch?" pizza tacos 2h');
+  if(opts.length>POLLOPTS)throw new Error('a poll can have up to '+POLLOPTS+' options');
+  if(q.length>200||opts.some(o=>o.length>80))throw new Error('keep the title under 200 characters and each option under 80');
+  return Object.assign(said('📊 '+q+'\n'+opts.map((o,i)=>(i+1)+'. '+o).join('\n')),{poll:{q,opts,ends:Date.now()+min*60000},min})}
+ return null}
+const says=x=>x.k==='text'||(x.k==='call'&&x.t==='offer')||(x.k==='group'&&(x.t==='name'||x.t==='icon')&&!!x.announce);
 /** The quote a reply carries {id, from, t}, cleaned up when it comes off the wire. */
 const reOf=x=>x&&typeof x.id==='string'&&x.id&&x.id.length<=64
  ?{id:x.id,from:typeof x.from==='string'?x.from.slice(0,64):'',t:typeof x.t==='string'?x.t.slice(0,200):''}:undefined;
@@ -626,6 +869,7 @@ const Ratchet={
      msg:<userId>:<id> message {id,peer,dir,text,ts,state,re?}; `re` {id,from,t} is the
                        message it replies to, as quoted when it was sent. A message
                        deleted for everyone stays as {..., text:'', deleted:true}
+     pref:filter       {level,action} the chat filter (see chatFilter)
    Relationships (friends, requests, blocks) are not records: the server
    holds them, because it is the server that refuses traffic between
    strangers. They are kept in this.peers as {userId,username,state,since}.
@@ -669,20 +913,30 @@ class Tx{
    DTLS handshake. A TURN relay, when one is needed, forwards SRTP it cannot
    decrypt.
    One call at a time. Signals are {k:'call', t, call:<id>, sdp?} with t one
-   of offer | answer | decline | busy | end. Each call leaves one line in the
-   chat history, stored like any other record. */
+   of offer | answer | decline | busy | end | media. Each call leaves one line
+   in the chat history, stored like any other record.
+   Video rides the same connection: the offer always carries an audio section
+   and two video sections, camera then screen, sending nothing until switched
+   on. Turning either on swaps a track into its sender, so there is never a
+   second round of offer and answer; a 'media' signal {cam, screen} tells the
+   other side which of its incoming videos to show. A call from an older,
+   audio-only client simply has no video sections, and video stays off. */
 class Voice{
  constructor(c,opts){
   this.c=c;this.call=null;
   this.RTC=opts.RTCPeerConnection||globalThis.RTCPeerConnection||null;
   const md=globalThis.navigator&&globalThis.navigator.mediaDevices;
   this.getMedia=opts.getUserMedia||(md&&md.getUserMedia?k=>md.getUserMedia(k):null);
+  this.getDisplay=opts.getDisplayMedia||(md&&md.getDisplayMedia?k=>md.getDisplayMedia(k):null);
   this.ring=opts.ring||45000;        // how long an unanswered call rings
   this.connect=opts.connectWait||20000;
   this.grace=opts.grace||10000;      // how long a dropped connection may take to recover
   this.gather=opts.gather||4000}
  supported(){return !!(this.RTC&&this.getMedia)}
  why(){return this.RTC?'voice calls need microphone access: open Marmot over https or from localhost':'this browser does not support voice calls'}
+ /** Whether this call can carry video at all (both ends negotiated the video sections). */
+ canVideo(){const c=this.call;return !!(c&&c.tx&&c.tx.cam)}
+ canScreen(){const c=this.call;return !!(this.getDisplay&&c&&c.tx&&c.tx.screen)}
  emit(){this.c.emit('call',this.call)}
  send(call,t,extra){return this.c._sendInner(call.peer,Object.assign({k:'call',t,call:call.id},extra))}
 
@@ -692,7 +946,7 @@ class Voice{
   if(cur)throw new Error('you are already in a call');
   if(!this.supported())throw new Error(this.why());
   if(!this.c.isFriend(peerId))throw new Error('you can only call friends');
-  const call=this.call={id:uid(),peer:peerId,dir:'out',state:'calling',created:Date.now(),muted:false};
+  const call=this.call={id:uid(),peer:peerId,dir:'out',state:'calling',created:Date.now(),muted:false,...Voice.fresh()};
   this.emit();
   try{
    await this._open(call);
@@ -713,7 +967,6 @@ class Voice{
   call.state='connecting';clearTimeout(call.timer);this.emit();
   try{
    await this._open(call);
-   await call.pc.setRemoteDescription({type:'offer',sdp:call.offer});
    await call.pc.setLocalDescription(await call.pc.createAnswer());
    await this._gathered(call.pc);
    if(this.call!==call)return null;
@@ -741,8 +994,49 @@ class Voice{
   if(call.stream)call.stream.getTracks().forEach(t=>{t.enabled=!on});
   this.emit()}
 
+ static fresh(){return {cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,switching:new Set()}}
+
+ /** Camera on or off. Resolves once the track is in (or out of) its sender. */
+ setCamera(on){return this._video('cam',on,()=>this.getMedia({audio:false,
+  video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}}))}
+
+ /** Screen share on or off; the browser asks which screen, window or tab. Ending it
+     from the browser's own "stop sharing" control turns it off here too. */
+ setScreen(on){return this._video('screen',on,async()=>{
+  const s=await this.getDisplay({video:{frameRate:{ideal:15,max:30}},audio:false});
+  const t=s.getTracks()[0];
+  if(t&&'contentHint' in t)t.contentHint='detail';   // keep text sharp rather than motion smooth
+  return s})}
+
+ async _video(kind,on,open){
+  const call=this.call;on=!!on;
+  if(!call||!call.pc)throw new Error('not in a call');
+  if(!(kind==='cam'?this.canVideo():this.canScreen()))
+   throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':'this call is voice only');
+  if(call[kind]===on||call.switching.has(kind))return;
+  const key=kind+'Stream',sender=call.tx[kind].sender;
+  call.switching.add(kind);
+  try{
+   if(on){
+    const s=await open();
+    if(this.call!==call){s.getTracks().forEach(t=>t.stop());return}
+    const t=s.getTracks()[0];
+    await sender.replaceTrack(t);
+    if(this.call!==call){s.getTracks().forEach(x=>x.stop());return}
+    t.onended=()=>{if(this.call===call&&call[key]===s)this._video(kind,false).catch(()=>{})};
+    call[key]=s;call[kind]=true}
+   else{
+    const s=call[key];call[key]=null;call[kind]=false;
+    if(s)s.getTracks().forEach(t=>t.stop());
+    await sender.replaceTrack(null).catch(()=>{})}
+  }finally{call.switching.delete(kind)}
+  if(this.call!==call)return;
+  this.emit();
+  await this.send(call,'media',{cam:call.cam,screen:call.screen}).catch(()=>{})}
+
  /** Microphone, ICE servers and the peer connection, checking after each wait
-     that the call was not hung up meanwhile (and releasing the mic if it was). */
+     that the call was not hung up meanwhile (and releasing the mic if it was).
+     The answering side applies the offer here, so its transceivers line up with it. */
  async _open(call){
   const stream=await this.getMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
   if(this.call!==call){stream.getTracks().forEach(t=>t.stop());throw new Error('call ended')}
@@ -752,8 +1046,21 @@ class Voice{
   try{ice=await this.c.api('GET','/api/ice')}catch(e){}
   if(this.call!==call)throw new Error('call ended');
   const pc=call.pc=new this.RTC({iceServers:ice.iceServers||[]});
+  pc.ontrack=ev=>{
+   if(this.call!==call||(ev.track&&ev.track.kind==='video'))return;   // video is picked up from the transceivers below
+   call.remote=(ev.streams&&ev.streams[0])||(ev.track&&globalThis.MediaStream?new MediaStream([ev.track]):null);this.emit()};
+  if(call.dir==='in')await pc.setRemoteDescription({type:'offer',sdp:call.offer});
+  if(this.call!==call)throw new Error('call ended');
+  // after the offer is applied, addTrack takes over the offer's audio section
   for(const t of stream.getTracks())pc.addTrack(t,stream);
-  pc.ontrack=ev=>{if(this.call!==call)return;call.remote=(ev.streams&&ev.streams[0])||null;this.emit()};
+  if(pc.getTransceivers){
+   if(call.dir==='out'&&pc.addTransceiver)for(let i=0;i<2;i++)pc.addTransceiver('video',{direction:'sendrecv'});
+   const v=pc.getTransceivers().filter(t=>t.receiver&&t.receiver.track&&t.receiver.track.kind==='video');
+   if(v.length>=2){
+    for(const t of v.slice(0,2))t.direction='sendrecv';
+    const MS=globalThis.MediaStream,of=t=>MS?new MS([t.receiver.track]):null;
+    call.tx={cam:v[0],screen:v[1]};
+    call.remoteCam=of(v[0]);call.remoteScreen=of(v[1])}}
   const watch=()=>{
    if(this.call!==call)return;
    const s=pc.connectionState||pc.iceConnectionState;
@@ -789,7 +1096,7 @@ class Voice{
     if(call.peer!==peer)this.c._logCall(peer,'call-'+s.call,ts,'missed voice call (you were on another call)',true).catch(()=>{});
     this.send({peer,id:s.call},'busy').catch(()=>{});return}
    const glare=!!call;
-   const c=this.call={id:s.call,peer,dir:'in',state:'ringing',created:ts,offer:s.sdp,muted:false};
+   const c=this.call={id:s.call,peer,dir:'in',state:'ringing',created:ts,offer:s.sdp,muted:false,...Voice.fresh()};
    c.timer=setTimeout(()=>{if(this.call===c&&c.state==='ringing')this._finish(c,'timeout')},Math.max(1000,this.ring-(this.c.serverNow()-ts)));
    this.emit();
    if(glare)this.accept().catch(()=>{});
@@ -798,7 +1105,12 @@ class Voice{
   if(s.t==='answer'&&call.dir==='out'&&call.state==='calling'&&typeof s.sdp==='string'){
    call.state='connecting';clearTimeout(call.timer);this.emit();
    call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
-   call.pc.setRemoteDescription({type:'answer',sdp:s.sdp}).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
+   call.pc.setRemoteDescription({type:'answer',sdp:s.sdp}).then(()=>{
+    // an older client answers voice only: it would neither send video nor show ours
+    const t=call.tx&&call.tx.cam;
+    if(this.call===call&&t&&'currentDirection' in t&&t.currentDirection!=='sendrecv'){call.tx=null;this.emit()}
+   }).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
+  else if(s.t==='media'){call.peerCam=!!s.cam;call.peerScreen=!!s.screen;this.emit()}
   else if((s.t==='decline'||s.t==='busy')&&call.dir==='out')this._finish(call,s.t==='busy'?'busy':'declined');
   else if(s.t==='end')this._finish(call,'ended')}
 
@@ -807,7 +1119,7 @@ class Voice{
   call=call||this.call;if(!call||this.call!==call)return;
   this.call=null;
   clearTimeout(call.timer);clearTimeout(call.lost);
-  if(call.stream)call.stream.getTracks().forEach(t=>t.stop());
+  for(const s of [call.stream,call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
   if(call.pc)try{call.pc.close()}catch(e){}
   this.emit()}
 
@@ -843,7 +1155,7 @@ class MarmotClient{
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
    peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
-   groups:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set()})}
+   groups:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set(),staff:null,mute:null,roles:new Map(),mutes:new Map(),pinged:new Set()})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -866,6 +1178,8 @@ class MarmotClient{
   if(!res.ok||j.ok===false){
    const err=new Error(j.error||('server error '+res.status));err.status=res.status;
    if(res.status===401&&this.token&&path!=='/api/account/delete')this._signedOut(err.message);
+   if(j.banned&&this.token)this._signedOut(err.message);
+   if(j.muted!=null&&this.token){this.mute={until:j.muted};this.emit('change')}
    throw err}
   return j}
 
@@ -936,7 +1250,7 @@ class MarmotClient{
    const pre=await this.api('POST','/api/prelogin',{username});
    const d=await Acct.derive(pass,pre.salt,pre.iter);
    const r=await this.api('POST','/api/login',{username,auth:d.auth});
-   this.token=r.token;this.vk=d.vkRaw;this.discoverable=!!r.discoverable;
+   this.token=r.token;this.vk=d.vkRaw;this.discoverable=!!r.discoverable;this._standing(r);
    await this._openVault(r.vault,d.vaultKey,r.userId,r.username);
    this._learnAv(r.userId,r.av);
   }catch(e){this._reset();throw e}
@@ -950,7 +1264,7 @@ class MarmotClient{
    const me=await this.api('GET','/api/me');
    const v=await this.api('GET','/api/vault');
    await this._openVault(v.vault,await CR.aesKey(ub64(s.vk)),me.userId,me.username);
-   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._learnAv(me.userId,me.av);
+   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._learnAv(me.userId,me.av);this._standing(me);
   }catch(e){this._reset();throw e}
   this.connect();this.replenish().catch(()=>{});this.emit('change');
   return this.me}
@@ -979,6 +1293,17 @@ class MarmotClient{
   await this.api('POST','/api/account/delete',{auth:d.auth});
   this._reset();this.emit('signedout','account deleted');this.emit('change')}
 
+ /** Staff role and mute, from a login or /api/me. */
+ _standing(r){
+  const s=r&&r.staff;
+  this.staff=s&&(s.role==='admin'||s.role==='mod')&&Array.isArray(s.perms)?{role:s.role,perms:s.perms.slice()}:null;
+  this.mute=r&&r.mute&&Number.isFinite(r.mute.until)?{until:r.mute.until,reason:String(r.mute.reason||'')}:null}
+ async refreshStanding(){const r=await this.api('GET','/api/me');this._standing(r);this.emit('change')}
+ /** The mute in force on this account, or null. until 0 = permanent. */
+ muted(){const m=this.mute;return m&&(m.until===0||m.until>this.serverNow())?m:null}
+ /** Whether this account holds a moderation permission. */
+ can(p){return !!(this.staff&&this.staff.perms.includes(p))}
+
  _signedOut(reason){
   if(!this.token)return;
   this._reset();this.emit('signedout',reason||'signed out');this.emit('change')}
@@ -999,7 +1324,9 @@ class MarmotClient{
    else if(m.t==='links')this.loadLinks().catch(()=>{});
    else if(m.t==='prekeys')this.replenish().catch(()=>{});
    else if(m.t==='avatar'){if(this._learnAv(m.userId,m.v))this.emit('change')}
-   else if(m.t==='revoked')this._signedOut('this account was signed in on another device')};
+   else if(m.t==='me')this.refreshStanding().catch(()=>{});
+   else if(m.t==='roles'){this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{})}
+   else if(m.t==='revoked')this._signedOut(m.why==='banned'?'this account was removed by a moderator':m.why==='ipban'?'this network was banned from this server':'this account was signed in on another device')};
   ws.onerror=()=>{};
   ws.onclose=()=>{
    if(this.ws!==ws)return;
@@ -1041,7 +1368,7 @@ class MarmotClient{
   const have=this.get('peer:'+peerId);if(have)return have;
   let p={userId:peerId,username:null,verified:false,added:Date.now()};
   try{const r=await this.api('GET','/api/users/lookup?id='+encodeURIComponent(peerId));
-   if(await Acct.userId(r.user.ik,r.user.sk)===peerId){p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk});this._learnAv(peerId,r.user.av)}}
+   if(await Acct.userId(r.user.ik,r.user.sk)===peerId){p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk});this._learnAv(peerId,r.user.av);this._learnRole(peerId,r.user.role,r.user.muted)}}
   catch(e){if(e.network)throw e}
   await tx.put('peer:'+peerId,p);return p}
 
@@ -1051,6 +1378,7 @@ class MarmotClient{
  async _handle(e,quiet){
   if(this.done.has(e.id)||!this.token)return;
   if(isDiscord(e.from))return this._handleDiscord(e,quiet);
+  if(e.from==='sys:mod')return this._handleMod(e);
   const peerId=e.from;
   let note=null,sig=null,after=null;
   await this.lock(peerId,async()=>{
@@ -1076,19 +1404,21 @@ class MarmotClient{
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
       const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-      const m=Object.assign({id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)},imgOf(inner));
+      const m=Object.assign({id:String(inner.id),peer:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re),poll:pollOf(inner.poll,e.ts+POLLMAX*60000)},imgOf(inner));
       await tx.put(key,m);
       note={peer:peerId,text:gist(m)}}
      const r=await Ratchet.encrypt(sess,{k:'receipt',ids:[inner.id]});
      sess=r.rec;tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
     }else if(inner.k==='del'&&typeof inner.id==='string'){
      await this._tombstone(tx,'msg:'+peerId+':'+inner.id,m=>m.dir==='in')
+    }else if(inner.k==='vote'&&typeof inner.id==='string'){
+     await this._vote(tx,'msg:'+peerId+':'+inner.id,peerId,inner,e.ts)
     }else if(inner.k==='receipt'&&Array.isArray(inner.ids)){
      for(const id of inner.ids.slice(0,100)){
       const key='msg:'+peerId+':'+id,m=this.get(key);
       if(m&&m.dir==='out'&&m.state!=='delivered')await tx.put(key,Object.assign({},m,{state:'delivered'}))}}
     else if(inner.k==='call'&&typeof inner.call==='string'&&inner.call.length<=64&&
-     ['offer','answer','decline','busy','end'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
+     ['offer','answer','decline','busy','end','media'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
      const key='msg:'+peerId+':call-'+inner.call;
      // an offer that waited in the mailbox past its ring time is a missed call, not a ringing phone
      if(inner.t==='offer'&&this.serverNow()-e.ts>this.voice.ring){
@@ -1119,7 +1449,7 @@ class MarmotClient{
    const key='msg:'+conv+':'+inner.id;let note=null;
    if(!this.get(key)){
     const ts=Math.min(Number(inner.ts)||e.ts,e.ts);
-    const m=Object.assign({id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re)},imgOf(inner));
+    const m=Object.assign({id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re),poll:pollOf(inner.poll,e.ts+POLLMAX*60000)},imgOf(inner));
     await tx.put(key,m);
     note={peer:conv,text:this.displayName(peerId)+': '+gist(m)}}
    const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
@@ -1135,6 +1465,7 @@ class MarmotClient{
    // only whoever wrote a message can take it back
    await this._tombstone(tx,'msg:'+conv+':'+inner.id,m=>m.dir==='in'&&m.from===peerId);
    return none}
+  if(inner.k==='vote'&&typeof inner.id==='string'){await this._vote(tx,'msg:'+conv+':'+inner.id,peerId,inner,e.ts);return none}
   if(inner.k==='receipt'&&Array.isArray(inner.ids)){
    for(const id of inner.ids.slice(0,100)){
     const key='msg:'+conv+':'+id,m=this.get(key);
@@ -1159,6 +1490,77 @@ class MarmotClient{
      text:this.displayName(peerId)+(inner.icon?' changed the group icon':' removed the group icon')})}
   return none}
 
+ /** A moderator removed messages for everyone. The notice comes from the server, which
+     cannot read the chat, so it names each message's author too, and a message is only
+     blanked if that is who wrote it. */
+ async _handleMod(e){
+  let p=null;try{p=JSON.parse(e.payload)}catch(x){}
+  const conv=p&&typeof p.conv==='string'?p.conv:'sys:mod';
+  await this.lock(conv,async()=>{
+   if(this.done.has(e.id))return;
+   const tx=new Tx(this);tx.ack.push(e.id);
+   if(p&&p.k==='mod'&&p.t==='del'&&Array.isArray(p.msgs)&&!isDiscord(conv)){
+    const by=String(p.by||'a moderator').slice(0,24);
+    for(const r of p.msgs.slice(0,500)){
+     if(!r||typeof r.id!=='string'||typeof r.from!=='string')continue;
+     await this._tombstone(tx,'msg:'+conv+':'+r.id,m=>(m.dir==='out'?this.me.userId:m.from||conv)===r.from,{mod:by})}}
+   await tx.commit();
+   this.done.add(e.id)});
+  this.emit('change')}
+
+ /** Whether a text pings this account with @username. */
+ pings(text){return !!this.me&&mentions(text).has(this.me.username.toLowerCase())}
+
+ /* ---- moderation ---- */
+ /** Runs a staff chat command typed in conv; returns {text} describing what happened,
+     {help:true} for /help, or null if text is not a command. Throws with a readable reason. */
+ async runCommand(conv,text){
+  const c=parseCommand(text);if(!c)return null;
+  if(c.cmd==='help')return {help:true};
+  if(!this.staff)throw new Error('only staff can use /'+c.cmd);
+  const who=async()=>{
+   if(!c.user)throw new Error('say who: /'+c.cmd+(c.cmd==='mute'?' 1h':'')+' @username');
+   if(c.user.toLowerCase()===this.me.username.toLowerCase())throw new Error('that is you');
+   return (await this.api('GET','/api/users/lookup?username='+encodeURIComponent(c.user))).user};
+  const why=c.reason?' — '+c.reason:'';
+  if(c.cmd==='mute'){
+   if(c.dur==null)throw new Error('say for how long: /mute 1h @username "reason" (m, h, d, w, mo, y, or perm)');
+   const u=await who();
+   await this.admin('POST','/mute',Object.assign({userId:u.userId,reason:c.reason},c.dur==='perm'?{permanent:true}:{minutes:c.dur}));
+   return {text:'you muted '+u.username+(c.dur==='perm'?' permanently':' for '+fmtDur(c.dur))+why}}
+  if(c.cmd==='unmute'){const u=await who();await this.admin('POST','/unmute',{userId:u.userId});return {text:'you unmuted '+u.username}}
+  if(c.cmd==='ban'){const u=await who();await this.admin('POST','/ban',{userId:u.userId,reason:c.reason});return {text:'you banned '+u.username+' and deleted their account'+why}}
+  if(c.cmd==='ipban'){const u=await who();await this.admin('POST','/ipban',{userId:u.userId,reason:c.reason});return {text:'you IP banned '+u.username+why}}
+  if(c.cmd==='purge'){
+   if(!c.n||c.n>500)throw new Error('say how many, up to 500: /purge 20, or /purge 20 @username');
+   if(isDiscord(conv))throw new Error('Discord channels cannot be purged from here');
+   const from=c.user?(await who()).userId:null;
+   const ids=this.thread(conv).filter(m=>m.dir!=='sys'&&!m.deleted&&m.state!=='sending'&&m.state!=='failed'&&
+    (!from||(m.dir==='out'?this.me.userId:m.from||conv)===from)).slice(-c.n).map(m=>m.id);
+   if(!ids.length)throw new Error('there is nothing to purge');
+   const r=await this.modRemove(conv,ids,true);
+   return {text:'you purged '+r.removed+' message'+(r.removed===1?'':'s')+(c.user?' from '+c.user:'')+(r.skipped?' · skipped '+r.skipped+' from staff':'')}}
+  return null}
+ /** A line in conv's history that only this account sees, e.g. what a command did. */
+ async sysLine(conv,text){
+  const id='c'+uid(),tx=new Tx(this);
+  await tx.put('msg:'+conv+':'+id,{id,peer:conv,dir:'sys',ts:Date.now(),text:String(text).slice(0,500)});
+  await tx.commit();this.emit('change')}
+
+ /* ---- moderation ---- */
+ /** Staff endpoints: path is under /api/admin. */
+ admin(method,path,body){return this.api(method,'/api/admin'+path,body)}
+ /** Removes messages (ids in conv) for everyone in the chat: one needs the delete
+     permission, several (or `purge`) need purge. Returns {removed, skipped}. */
+ async modRemove(conv,ids,purge){
+  const msgs=[];
+  for(const id of ids){
+   const m=this.get('msg:'+conv+':'+id);
+   if(!m||m.dir==='sys'||m.deleted)continue;
+   msgs.push({id:m.id,from:m.dir==='out'?this.me.userId:m.from||conv})}
+  if(!msgs.length)throw new Error('there is nothing left to remove');
+  return this.admin('POST',purge||msgs.length>1?'/purge':'/delete',{conv,msgs})}
+
  /* ---- group chats ---- */
  group(gid){return this.groups.get(String(gid).replace(/^g:/,''))||null}
  inGroup(gid,userId){const g=this.group(gid);return !!g&&g.members.some(m=>m.userId===userId)}
@@ -1173,7 +1575,7 @@ class MarmotClient{
    const r=await this.api('GET','/api/groups');
    if(!this.token)return;
    const now=new Map(r.groups.map(g=>[g.groupId,g]));
-   const known=new Map();for(const g of now.values())for(const m of g.members){known.set(m.userId,m.username);this._learnAv(m.userId,m.av)}
+   const known=new Map();for(const g of now.values())for(const m of g.members){known.set(m.userId,m.username);this._learnAv(m.userId,m.av);this._learnRole(m.userId,m.role,m.muted)}
    const name=id=>!id?'someone':id===this.me.userId?'you':known.get(id)||this.displayName(id);
    const tx=new Tx(this);
    let n=0;const line=async(gid,text)=>{const id='j'+Date.now().toString(36)+'-'+(n++);
@@ -1273,7 +1675,7 @@ class MarmotClient{
    for(const id of to){
     let env;
     try{env=await this._encryptTo(id,inner,tx)}catch(e){if(e.status===403||e.status===404)continue;throw e}
-    tx.send.push({to:id,payload:JSON.stringify(env),optional:true})}
+    tx.send.push({to:id,payload:JSON.stringify(env),optional:true,say:says(inner)})}
    if(more)await more(tx);
    await tx.commit()};
   await to.reduceRight((fn,id)=>()=>this.lock(id,fn),run)()}
@@ -1286,7 +1688,7 @@ class MarmotClient{
   const r=await this.api('GET','/api/users/lookup?username='+encodeURIComponent(username));
   const u=r.user;
   if(await Acct.userId(u.ik,u.sk)!==u.userId)throw new Error('the server returned keys that do not match this user');
-  this._learnAv(u.userId,u.av);
+  this._learnAv(u.userId,u.av);this._learnRole(u.userId,u.role,u.muted);
   const clash=[...this.recs.entries()].find(([k,p])=>k.startsWith('peer:')&&p.userId!==u.userId&&
    p.username&&p.username.toLowerCase()===u.username.toLowerCase());
   if(!this.get('peer:'+u.userId)){
@@ -1308,7 +1710,7 @@ class MarmotClient{
   const r=await this.api('GET','/api/peers');
   const before=this.peers,first=!this.peersLoaded;
   this.peers=new Map(r.peers.map(p=>[p.userId,p]));this.peersLoaded=true;
-  for(const p of r.peers)this._learnAv(p.userId,p.av);
+  for(const p of r.peers){this._learnAv(p.userId,p.av);this._learnRole(p.userId,p.role,p.muted)}
   for(const p of this.peers.values()){
    const was=before.get(p.userId);
    if(!first&&p.state==='incoming'&&(!was||was.state!=='incoming'))this.emit('peer','request',p);
@@ -1334,6 +1736,22 @@ class MarmotClient{
  async setDiscoverable(on){
   const r=await this.api('POST','/api/me/discovery',{on:!!on});
   this.discoverable=r.discoverable;this.emit('change');return r.discoverable}
+
+ /** The chat filter, {level, action}: what it catches and whether caught messages are hidden or left out. */
+ filter(){
+  const f=this.get('pref:filter')||{};
+  return {level:FILTER_LEVELS.includes(f.level)?f.level:'none',action:FILTER_ACTIONS.includes(f.action)?f.action:'hide'}}
+ async setFilter(o){
+  const f=Object.assign(this.filter(),o);
+  if(!FILTER_LEVELS.includes(f.level)||!FILTER_ACTIONS.includes(f.action))throw new Error('unknown filter setting');
+  const tx=new Tx(this);await tx.put('pref:filter',f);await tx.commit();return f}
+ /** True when the chat filter catches m. Only what other people send is checked. */
+ filtered(m){
+  if(!m||m.dir!=='in'||m.deleted||!m.text)return false;
+  const {level}=this.filter();if(level==='none')return false;
+  const memo=this._fmemo||(this._fmemo=new WeakMap()),hit=memo.get(m);
+  if(hit&&hit.level===level&&hit.text===m.text)return hit.v;
+  const v=chatFilter.test(level,m.text);memo.set(m,{level,text:m.text,v});return v}
  /** Users who opted into global discovery; q filters by username. */
  async discover(q,offset){
   const r=await this.api('GET','/api/peers/global?q='+encodeURIComponent(q||'')+'&offset='+(offset||0));
@@ -1342,6 +1760,15 @@ class MarmotClient{
 
  /* ---- profile pictures ---- */
  /** Notes the version of someone's picture the server last mentioned; true if it moved. */
+ /** Notes whether a user is staff ('admin' | 'mod') and when their mute ends (0 = never), as the server last said. */
+ _learnRole(id,role,muted){if(!id)return;
+  if(role==='admin'||role==='mod')this.roles.set(id,role);else this.roles.delete(id);
+  if(Number.isFinite(muted))this.mutes.set(id,muted);else this.mutes.delete(id)}
+ /** Whether a user is muted right now; this account's own comes from its standing. */
+ isMuted(id){if(this.me&&id===this.me.userId)return !!this.muted();
+  const u=this.mutes.get(id);return u!=null&&(u===0||u>this.serverNow())}
+ /** 'admin', 'mod' or null; this account's own comes from its standing. */
+ role(id){return this.me&&id===this.me.userId?(this.staff?this.staff.role:null):this.roles.get(id)||null}
  _learnAv(id,v){if(!id||!Number.isFinite(v)||this.avv.get(id)===v)return false;this.avv.set(id,v);return true}
  /** Someone's profile picture as a data: URL, or null. It is fetched the first time it is
      asked for and again when its version moves on; 'change' fires once it arrives. */
@@ -1424,14 +1851,15 @@ class MarmotClient{
 
  /** `replyTo` is the id of a message in the same conversation to quote; `pic` is an
      image {img,w,h} already shrunk to fit (see fitImage), sent with `text` as its caption. */
- async sendText(peerId,text,reuseId,replyTo,pic){
+ async sendText(peerId,text,reuseId,replyTo,pic,poll){
   text=String(text||'');
   const im=pic?imgOf(pic):{};
+  if(poll){poll=pollOf(poll,this.serverNow()+POLLMAX*60000);if(!poll)throw new Error('that poll is not valid');im.poll=poll}
   if(pic&&!im.img)throw new Error('that image is too large or not in a supported format');
   if(!text.trim()&&!im.img)return null;
   if(im.img&&text.length>IMGTEXT)throw new Error('captions are limited to '+IMGTEXT+' characters');
   if(text.length>MAXTEXT)throw new Error('messages are limited to '+MAXTEXT+' characters');
-  if(isDiscord(peerId)){if(im.img)throw new Error('images cannot be sent to Discord');return this._sendDiscord(peerId,text,reuseId)}
+  if(isDiscord(peerId)){if(im.img)throw new Error('images cannot be sent to Discord');if(poll)throw new Error('polls are not available in Discord channels');return this._sendDiscord(peerId,text,reuseId)}
   const grp=isGroup(peerId);
   if(grp?!this.group(peerId):!this.isFriend(peerId))throw new Error(grp?'you are not in this group':'you can only message friends');
   const q=replyTo&&this.get('msg:'+peerId+':'+replyTo);
@@ -1453,7 +1881,7 @@ class MarmotClient{
    const tx=new Tx(this);
    const env=await this._encryptTo(peerId,inner,tx);
    if(more)await more(tx);
-   tx.send.push({to:peerId,payload:JSON.stringify(env)});
+   tx.send.push({to:peerId,payload:JSON.stringify(env),say:says(inner)});
    await tx.commit()})}
 
  /** One step of peerId's ratchet into `tx`, opening a session from their prekey
@@ -1474,6 +1902,7 @@ class MarmotClient{
      catching up on the mailbox, adds it to the backlog summary instead. */
  _note(peer,text,quiet){
   this.unread.set(peer,(this.unread.get(peer)||0)+1);
+  if(this.pings(text))this.pinged.add(peer);
   if(quiet&&this.backlog){this.backlog.n++;this.backlog.peers.add(peer)}
   else this.emit('message',peer,text)}
 
@@ -1488,7 +1917,7 @@ class MarmotClient{
   const m=this.pending.get(msgId);
   if(!m||m.state!=='failed')return;
   this.pending.delete(msgId);
-  return this.sendText(m.peer,m.text,m.id,m.re&&m.re.id,m.img?m:null)}
+  return this.sendText(m.peer,m.text,m.id,m.re&&m.re.id,m.img?m:null,m.poll)}
  discard(msgId){this.pending.delete(msgId);this.emit('change')}
 
  /** Deletes a message. Just for me: it is gone from this account's history.
@@ -1503,11 +1932,31 @@ class MarmotClient{
   if(isGroup(peerId)){const gid=peerId.slice(2);return this._sendGroup(gid,{k:'del',g:gid,id:msgId},tomb)}
   if(!this.isFriend(peerId))throw new Error('you can only delete for everyone while you are friends');
   return this._sendInner(peerId,{k:'del',id:msgId},tomb)}
+ /** Votes for option o of the poll msgId in peerId, or takes the vote back with o = -1.
+     Every vote goes to everyone in the chat, so each copy of the poll keeps the same count. */
+ async vote(peerId,msgId,o){
+  const key='msg:'+peerId+':'+msgId,m=this.get(key);
+  if(!m||!m.poll||m.deleted)throw new Error('that poll is gone');
+  if(this.serverNow()>m.poll.ends)throw new Error('this poll has ended');
+  if(!(o===-1||(Number.isInteger(o)&&o>=0&&o<m.poll.opts.length)))return;
+  const mine=tx=>this._vote(tx,key,this.me.userId,{o},this.serverNow());
+  if(isGroup(peerId)){const gid=peerId.slice(2);return this._sendGroup(gid,{k:'vote',g:gid,id:msgId,o},mine)}
+  if(isDiscord(peerId)||!this.isFriend(peerId))throw new Error('you can only vote while you are friends');
+  return this._sendInner(peerId,{k:'vote',id:msgId,o},mine)}
+ /** Records a vote {o} by `who` on the poll at `key` (o = -1 takes it back), if the poll was still open at ts. */
+ async _vote(tx,key,who,v,ts){
+  const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
+  if(!m||!m.poll||m.deleted||ts>m.poll.ends)return;
+  const o=v.o,votes=Object.assign({},m.votes);
+  if(o===-1)delete votes[who];
+  else if(Number.isInteger(o)&&o>=0&&o<m.poll.opts.length)votes[who]=o;
+  else return;
+  await tx.put(key,Object.assign({},m,{votes}))}
  /** Blanks the message at `key` into a placeholder, if there is one and ok(it) says so. */
- async _tombstone(tx,key,ok){
+ async _tombstone(tx,key,ok,extra){
   const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
   if(!m||m.dir==='sys'||m.deleted||!ok(m))return false;
-  const t=Object.assign({},m,{text:'',deleted:true});delete t.re;delete t.img;delete t.w;delete t.h;
+  const t=Object.assign({},m,{text:'',deleted:true},extra);delete t.re;delete t.img;delete t.w;delete t.h;delete t.poll;delete t.votes;
   await tx.put(key,t);return true}
 
  /** Tops the server back up with one-time prekeys when it runs low. */
@@ -1515,7 +1964,7 @@ class MarmotClient{
   if(this._replenishing||!this.token)return;
   this._replenishing=true;
   try{
-   const me=await this.api('GET','/api/me');this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;
+   const me=await this.api('GET','/api/me');this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._standing(me);
    if(me.opkCount>=20)return;
    await this.lock('__prekeys',async()=>{
     const prof=this.get('prof')||{nextOpk:1};
@@ -1623,8 +2072,13 @@ function fitImage(file){
    const d=encodeImage(img,[0,0,w0,h0],w,h,IMGCHARS,[.82,.7,.58]);
    if(d)return {img:d,w,h}}
   throw new Error('could not make that image small enough')})}
-function toast(msg,ms){const t=document.createElement('div');t.className='toast';t.textContent=msg;$('#toasts').appendChild(t);
+function toast(msg,ms){const box=$('#toasts'),t=document.createElement('div');t.className='toast';t.textContent=msg;
+ // a handful at most: the oldest give way
+ while(box.children.length>=4)box.firstChild.remove();
+ box.appendChild(t);
  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
+/** One toast for a batch of messages, e.g. what came in while away. */
+function summary(n,chats){toast(n+' new message'+(n>1?'s':'')+(chats>1?' in '+chats+' chats':''),5000)}
 const store={
  get(k){try{return localStorage.getItem('marmot.'+k)}catch(e){return null}},
  set(k,v){try{v==null?localStorage.removeItem('marmot.'+k):localStorage.setItem('marmot.'+k,v)}catch(e){}},
@@ -1653,8 +2107,8 @@ const ICON={
  x:svg('<path d="M4 4l8 8M12 4l-8 8"/>')};
 
 const UI={
- S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',reply:null,
-    global:{q:null,users:[],more:false,loading:false,err:'',seq:0}},
+ S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',reply:null,unveiled:new Set(),
+    global:{q:null,users:[],more:false,loading:false,err:'',seq:0},adm:null},
  _raf:0,
  /** Replays el's entrance animation: for when what it shows changes, not for every re-render. */
  enter(el){el.classList.remove('enter');void el.offsetWidth;el.classList.add('enter')},
@@ -1673,6 +2127,8 @@ const UI={
   $('#navDc').textContent=$('#tabDc').textContent=dcUnread||'';
   const dcOn=!!M.me&&(M.discordEnabled||M.links.size>0);
   $('#navDiscord').classList.toggle('hidden',!dcOn);$('#tabDiscord').classList.toggle('hidden',!dcOn);
+  $('#navAdmin').classList.toggle('hidden',!M.staff);$('#tabAdmin').classList.toggle('hidden',!M.staff);
+  if(!M.staff&&this.S.screen==='admin'){this.S.screen='messages';this.S.adm=null}
   const total=unread+requests+dcUnread,vc=M.voice.call;
   document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+total+') ':'')+'Marmot';
   if(M.me){
@@ -1695,31 +2151,32 @@ const UI={
  renderCol(){
   const rows=$('#rows'),scr=this.S.screen;
   if(this._colScreen!==scr){if(this._colScreen)this.enter(rows);this._colScreen=scr}
-  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord'}[scr]||'Messages';
+  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord',admin:'Admin'}[scr]||'Messages';
   $('#colAction').textContent=scr==='peers'?'+ ADD':scr==='discord'?'+ JOIN':'+ NEW';
-  $('#colAction').classList.toggle('hidden',scr==='settings');
+  $('#colAction').classList.toggle('hidden',scr==='settings'||scr==='admin');
   const search=$('#search');
   search.classList.toggle('hidden',scr==='settings');
-  search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':'search conversations…';
+  search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':scr==='admin'?'search accounts…':'search conversations…';
   if(scr==='settings'){
    rows.innerHTML='<button class="row" data-act="open-settings" aria-current="true"><div class="row-main"><div class="row-name">Account &amp; security</div>'+
-    '<div class="row-sub">identity, discovery, connection, session</div></div></button>';
+    '<div class="row-sub">identity, discovery, chat filter, connection, session</div></div></button>';
    return}
   if(!M.me){rows.innerHTML='';return}
   if(scr==='peers')return this.renderPeers(rows);
   if(scr==='discord')return this.renderDiscordCol(rows);
+  if(scr==='admin')return this.renderAdminCol(rows);
   const f=this.S.filter.toLowerCase();
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
   rows.innerHTML=list.length?list.map(c=>{
-   const p=M.peer(c.id),n=M.unread.get(c.id)||0,l=c.last,grp=isGroup(c.id);
-   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':gist(l)):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
+   const p=M.peer(c.id),n=M.unread.get(c.id)||0,t=this.thread(c.id),l=t[t.length-1],grp=isGroup(c.id);
+   const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':this.gist(c.id,l)):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
    return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
     this.av(c.id,'av-34')+
-    '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+
+    '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(c.id))+'</span>'+(grp||isDiscord(c.id)?'':this.staffTag(c.id))+
     (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+
     (grp?'<span class="chip">'+(M.group(c.id)?'GROUP':'LEFT')+'</span>':'')+'</div>'+
     '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
-    '<div class="row-right"><div class="time">'+esc(shortTime(c.ts))+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'}).join('')
+    '<div class="row-right"><div class="time">'+esc(shortTime(l?l.ts:c.ts))+'</div>'+(n?'<div class="badge'+(M.pinged.has(c.id)?' at" title="You were mentioned">@ ':'">')+n+'</div>':'')+'</div></button>'}).join('')
    :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO START A GROUP')+'</div>'},
  /** An avatar tile: the picture if there is one, else initials (# for a Discord channel). */
  av(id,cls,name,attrs){return '<div class="av '+cls+(isGroup(id)?' grp':'')+'"'+(attrs||'')+'>'+this.avInner(id,name)+'</div>'},
@@ -1760,12 +2217,12 @@ const UI={
    '<div class="row-sub">'+esc(l.guild)+' · '+l.members+' on Marmot</div></div>'+
    '<div class="row-right"><span class="chip">JOIN</span></div></button>'},
  dcRow(id,l){
-  const t=M.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
-  const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+(last.deleted?'message deleted':last.text):(l?'no messages yet':'');
+  const t=this.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
+  const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+(last.deleted?'message deleted':this.gist(id,last)):(l?'no messages yet':'');
   return '<button class="row" data-dc="'+esc(id)+'"'+(id===this.S.dc?' aria-current="true"':'')+'>'+
    '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(id))+'</span></div>'+
    '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
-   '<div class="row-right"><div class="time">'+esc(last?shortTime(last.ts):'')+'</div>'+(n?'<div class="badge">'+n+'</div>':'')+'</div></button>'},
+   '<div class="row-right"><div class="time">'+esc(last?shortTime(last.ts):'')+'</div>'+(n?'<div class="badge'+(M.pinged.has(id)?' at" title="You were mentioned">@ ':'">')+n+'</div>':'')+'</div></button>'},
 
  /* ---------- peers ---------- */
  STATE:{friend:['FRIEND','ok'],incoming:['WANTS TO BE FRIENDS','warn'],outgoing:['REQUEST SENT',''],blocked:['BLOCKED','bad'],none:['NOT CONNECTED','']},
@@ -1773,7 +2230,7 @@ const UI={
   const st=M.relation(p.userId),[label,cls]=st==='incoming'?['REQUEST','warn']:this.STATE[st];
   return '<button class="row" data-peer="'+esc(p.userId)+'"'+(p.userId===this.S.peer?' aria-current="true"':'')+'>'+
    this.av(p.userId,'av-34',p.username)+
-   '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(p.username)+'</span>'+
+   '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(p.username)+'</span>'+this.staffTag(p.userId)+
    (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</div>'+
    '<div class="row-sub">'+esc(sub)+'</div></div>'+
    (st==='none'?'':'<div class="row-right"><span class="chip '+cls+'">'+label+'</span></div>')+'</button>'},
@@ -1831,7 +2288,7 @@ const UI={
    none:b('request','ADD FRIEND','send')+b('block','BLOCK','tbtn danger')}[st];
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
-   this.av(id,'av-34',p.username)+'<div style="min-width:0"><div class="pane-title">'+name+
+   this.av(id,'av-34',p.username)+'<div style="min-width:0"><div class="pane-title">'+name+this.staffTag(id)+
    (pin.verified?' <span class="chip ok">VERIFIED</span>':'')+'</div><div class="meta">'+this.STATE[st][0].toLowerCase()+'</div></div></div>'+
    '<div class="sheet"><div class="sec"><div class="btnrow" style="margin-top:0">'+acts+'</div>'+
    '<div class="err" id="peerErr"></div></div>'+
@@ -1868,7 +2325,7 @@ const UI={
  /* ---------- pane ---------- */
  renderPane(){
   const pane=$('#pane'),scr=this.S.screen;
-  const sel=scr==='settings'?this.S.set:scr==='peers'?!!this.S.peer:!!this.cur();
+  const sel=scr==='settings'?this.S.set:scr==='peers'?!!this.S.peer:scr==='admin'?!!(this.S.adm&&this.S.adm.sel):!!this.cur();
   $('#app').classList.toggle('in-pane',sel);
   if(scr==='peers'){
    // no inputs live in this pane, so it is simply rebuilt
@@ -1876,6 +2333,11 @@ const UI={
    if(this.S.paneKey!==pk){this.S.paneKey=pk;this.enter(pane)}
    pane.innerHTML=this.S.peer?this.peerPaneHTML(this.S.peer):
     '<div class="empty">'+(M.me?'SELECT A PEER<br>OR ADD ONE BY USERNAME WITH + ADD':'')+'</div>';
+   return}
+  if(scr==='admin'){
+   // rebuilt only when the selection or its data changes, so half-typed reasons survive other renders
+   const A=this.adm(),pk='admin:'+(A.sel||'')+':'+A.v;
+   if(this.S.paneKey!==pk){if(!this.S.paneKey.startsWith('admin:'+(A.sel||'')+':'))this.enter(pane);this.S.paneKey=pk;pane.innerHTML=this.adminPaneHTML()}
    return}
   const chat=this.cur();
   const key=scr==='settings'?'settings':(scr+':'+(chat||''));
@@ -1887,17 +2349,23 @@ const UI={
     pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
      '<div class="av av-34" id="chatAv"></div><div style="min-width:0"><div class="pane-title" id="chatName"></div><div class="meta" id="chatMeta"></div></div>'+
      '<div class="acts" id="chatActs">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
-      :isGroup(chat)?'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-icon">ICON</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
-      :'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
+      :isGroup(chat)?(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-icon">ICON</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
+      :(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
      '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><div class="attbar hidden" id="attBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
      '<div class="composer-bar"><button class="cbtn" data-act="emoji" title="Emoji" aria-label="Emoji" aria-expanded="false">'+ICON.smile+'</button>'+
      (isDiscord(chat)?'':'<button class="cbtn" data-act="attach" title="Send an image (or paste or drop one)" aria-label="Send an image">'+ICON.image+'</button>')+
-     '<span class="hint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
+     '<span class="hint" id="cHint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
   if(scr==='settings')this.fillSettings();
-  else if(chat){this.renderThread();this.renderReply();this.renderAtt();if(!this._follow)this.more()}},
+  else if(chat){this.renderThread();this.renderReply();this.renderAtt();this.renderHint();if(!this._follow)this.more()}},
+ /** The composer's hint line, which says so while this account is muted. */
+ renderHint(){
+  const h=$('#cHint');if(!h)return;
+  const mu=M.muted(),t=mu?'you are muted '+this.muteText(mu):'↵ send · shift+↵ newline';
+  if(h.textContent!==t)h.textContent=t;h.classList.toggle('warn',!!mu)},
+ muteText(m){return m.until===0?'permanently':'until '+new Date(m.until).toLocaleString()},
 
  renderThread(){
   const id=this.cur(),th=$('#thread');if(!id||!th)return;
@@ -1905,7 +2373,7 @@ const UI={
   if(isGroup(id))return this.renderGroup(id,th);
   const p=M.peer(id),st=M.relation(id);
   this.setAv($('#chatAv'),id);
-  $('#chatName').innerHTML=esc(M.displayName(id))+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
+  $('#chatName').innerHTML=esc(M.displayName(id))+this.staffTag(id)+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
   $('#chatMeta').textContent='id '+id.slice(0,16)+' · '+(st==='friend'?'session '+M.sessionState(id):this.STATE[st][0].toLowerCase());
   // only friends can be messaged: otherwise the composer gives way to the next step
   const gate=$('#gate'),friend=st==='friend',vc=M.voice.call;
@@ -1921,10 +2389,10 @@ const UI={
     blocked:['You blocked '+n+'.','unblock','UNBLOCK']}[st];
    const html='<span class="grow">'+g[0]+'</span>'+(g[1]?'<button class="send" data-peer-act="'+g[1]+'">'+g[2]+'</button>':'');
    if(gate.innerHTML!==html)gate.innerHTML=html}
-  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);M.pinged.delete(id);this.renderRail();this.renderCol()}
   const atBottom=this.following(th);
   let html='',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
+  const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
   if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
   if(p.replaced)html+='<div class="sys" data-k="replaced">this username used to belong to a different identity. verify before trusting it.</div>';
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>'+html;
@@ -2005,7 +2473,7 @@ const UI={
  more(){
   const th=$('#thread'),id=this.cur();
   if(!th||!id||id!==this._winFor||!this._more||th.scrollTop>200)return;
-  const list=M.thread(id),i=list.findIndex(m=>m.ts>=this._from);
+  const list=this.thread(id),i=list.findIndex(m=>m.ts>=this._from);
   if(i<=0)return;
   this.reveal(list[Math.max(0,i-PAGE)].ts);
   const h=th.scrollHeight,top=th.scrollTop;
@@ -2013,30 +2481,61 @@ const UI={
   th.scrollTop=top+th.scrollHeight-h;this._lastTop=th.scrollTop},
 
  /** m => ' new' for messages that arrived since this thread was last drawn.
-     Opening a thread animates the pane instead, so nothing counts as new then. */
- fresh(id,list){
+     Opening a thread animates the pane instead, so nothing counts as new then. Nor does a
+     pile of arrivals (catching up on the mailbox, or back after being away): that is drawn
+     as it is, not as a flurry of entrances. */
+ fresh(id,shown){
   const first=this._seenFor!==id;
   if(first){this._seenFor=id;this._seen=new Set()}
   const seen=this._seen;
-  return m=>{if(seen.has(m.id))return '';seen.add(m.id);return first?'':' new'}},
+  const calm=first||!!M._draining||document.hidden||shown.reduce((n,m)=>n+!seen.has(m.id),0)>3;
+  return m=>{if(seen.has(m.id))return '';seen.add(m.id);return calm?'':' new'}},
 
+ /* ---- chat filter (see chatFilter) ---- */
+ /** A conversation's messages as shown: under "delete", what the chat filter catches is left out. */
+ thread(id){const list=M.thread(id);return M.filter().action==='delete'?list.filter(m=>!M.filtered(m)):list},
+ /** True while the chat filter hides m and it has not been clicked open. */
+ veiled(conv,m){return M.filtered(m)&&!this.S.unveiled.has(conv+'|'+m.id)},
+ /** A message in one line, as the chat list and the reply strip show it. */
+ gist(conv,m){return this.veiled(conv,m)?'hidden by your chat filter':gist(m)},
+
+ /** Message text, escaped, with @username pings picked out (mine stand out more). */
+ rich(t){
+  const me=M.me?M.me.username.toLowerCase():'';
+  return esc(t).replace(MENTION,(all,p,n)=>{const name=n.replace(/\.+$/,'');
+   return p+'<span class="ping'+(name.toLowerCase()===me?' me':'')+'">@'+name+'</span>'+n.slice(name.length)})},
  /** One chat bubble: who wrote it, the message it quotes, and the actions that
      float over its corner on hover (or on tap, which focuses it).
      o: {fresh, state (stamp suffix), who (html), reply (whether replying is possible),
          av (true: the sender's picture beside it; false: the space for it; absent: neither)} */
  bubble(conv,m,o){
-  const settled=m.state!=='sending'&&m.state!=='failed',r=this.S.reply;
+  const settled=m.state!=='sending'&&m.state!=='failed',r=this.S.reply,veil=this.veiled(conv,m),
+   // a filtered message clicked open: outlined, and a click on it hides it again
+   rv=!veil&&M.filtered(m)?' unveiled" data-reveil="'+esc(m.id)+'" title="Click to hide again':'';
   const acts=settled?'<div class="macts">'+
    (o.reply&&!m.deleted?'<button data-reply="'+esc(m.id)+'" title="Reply" aria-label="Reply">'+ICON.reply+'</button>':'')+
    '<button class="del" data-del="'+esc(m.id)+'" title="Delete" aria-label="Delete">'+ICON.trash+'</button></div>':'';
   return '<div class="msg '+m.dir+o.fresh+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+(m.deleted?' gone':'')+
-   (r&&r.conv===conv&&r.id===m.id?' replying':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1">'+(o.who||'')+
+   (r&&r.conv===conv&&r.id===m.id?' replying':'')+(m.dir==='in'&&!m.deleted&&M.pings(m.text)?' pinged':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1">'+(o.who||'')+
    (o.av==null?'':'<div class="mrow">'+(o.av?this.av(this.sender(conv,m),'mav'):'<div class="av mav ghost"></div>'))+
-   '<div class="bub'+(m.re&&!m.deleted?' has-re':'')+'">'+acts+(m.re&&!m.deleted?this.quoteHTML(conv,m.re,true):'')+
-   (m.img&&!m.deleted?'<div class="body has-img">'+this.imgHTML(m)+(m.text?'<div class="cap">'+esc(m.text)+'</div>':'')+'</div></div>'
-    :'<div class="body">'+(m.deleted?(m.dir==='out'?'you deleted this message':'message deleted'):esc(m.text))+'</div></div>')+
+   '<div class="bub'+(m.re&&!m.deleted&&!veil?' has-re':'')+'">'+acts+(m.re&&!m.deleted&&!veil?this.quoteHTML(conv,m.re,true):'')+
+   (veil?'<button class="body veil" data-unveil="'+esc(m.id)+'" title="Show this message">hidden by your chat filter · click to show</button></div>'
+   :m.poll&&!m.deleted?'<div class="body'+rv+'">'+this.rich(m.text.split('\n')[0])+this.pollHTML(m)+'</div></div>'
+   :m.img&&!m.deleted?'<div class="body has-img'+rv+'">'+this.imgHTML(m)+(m.text?'<div class="cap">'+this.rich(m.text)+'</div>':'')+'</div></div>'
+    :'<div class="body'+rv+'">'+(m.deleted?(m.mod?'removed by a moderator':m.dir==='out'?'you deleted this message':'message deleted'):this.rich(m.text))+'</div></div>')+
    (o.av==null?'':'</div>')+
    '<div class="stamp">'+hm(m.ts)+(m.deleted?'':o.state)+'</div></div>'},
+ /** A poll's options as buttons, each with its share of the votes; hover one to see who picked it. */
+ pollHTML(m){
+  const p=m.poll,votes=m.votes||{},n=p.opts.map(()=>[]),left=p.ends-M.serverNow(),open=left>0;
+  for(const [who,o] of Object.entries(votes))if(n[o])n[o].push(who===M.me.userId?'you':M.displayName(who));
+  const total=Object.keys(votes).length,mine=votes[M.me.userId],top=Math.max(...n.map(x=>x.length));
+  const span=ms=>{const mi=Math.max(1,Math.round(ms/60000));return mi<60?mi+'m':mi<2880?Math.round(mi/60)+'h':Math.round(mi/1440)+'d'};
+  return '<div class="poll"><div class="pq">'+esc(p.q)+'</div>'+p.opts.map((o,i)=>{
+   const c=n[i].length,pct=total?Math.round(c*100/total):0;
+   return '<button class="popt'+(mine===i?' mine':'')+(!open&&c&&c===top?' won':'')+'"'+(open?' data-vote="'+esc(m.id)+'" data-o="'+i+'"':' disabled')+
+    ' title="'+esc(c?n[i].join(', '):'no votes yet')+'"><span class="bar" style="width:'+pct+'%"></span><span class="ot">'+esc(o)+'</span><span class="oc">'+c+'</span></button>'}).join('')+
+   '<div class="pf">'+total+' vote'+(total===1?'':'s')+' · '+(open?'ends in '+span(left)+(mine!=null?' · click your pick again to take it back':''):'ended')+'</div></div>'},
  /** A message's image at most 320×360, sized up front so the thread does not jump as it decodes. */
  imgHTML(m){
   const w=m.w||320,h=m.h||240,k=Math.min(1,320/w,360/h);
@@ -2123,10 +2622,12 @@ const UI={
  quoteHTML(conv,re,jump){
   const live=M.get('msg:'+conv+':'+re.id),gone=!!(live&&live.deleted);
   const name=re.from===M.me.userId?'you':M.displayName(re.from||conv);
-  const text=gone?'message deleted':live?gist(live):re.t||'original message';
+  const f=M.filter(),veil=!gone&&!this.S.unveiled.has(conv+'|'+re.id)&&(live?M.filtered(live)
+   :re.from!==M.me.userId&&f.level!=='none'&&chatFilter.test(f.level,re.t));
+  const text=gone?'message deleted':veil?'hidden by your chat filter':live?gist(live):re.t||'original message';
   const tag=jump?'button':'div';
   return '<'+tag+' class="quote"'+(jump?' data-jump="'+esc(re.id)+'" title="Jump to message"':'')+'><b>'+esc(name)+'</b>'+
-   '<span'+(gone?' class="gone"':'')+'>'+esc(text.slice(0,200))+'</span></'+tag+'>'},
+   '<span'+(gone||veil?' class="gone"':'')+'>'+esc(text.slice(0,200))+'</span></'+tag+'>'},
 
  /** The "replying to" strip on top of the composer. */
  renderReply(){
@@ -2137,7 +2638,7 @@ const UI={
   if(!m||m.deleted){bar.classList.add('hidden');bar.innerHTML='';return}
   const name=m.dir==='out'?'yourself':M.displayName(m.from||conv);
   const html=ICON.reply+'<div class="grow"><div class="lbl">REPLYING TO '+esc(name.toUpperCase())+'</div>'+
-   '<div class="rtext">'+esc(gist(m).slice(0,200))+'</div></div>'+
+   '<div class="rtext">'+esc(this.gist(conv,m).slice(0,200))+'</div></div>'+
    '<button data-act="reply-cancel" title="Cancel reply (Esc)" aria-label="Cancel reply">'+ICON.x+'</button>';
   bar.classList.remove('hidden');
   if(bar.innerHTML!==html)bar.innerHTML=html},
@@ -2161,6 +2662,8 @@ const UI={
  askDelete(id){
   const conv=this.cur(),m=conv&&M.get('msg:'+conv+':'+id);if(!m)return;
   const all=m.dir==='out'&&!m.deleted&&!isDiscord(conv)&&(isGroup(conv)?!!M.group(conv):M.isFriend(conv));
+  // staff can take someone else's message down for everyone in a chat they are in
+  const mod=m.dir==='in'&&!m.deleted&&!isDiscord(conv)&&(isGroup(conv)?!!M.group(conv):true)&&(M.can('delete')||M.can('purge'));
   const note=m.deleted?'This removes the placeholder from your history.'
    :all?'Delete for everyone replaces it with “message deleted” on every copy in this chat, including people who have not opened it yet. Delete for me only removes it from your history.'
    :isDiscord(conv)?'This removes it from your Marmot history only. It stays in the Discord channel.'
@@ -2169,13 +2672,14 @@ const UI={
   this.modal('<h3>'+(m.deleted?'Remove placeholder?':'Delete message?')+'</h3>'+preview+'<div class="note">'+esc(note)+'</div>'+
    '<div class="err" id="delMsgErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
    '<button class="'+(all?'tbtn danger':'hang')+'" data-m="me">'+(m.deleted?'REMOVE':'DELETE FOR ME')+'</button>'+
-   (all?'<button class="hang" data-m="all">DELETE FOR EVERYONE</button>':'')+'</div>',
+   (all?'<button class="hang" data-m="all">DELETE FOR EVERYONE</button>':'')+
+   (mod?'<button class="hang" data-m="mod" title="Replaces it with “removed by a moderator” for everyone in this chat">REMOVE AS MODERATOR</button>':'')+'</div>',
    async(act,btn)=>{
     if(act==='cancel')return this.close();
-    if(act!=='me'&&act!=='all')return;
+    if(act!=='me'&&act!=='all'&&act!=='mod')return;
     const err=$('#delMsgErr');err.textContent='';
     document.querySelectorAll('#overlay [data-m]').forEach(b=>b.disabled=true);
-    try{await M.deleteMessage(conv,id,act==='all');this.close()}
+    try{if(act==='mod')await M.modRemove(conv,[id],!M.can('delete'));else await M.deleteMessage(conv,id,act==='all');this.close()}
     catch(e){err.textContent=e.message;document.querySelectorAll('#overlay [data-m]').forEach(b=>b.disabled=false)}});
   const go=document.querySelector('#overlay [data-m='+(all?'all':'me')+']');if(go)go.focus()},
 
@@ -2190,10 +2694,10 @@ const UI={
   const ghtml='<span class="grow">You are no longer in this channel. A Discord moderator can give you a new invite code.</span>';
   if(!l&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   const leave=document.querySelector('[data-act=leave]');if(leave)leave.classList.toggle('hidden',!l);
-  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);M.pinged.delete(id);this.renderRail();this.renderCol()}
   const atBottom=this.following(th);
   let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
+  const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
   for(const m of shown){
    const day=dayLabel(m.ts);
@@ -2218,11 +2722,11 @@ const UI={
   const ghtml='<span class="grow">You left this group. A member can invite you back if you are friends with them.</span>';
   if(!g&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   document.querySelectorAll('#chatActs button').forEach(b=>b.classList.toggle('hidden',!g));
-  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);this.renderRail();this.renderCol()}
+  if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);M.pinged.delete(id);this.renderRail();this.renderCol()}
   const atBottom=this.following(th);
   const others=g?g.members.length-1:0;
   let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
-  const list=M.thread(id),opened=this._seenFor!==id,fresh=this.fresh(id,list),shown=this.win(id,list,atBottom);
+  const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
   shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
@@ -2233,7 +2737,7 @@ const UI={
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':got?' · delivered to '+(others&&got>=others?'everyone':got):' · sent'):'';
    html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,av:this.runEnd(id,shown,i),
-    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
+    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+this.staffTag(m.from)+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
   this.patch(th,html);
   this.settle(th,atBottom,opened)},
 
@@ -2333,7 +2837,7 @@ const UI={
   const rows=g.members.slice().sort((a,b)=>(b.userId===M.me.userId)-(a.userId===M.me.userId)||a.username.localeCompare(b.username)).map(m=>{
    const st=m.userId===M.me.userId?'':M.relation(m.userId);
    return '<div class="pick" style="cursor:default">'+this.av(m.userId,'av-26',m.username,' style="background:var(--avatar);color:var(--avatar-fg)"')+''+
-    '<div class="row-main"><div>'+esc(m.username)+(m.userId===M.me.userId?' <span class="chip">YOU</span>':'')+'</div>'+
+    '<div class="row-main"><div>'+esc(m.username)+this.staffTag(m.userId)+(m.userId===M.me.userId?' <span class="chip">YOU</span>':'')+'</div>'+
     '<div class="meta">'+(m.invitedBy?'added by '+esc(name(m.invitedBy)):'started the group')+'</div></div>'+
     (st?'<button class="tbtn" data-m="peer:'+esc(m.userId)+'" style="margin-left:auto">'+(st==='friend'?'PROFILE':'VIEW')+'</button>':'')+'</div>'}).join('');
   this.modal('<h3>'+esc(M.displayName(id))+'</h3><div class="note">'+this.memberCount(id)+'. Members who are not your friends can message you here, but not directly.</div>'+
@@ -2363,12 +2867,24 @@ const UI={
  settingsHTML(){
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Account &amp; security</div><div class="meta">everything below is stored encrypted on the server</div></div></div>'+
    '<div class="sheet">'+
-   '<div class="sec"><h3>Profile picture</h3><div class="note">Anyone who can see your username can see it. It is resized to '+AVSIZE+'×'+AVSIZE+' before it is uploaded, and it is not end-to-end encrypted.</div>'+
+   '<div class="sec"><h3>Profile picture</h3><div class="note">Pick a profile picture that fits your account. These are not encrypted.</div>'+
    '<div class="btnrow" style="align-items:center"><div class="av av-64" id="setAv"></div><button class="tbtn" data-act="av-pick">CHANGE PICTURE</button>'+
    '<button class="tbtn danger" data-act="av-clear" id="avClear">REMOVE</button></div><div class="err" id="avErr"></div></div>'+
    '<div class="sec"><h3>Identity</h3><div class="note">Information about your account and keys.</div><div id="setIdent"></div></div>'+
-   '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">When on, everyone on this server can find you in the global section of Peers and send you a friend request. When off, only people who know your exact username can. Either way, nobody can message you until you accept them.</div>'+
+   '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">Lets every Marmot user find and friend you, instead of having to ask people for their usernames.</div>'+
    '<div class="btnrow"><button class="tbtn" data-act="disc-off" id="discOff">HIDDEN</button><button class="tbtn" data-act="disc-on" id="discOn">LISTED</button></div><div class="err" id="discErr"></div></div>'+
+   '<div class="sec" id="secFilter"><h3>Chat filter</h3><div class="note">Checks what other people send you in chats, groups and Discord channels and filters out inappropriate content.</div>'+
+   '<div class="lbl">FILTER</div><div class="btnrow" style="margin-top:0">'+
+   [['none','NONE'],['slurs','SLURS'],['swears','SWEARS &amp; SLURS'],['strict','STRICT']].map(([v,l])=>'<button class="tbtn" data-act="filter-level" data-v="'+v+'">'+l+'</button>').join('')+'</div>'+
+   '<div class="note" id="filterLevelNote" style="margin:8px 0 14px"></div>'+
+   '<div class="lbl">FILTERED MESSAGES</div><div class="btnrow" style="margin-top:0">'+
+   '<button class="tbtn" data-act="filter-action" data-v="hide">HIDE</button><button class="tbtn" data-act="filter-action" data-v="delete">DELETE</button></div>'+
+   '<div class="note" id="filterActionNote" style="margin:8px 0 0"></div><div class="err" id="filterErr"></div></div>'+
+   '<div class="sec"><h3>Updates</h3><div class="note">With auto-update on, an outdated copy of Marmot loads the latest version from the server each time it starts. '+
+   'Downloading the latest file skips that and starts faster.</div>'+
+   '<div class="lbl">AUTO-UPDATE</div><div class="btnrow" style="margin-top:0"><button class="tbtn" data-act="upd-on" id="updOn">ON</button><button class="tbtn" data-act="upd-off" id="updOff">OFF</button></div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="upd-notes">PATCH NOTES</button><button class="tbtn" data-act="upd-get">DOWNLOAD LATEST</button></div>'+
+   '<div class="err" id="updErr"></div></div>'+
    '<div class="sec"><h3>Connection</h3><div id="setConn"></div></div>'+
    '<div class="sec"><h3>Session</h3><div class="note"></div>'+
    '<div class="btnrow"><button class="tbtn" data-act="logout">LOG OUT</button></div></div>'+
@@ -2387,8 +2903,192 @@ const UI={
   if(b)b.innerHTML=kv('server',M.server)+kv('live socket',M.wsState)+
    kv('one-time prekeys',M.opkCount==null?'—':M.opkCount+' on server')+kv('stored records',M.recs.size+' ('+msgs+' messages)')+
    kv('voice calls',M.voice.supported()?'available · DTLS-SRTP, keyed over the ratchet':M.voice.why());
+  const uo=$('#updOn');
+  if(uo){uo.setAttribute('aria-pressed',String(autoUpdates()));$('#updOff').setAttribute('aria-pressed',String(!autoUpdates()))}
   const on=$('#discOn'),off=$('#discOff');
-  if(on){on.setAttribute('aria-pressed',String(M.discoverable));off.setAttribute('aria-pressed',String(!M.discoverable))}},
+  if(on){on.setAttribute('aria-pressed',String(M.discoverable));off.setAttribute('aria-pressed',String(!M.discoverable))}
+  const f=M.filter();
+  for(const b of document.querySelectorAll('[data-act=filter-level],[data-act=filter-action]'))
+   b.setAttribute('aria-pressed',String(b.dataset.v===(b.dataset.act==='filter-level'?f.level:f.action)));
+  const ln=$('#filterLevelNote'),an=$('#filterActionNote');
+  if(ln)ln.textContent={none:'Nothing is filtered.',slurs:'Filters slurs.',swears:'Filters slurs and swearing.',
+   strict:'Filters slurs and swearing, and also abbreviations (wtf, stfu, fml…), starred-out words (f**k) and words spelled out in pieces (f u c k).'}[f.level];
+  if(an)an.textContent=f.action==='hide'?'A filtered message shows as “hidden by your chat filter”. Click it to read it.'
+   :'A filtered message is left out of your chats entirely. It comes back if you turn the filter off or down.';},
+
+ /* ---------- admin ---------- */
+ /* Staff only. The column lists the sections this account may see (staff, IP bans, the
+    log) over a search of every account; the pane shows whichever is picked. What each
+    button may do is checked again by the server. */
+ adm(){return this.S.adm||(this.S.adm={sel:null,users:[],more:false,q:null,err:'',loading:false,seq:0,v:0,data:null,all:null})},
+ RANK:{admin:2,mod:1},
+ MUTES:[[10,'10 minutes'],[60,'1 hour'],[360,'6 hours'],[1440,'1 day'],[4320,'3 days'],[10080,'1 week'],
+  [20160,'2 weeks'],[43200,'30 days'],[129600,'90 days'],[525600,'1 year'],['perm','permanently']],
+ /** The ADMIN / MOD tag shown beside a staff member's name in chats. */
+ staffTag(id){const r=M.role(id);
+  return (r==='admin'?' <span class="chip warn" title="Server admin">ADMIN</span>':r==='mod'?' <span class="chip ok" title="Moderator">MOD</span>':'')+
+   (M.isMuted(id)?' <span class="chip bad" title="Muted by a moderator: cannot send messages">MUTED</span>':'')},
+ roleChip(u){return (u.role==='admin'?'<span class="chip warn">ADMIN</span>':u.role==='mod'?'<span class="chip ok">MOD</span>':'')+
+  (u.mute?'<span class="chip bad">MUTED</span>':'')+(u.ipBanned?'<span class="chip bad">IP BANNED</span>':'')},
+ renderAdminCol(rows){
+  if(!M.staff){rows.innerHTML='';return}
+  const A=this.adm(),admin=M.staff.role==='admin';
+  const sec=(sel,name,sub)=>'<button class="row" data-adm-sel="'+sel+'"'+(A.sel===sel?' aria-current="true"':'')+'><div class="row-main">'+
+   '<div class="row-name">'+name+'</div><div class="row-sub">'+sub+'</div></div></button>';
+  let html='<div class="grouplbl">'+(admin?'ADMIN':'MODERATOR')+' · '+M.staff.perms.length+' PERMISSION'+(M.staff.perms.length===1?'':'S')+'</div>';
+  if(admin)html+=sec('staff','Staff','admins and moderators');
+  if(M.can('ip_ban'))html+=sec('bans','IP bans','addresses this server refuses');
+  if(admin)html+=sec('log','Activity log','every staff action');
+  html+='<div class="grouplbl">ACCOUNTS'+(A.users.length?' · '+A.users.length+(A.more?'+':''):'')+'</div>';
+  if(A.err)html+='<div class="grouplbl note2">'+esc(A.err.toUpperCase())+'</div>';
+  else if(A.loading&&!A.users.length)html+='<div class="grouplbl note2">SEARCHING…</div>';
+  else if(!A.users.length)html+='<div class="grouplbl note2">NO ACCOUNTS MATCH</div>';
+  html+=A.users.map(u=>'<button class="row" data-adm-sel="u:'+esc(u.userId)+'"'+(A.sel==='u:'+u.userId?' aria-current="true"':'')+'>'+
+   this.av(u.userId,'av-34',u.username)+'<div class="row-main"><div class="row-top"><span class="row-name">'+esc(u.username)+'</span>'+this.roleChip(u)+'</div>'+
+   '<div class="row-sub">'+esc(u.mute?'muted '+this.muteText(u.mute):'last seen '+(u.lastSeen?new Date(u.lastSeen).toLocaleString():'never'))+'</div></div></button>').join('');
+  if(A.more)html+='<button class="tbtn more" data-act="adm-more">LOAD MORE</button>';
+  rows.innerHTML=html},
+ /** Accounts matching the search box; stale responses are ignored. */
+ async loadAdminUsers(more){
+  const A=this.adm(),q=this.S.filter.trim();
+  if(!M.staff)return;
+  if(!more&&A.q===q&&!A.err&&A.users.length)return;
+  const seq=++A.seq;A.loading=true;A.err='';this.render();
+  try{
+   const r=await M.admin('GET','/users?q='+encodeURIComponent(q)+'&offset='+(more?A.users.length:0));
+   if(seq!==A.seq)return;
+   A.q=q;A.users=more?A.users.concat(r.users):r.users;A.more=r.more}
+  catch(e){if(seq===A.seq)A.err=e.message}
+  finally{if(seq===A.seq){A.loading=false;this.render()}}},
+ /** Picks a section ('staff', 'bans', 'log') or an account ('u:<id>') and loads it. */
+ async admOpen(sel){
+  const A=this.adm();
+  if(A.sel!==sel){A.sel=sel;A.data=null}
+  A.v++;this.render();
+  const path=sel==='staff'?'/staff':sel==='bans'?'/ipbans':sel==='log'?'/log':'/users/'+encodeURIComponent(sel.slice(2));
+  let data;
+  try{
+   if(!A.all)A.all=(await M.admin('GET','/me')).all;
+   data=await M.admin('GET',path)}
+  catch(e){data={err:e.message}}
+  if(A.sel!==sel)return;
+  A.data=data;A.v++;
+  // keep the column's copy of this account in step
+  if(data.user){const i=A.users.findIndex(u=>u.userId===data.user.userId);if(i>=0)A.users[i]=data.user}
+  this.render()},
+ adminPaneHTML(){
+  const A=this.adm(),d=A.data;
+  const head=(title,meta,av)=>'<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+(av||'')+
+   '<div style="min-width:0"><div class="pane-title">'+title+'</div><div class="meta">'+meta+'</div></div></div>';
+  if(!A.sel)return '<div class="empty">SELECT AN ACCOUNT TO MODERATE<br>OR A SECTION ABOVE THEM</div>';
+  if(!d)return head('Loading…','')+'<div class="sheet"><div class="note">loading…</div></div>';
+  if(d.err)return head('Admin','')+'<div class="sheet"><div class="err">'+esc(d.err)+'</div></div>';
+  const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
+  const when=t=>t?new Date(t).toLocaleString():'—';
+  if(A.sel==='staff'){
+   const who=u=>u.userId?'<button class="tbtn" data-adm-sel="u:'+esc(u.userId)+'">'+esc(u.username)+'</button>':'<span class="chip">'+esc(u.username)+' · NO ACCOUNT</span>';
+   return head('Staff',d.admins.length+' admin'+(d.admins.length===1?'':'s')+' · '+d.mods.length+' moderator'+(d.mods.length===1?'':'s'))+'<div class="sheet">'+
+    '<div class="sec"><h3>Admins</h3><div class="note">Admins hold every permission. They are listed in admin.json in the server\'s data directory and can only be added or removed there, by whoever runs the server.</div>'+
+    '<div class="btnrow">'+d.admins.map(who).join('')+'</div></div>'+
+    '<div class="sec"><h3>Moderators</h3><div class="note">To appoint one, search for their account in the column and tick the permissions they should have. Untick everything to remove them.</div>'+
+    (d.mods.length?d.mods.map(m=>'<div class="kv" style="align-items:center"><b>'+(m.userId?'<button class="tbtn" data-adm-sel="u:'+esc(m.userId)+'">'+esc(m.username)+'</button>':esc(m.username))+'</b>'+
+     '<span>'+esc(m.perms.map(p=>(d.all[p]||p)).join(' · '))+'</span></div>').join(''):'<div class="note">No moderators yet.</div>')+'</div></div>'}
+  if(A.sel==='bans'){
+   return head('IP bans',d.bans.length+' address'+(d.bans.length===1?'':'es'))+'<div class="sheet"><div class="sec">'+
+    '<div class="note">Requests from these addresses are refused outright, whoever is signed in. Lift one to let that address back in.</div>'+
+    (d.bans.length?d.bans.map(b=>'<div class="kv" style="align-items:center"><b>'+esc(b.username||'unknown')+'</b><span style="flex:1">'+
+     esc((b.ip?b.ip+' · ':'')+'by '+(b.by||'?')+' · '+when(b.created)+(b.reason?' · '+b.reason:''))+'</span>'+
+     '<button class="tbtn" data-adm="unban:'+esc(b.id)+'">LIFT</button></div>').join(''):'<div class="note">Nobody is IP banned.</div>')+
+    '<div class="err" id="admErr"></div></div></div>'}
+  if(A.sel==='log'){
+   const verb={mute:'muted',unmute:'unmuted',ban:'banned',ipban:'IP banned',unipban:'lifted the IP ban on',delete:'removed a message from',purge:'purged messages from',mod:'set moderator permissions for',unmod:'removed moderator'};
+   return head('Activity log','the latest '+d.log.length+' staff actions')+'<div class="sheet"><div class="sec">'+
+    (d.log.length?d.log.map(e=>'<div class="logrow"><b>'+esc(when(e.ts))+'</b><span>'+esc(e.by+' '+(verb[e.action]||e.action)+(e.target?' '+e.target:'')+(e.detail?' · '+e.detail:''))+'</span></div>').join('')
+     :'<div class="note">Nothing yet.</div>')+'</div></div>'}
+  const u=d.user,self=u.userId===M.me.userId,name=esc(u.username);
+  const can=!self&&(this.RANK[u.role]||0)<this.RANK[M.staff.role];
+  let html=head(name+' '+this.roleChip(u),u.role?(u.role==='admin'?'admin':'moderator'):'member',this.av(u.userId,'av-34',u.username))+'<div class="sheet">'+
+   '<div class="sec"><h3>Account</h3>'+kv('username',u.username)+kv('user id',u.userId)+kv('joined',when(u.created))+kv('last seen',when(u.lastSeen))+
+   (u.ip!==undefined?kv('last address',u.ip||'none on record'):'')+kv('IP ban',u.ipBanned?'their last address is banned':u.hasIp?'no':'no address on record yet')+
+   (u.role==='mod'?kv('permissions',u.perms.map(p=>A.all[p]||p).join(' · ')):'')+'</div>';
+  if(!can){
+   html+='<div class="sec"><div class="note">'+(self?'This is you.':u.role==='admin'?'Admins cannot be moderated from here. Only whoever runs the server can change them, in admin.json.':'Only an admin can moderate a moderator.')+'</div></div>'}
+  if(can&&(M.can('mute_short')||M.can('mute_long'))){
+   const m=u.mute;
+   html+='<div class="sec"><h3>Mute</h3><div class="note">A muted account can still read and receive, but cannot send messages, images or calls, or rename a group. '+
+    (M.can('mute_long')?'':'Mutes longer than a week need the long mute permission. ')+'</div>'+
+    (m?'<div class="kv"><b>status</b><span>muted '+esc(this.muteText(m))+' by '+esc(m.by)+(m.reason?' — '+esc(m.reason):'')+'</span></div>':'<div class="kv"><b>status</b><span>not muted</span></div>')+
+    '<div class="btnrow"><select class="inp" id="admDur" style="width:auto">'+this.MUTES.map(([v,l])=>{
+     const long=v==='perm'||v>10080,ok=M.can(long?'mute_long':'mute_short');
+     return '<option value="'+v+'"'+(ok?'':' disabled')+(v===60&&ok?' selected':'')+'>'+(v==='perm'?'permanently':'for '+l)+'</option>'}).join('')+'</select>'+
+    '<input class="inp" id="admMuteWhy" maxlength="300" placeholder="reason (optional, shown to them)" style="flex:1;min-width:180px">'+
+    '<button class="tbtn danger" data-adm="mute">'+(m?'CHANGE MUTE':'MUTE')+'</button>'+(m?'<button class="tbtn" data-adm="unmute">UNMUTE</button>':'')+'</div></div>'}
+  if(can&&M.can('ban'))
+   html+='<div class="sec"><h3>Ban</h3><div class="note">Deletes the account: its keys, friendships, group memberships, stored chats and undelivered mail. They are signed out at once. This cannot be undone, though the username becomes free to register again.</div>'+
+    '<div class="btnrow"><input class="inp" id="admBanWhy" maxlength="300" placeholder="reason (for the log)" style="flex:1;min-width:180px"><button class="tbtn danger" data-adm="ban">BAN · DELETE ACCOUNT</button></div></div>';
+  if(can&&M.can('ip_ban'))
+   html+='<div class="sec"><h3>IP ban</h3><div class="note">Refuses every request from the address this account last used, and signs them out. Anyone else on that address (a household, a school) is shut out too. Lift it from IP bans.</div>'+
+    '<div class="btnrow"><input class="inp" id="admIpWhy" maxlength="300" placeholder="reason (for the log)" style="flex:1;min-width:180px"><button class="tbtn danger" data-adm="ipban"'+(u.hasIp&&!u.ipBanned?'':' disabled')+'>'+(u.ipBanned?'ALREADY BANNED':'IP BAN')+'</button></div></div>';
+  if(!self&&M.staff.role==='admin'&&u.role!=='admin'){
+   html+='<div class="sec"><h3>Moderator</h3><div class="note">'+(u.role==='mod'?name+' is a moderator. Change what they can do, or untick everything to remove them.':'Make '+name+' a moderator by giving them at least one permission.')+' Admins can only be appointed in the server config.</div>'+
+    '<div id="admPerms">'+Object.entries(A.all||{}).map(([p,l])=>'<label class="perm"><input type="checkbox" value="'+p+'"'+(u.perms.includes(p)?' checked':'')+'>'+esc(l)+'<span class="chip">'+p.toUpperCase()+'</span></label>').join('')+'</div>'+
+    '<div class="btnrow"><button class="send" data-adm="perms">SAVE PERMISSIONS</button></div></div>'}
+  return html+'<div class="err" id="admErr"></div></div>'},
+ /** A button in the admin pane. */
+ async admAct(act,btn){
+  const A=this.adm(),d=A.data,u=d&&d.user,err=$('#admErr');
+  if(err)err.textContent='';
+  const val=id=>{const e=$('#'+id);return e?e.value.trim():''};
+  let msg='';
+  try{
+   btn.disabled=true;
+   if(act==='mute'){
+    const v=val('admDur');
+    const r=await M.admin('POST','/mute',Object.assign({userId:u.userId,reason:val('admMuteWhy')},v==='perm'?{permanent:true}:{minutes:Number(v)}));
+    msg=u.username+' is muted '+this.muteText(r.user.mute)}
+   else if(act==='unmute'){await M.admin('POST','/unmute',{userId:u.userId});msg=u.username+' is no longer muted'}
+   else if(act==='ban'){
+    if(!await this.confirm('Ban '+u.username+'?','Their account is deleted for good and they are signed out. This cannot be undone.','BAN'))return;
+    await M.admin('POST','/ban',{userId:u.userId,reason:val('admBanWhy')});
+    A.users=A.users.filter(x=>x.userId!==u.userId);A.sel=null;A.data=null;A.v++;this.render();
+    return toast(u.username+' was banned and their account deleted',6000)}
+   else if(act==='ipban'){
+    if(!await this.confirm('IP ban '+u.username+'?','Every request from the address they last used is refused, and they are signed out. Others on the same network are shut out too.','IP BAN'))return;
+    await M.admin('POST','/ipban',{userId:u.userId,reason:val('admIpWhy')});msg=u.username+'\'s address is banned'}
+   else if(act==='perms'){
+    const perms=[...document.querySelectorAll('#admPerms input:checked')].map(i=>i.value);
+    await M.admin('POST','/staff',{userId:u.userId,perms});
+    msg=perms.length?u.username+'\'s permissions are saved':u.username+' is no longer a moderator'}
+   else if(act.startsWith('unban:')){await M.admin('POST','/ipbans/remove',{id:act.slice(6)});msg='IP ban lifted'}
+   else return;
+   if(msg)toast(msg);
+   await this.admOpen(A.sel)}
+  catch(e){const x=$('#admErr');if(x)x.textContent=e.message;else toast(e.message)}
+  finally{if(btn.isConnected)btn.disabled=false}},
+
+ /** Removes the latest messages in a chat for everyone in it (the purge permission). */
+ purge(conv){
+  if(!conv||!M.can('purge'))return;
+  const list=M.thread(conv).filter(m=>m.dir!=='sys'&&!m.deleted&&m.state!=='sending'&&m.state!=='failed');
+  const authors=[...new Set(list.map(m=>this.sender(conv,m)))];
+  const nm=id=>id===M.me.userId?'you':M.displayName(id);
+  this.modal('<h3>Purge messages</h3><div class="note">Removes the most recent messages in '+esc(M.displayName(conv))+' for everyone in it; each becomes “removed by a moderator”. '+
+   'Messages from staff you cannot moderate are left alone. '+list.length+' message'+(list.length===1?' is':'s are')+' here to purge.</div>'+
+   '<div class="field"><div class="lbl">HOW MANY · LATEST FIRST</div><input class="inp" id="purgeN" type="number" min="1" max="500" value="'+Math.min(20,Math.max(1,list.length))+'"></div>'+
+   '<div class="field"><div class="lbl">FROM</div><select class="inp" id="purgeWho"><option value="">everyone</option>'+
+   authors.map(a=>'<option value="'+esc(a)+'">'+esc(nm(a))+'</option>').join('')+'</select></div>'+
+   '<div class="err" id="purgeErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="hang" data-m="go">PURGE</button></div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const err=$('#purgeErr');err.textContent='';
+    const n=Math.floor(Number($('#purgeN').value)),who=$('#purgeWho').value;
+    if(!(n>=1&&n<=500))return err.textContent='purge between 1 and 500 messages';
+    const ids=list.filter(m=>!who||this.sender(conv,m)===who).slice(-n).map(m=>m.id);
+    if(!ids.length)return err.textContent='there is nothing to purge';
+    btn.disabled=true;
+    try{const r=await M.modRemove(conv,ids,true);this.close();toast('removed '+r.removed+' message'+(r.removed===1?'':'s')+(r.skipped?' · skipped '+r.skipped+' from staff':''))}
+    catch(e){err.textContent=e.message;btn.disabled=false}})},
 
  /* ---------- overlays ---------- */
  modal(html,onClick){
@@ -2491,10 +3191,11 @@ const UI={
  screen(s){
   this.S.screen=s;this.S.filter='';$('#search').value='';
   if(s==='peers'){this.S.global.q=null;this.loadGlobal()}
+  if(s==='admin'){this.adm().q=null;this.loadAdminUsers()}
   this.render()},
  open(id){
   if(isDiscord(id)){this.S.screen='discord';this.S.dc=id}else{this.S.screen='messages';this.S.chat=id}
-  M.unread.delete(id);this._stick=true;this._winFor=null;this.render()},
+  M.unread.delete(id);M.pinged.delete(id);this._stick=true;this._winFor=null;this.render()},
  showPeer(id){if(this.S.screen!=='peers')this.screen('peers');this.S.peer=id;this.render()},
 
  async send(){
@@ -2504,12 +3205,113 @@ const UI={
   const a=this.S.att&&this.S.att.conv===id?this.S.att:null;
   if(!text.trim()&&!a)return;
   if(a&&text.length>IMGTEXT)return toast('captions are limited to '+IMGTEXT+' characters');
+  if(!a&&parseCommand(text))return this.command(id,text);
+  let out=text,poll;
+  if(!a)try{const f=funCommand(text,M.me.username);if(f){out=f.text;this.acClose();
+    if(f.poll){if(isDiscord(id))return toast('polls are not available in Discord channels');poll=Object.assign(f.poll,{ends:M.serverNow()+f.min*60000})}}}
+   catch(e){return toast(text.trim().split(/\s/)[0]+': '+e.message,6000)}
+  const mu=M.muted();if(mu)return toast('you are muted '+this.muteText(mu)+(mu.reason?' — '+mu.reason:''),6000);
   ta.value='';this._stick=true;this.emojiClose();
   if(re||a){this.S.reply=null;this.S.att=null;this.render()}
-  try{await M.sendText(id,text,undefined,re,a)}catch(e){toast('not sent: '+e.message)}},
+  try{await M.sendText(id,out,undefined,re,a,poll)}catch(e){toast('not sent: '+e.message)}},
+ /** A click on a poll option: vote for it, or take the vote back if it is already yours. */
+ async vote(id,o){
+  const conv=this.cur(),m=conv&&M.get('msg:'+conv+':'+id);if(!m||!m.poll)return;
+  const mine=(m.votes||{})[M.me.userId];
+  try{await M.vote(conv,id,mine===o?-1:o)}catch(e){toast('vote not counted: '+e.message)}},
 
+ /** A /command typed in the composer: run it, and leave a note in this chat (only you see it). */
+ async command(conv,text){
+  const ta=$('#composer'),c=parseCommand(text);
+  this.acClose();
+  if(c.cmd==='help'){if(ta)ta.value='';return this.cmdHelp()}
+  if(!M.staff)return toast('only staff can use /'+c.cmd+' · type /help to see what you can do',6000);
+  if((c.cmd==='ban'||c.cmd==='ipban')&&c.user&&!await this.confirm((c.cmd==='ban'?'Ban ':'IP ban ')+c.user+'?',
+   c.cmd==='ban'?'Their account is deleted for good and they are signed out. This cannot be undone.'
+    :'Every request from the address they last used is refused, and they are signed out. Others on the same network are shut out too.',
+   c.cmd==='ban'?'BAN':'IP BAN'))return;
+  try{
+   const r=await M.runCommand(conv,text);
+   if(ta&&ta.value.trim()===text.trim())ta.value='';
+   await M.sysLine(conv,r.text)}
+  catch(e){toast('/'+c.cmd+': '+e.message,7000)}},
+ /** Commands this account may use: [name, usage, what it does]. */
+ cmdList(){
+  const all=[['mute','1h @user "reason"','mute for m, h, d, w, mo, y, or perm',M.can('mute_short')||M.can('mute_long')],
+   ['unmute','@user','lift a mute',M.can('mute_short')||M.can('mute_long')],
+   ['ban','@user "reason"','delete their account',M.can('ban')],
+   ['ipban','@user "reason"','ban the address they last used',M.can('ip_ban')],
+   ['purge','20 @user','remove the latest messages here (@user optional)',M.can('purge')],
+   ['help','','show this list',true]];
+  return all.filter(c=>c[3])},
+ cmdHelp(){
+  const cmds=M.staff?this.cmdList():[];
+  this.modal('<h3>Chat commands</h3><div class="cmdhelp">'+
+   '<div><b>@username</b> — ping someone: their copy of the message is highlighted and they get a notification.</div>'+
+   '<div style="margin-top:10px">Fun commands send their result to the chat for everyone to see.</div>'+
+   FUN.map(c=>'<div><b>/'+c[0]+'</b> '+esc(c[1])+' — '+esc(c[2])+'</div>').join('')+
+   (cmds.length>1?'<div style="margin-top:10px">Staff commands run on the server and are never sent to the chat; you get a line here saying what happened. Quote a reason with "…".</div>'+
+    cmds.filter(c=>c[0]!=='help').map(c=>'<div><b>/'+c[0]+'</b> '+esc(c[1])+' — '+esc(c[2])+'</div>').join(''):'')+
+   '</div><div class="modal-foot"><span class="grow"></span><button class="send" data-m="close">CLOSE</button></div>',()=>this.close())},
+
+ /* ---- autocomplete: @people and /commands ---- */
+ acOpen(){return !!$('#acPop')},
+ acClose(){const p=$('#acPop');if(p)p.remove();this._ac=null},
+ /** Who can be pinged from conv: its members first, then friends (and accounts staff have looked up). */
+ acPeople(conv){
+  const seen=new Map(),add=(id,name)=>{if(id&&name&&id!==M.me.userId&&!seen.has(name.toLowerCase()))seen.set(name.toLowerCase(),{id,name})};
+  const g=isGroup(conv)&&M.group(conv);
+  if(g)for(const m of g.members)add(m.userId,m.username);
+  if(conv&&!isGroup(conv)&&!isDiscord(conv))add(conv,M.displayName(conv));
+  for(const p of M.peers.values())if(p.state==='friend')add(p.userId,p.username);
+  if(M.staff&&this.S.adm)for(const u of this.S.adm.users)add(u.userId,u.username);
+  return [...seen.values()]},
+ /** Opens, updates or closes the suggestion list for the word being typed. */
+ acUpdate(){
+  const ta=$('#composer'),box=$('#composerBox');if(!ta||!box)return this.acClose();
+  const before=ta.value.slice(0,ta.selectionStart==null?ta.value.length:ta.selectionStart);
+  let items=[],start=0;
+  const at=/(^|[^\w@])@([A-Za-z0-9._-]{0,24})$/.exec(before);
+  const cmd=/^\/(\w*)$/.exec(before);
+  if(at){
+   const q=at[2].toLowerCase();start=before.length-at[2].length-1;
+   items=this.acPeople(this.cur()).filter(p=>p.name.toLowerCase().startsWith(q)).concat(
+    this.acPeople(this.cur()).filter(p=>!p.name.toLowerCase().startsWith(q)&&p.name.toLowerCase().includes(q)))
+    .slice(0,8).map(p=>({value:'@'+p.name+' ',html:this.av(p.id,'av-26',p.name,' style="background:var(--avatar);color:var(--avatar-fg)"')+'<span>'+esc(p.name)+'</span>'+this.staffTag(p.id)}))}
+  else if(cmd){
+   const q=cmd[1].toLowerCase();
+   items=FUN.concat(M.staff?this.cmdList():[['help','','show all commands']]).filter(c=>c[0].startsWith(q)).map(c=>({value:'/'+c[0]+' ',html:'<b>/'+c[0]+'</b><span class="d">'+esc(c[1]||c[2])+'</span>'}))}
+  if(!items.length)return this.acClose();
+  let pop=$('#acPop');
+  if(!pop){pop=document.createElement('div');pop.className='acpop';pop.id='acPop';pop.setAttribute('role','listbox');box.appendChild(pop)}
+  const sel=this._ac&&this._ac.items.length===items.length?Math.min(this._ac.sel,items.length-1):0;
+  this._ac={items,start,end:before.length,sel};
+  pop.innerHTML=items.map((it,i)=>'<button type="button" data-ac="'+i+'" role="option" aria-selected="'+(i===sel)+'">'+it.html+'</button>').join('')},
+ acMove(d){const a=this._ac;if(!a)return;a.sel=(a.sel+d+a.items.length)%a.items.length;
+  document.querySelectorAll('#acPop [data-ac]').forEach((b,i)=>{b.setAttribute('aria-selected',String(i===a.sel));if(i===a.sel)b.scrollIntoView({block:'nearest'})})},
+ acPick(i){
+  const a=this._ac,ta=$('#composer');if(!a||!ta)return;
+  const it=a.items[i==null?a.sel:i];if(!it)return;
+  ta.setRangeText(it.value,a.start,a.end,'end');ta.focus();
+  this.acClose();this.acUpdate()},
+
+ /** A toast for a message in another chat. While the tab is hidden they are only counted,
+     and come back as one summary: background tabs hold up the timers that clear toasts,
+     so otherwise a busy group leaves hundreds waiting on return. */
  notify(peer,text){
-  if(document.hidden||this.cur()!==peer)toast(M.displayName(peer)+': '+text.slice(0,80),4000)},
+  const ping=M.pings(text);
+  if(document.hidden){const a=this._away||(this._away={n:0,peers:new Set(),pings:0});a.n++;a.peers.add(peer);if(ping)a.pings++;return}
+  if(this.cur()===peer)return;
+  const f=M.filter(),caught=f.level!=='none'&&chatFilter.test(f.level,text);
+  if(caught&&f.action==='delete')return;
+  toast((ping?'@ you were mentioned · ':'')+M.displayName(peer)+': '+(caught?'message hidden by your chat filter':text.slice(0,ping?140:80)),ping?9000:4000)},
+ /** The messages that came in while the tab was hidden, as one toast. */
+ back(){
+  const a=this._away;this._away=null;
+  if(!a)return;
+  if(a.n===1&&this.cur()===[...a.peers][0])return;
+  summary(a.n,a.peers.size);
+  if(a.pings)toast('@ you were mentioned '+(a.pings===1?'once':a.pings+' times')+' while you were away',8000)},
 
  /* ---------- voice ---------- */
  async call(id){
@@ -2541,9 +3343,52 @@ const UI={
    (M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
    '<div class="meta'+(c.unstable?' warn':'')+'">'+esc(st)+' · end-to-end encrypted</div></div>'+
    (ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">ACCEPT</button>'
-    :'<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button><button class="hang" data-act="call-hangup">HANG UP</button>');
+    :(M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+c.cam+'">CAMERA</button>':'')+
+     (M.voice.canScreen()?'<button class="tbtn" data-act="call-screen" aria-pressed="'+c.screen+'">SCREEN</button>':'')+
+     '<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button><button class="hang" data-act="call-hangup">HANG UP</button>');
   box.className='callbar'+(ringing?' ringing':'');
-  if(box.innerHTML!==html)box.innerHTML=html}
+  if(box.innerHTML!==html)box.innerHTML=html;
+  this.renderStage(c)},
+
+ async video(kind){
+  const c=M.voice.call;if(!c)return;
+  const on=!c[kind];
+  try{await (kind==='cam'?M.voice.setCamera(on):M.voice.setScreen(on))}
+  catch(e){
+   // closing the screen picker without choosing is not an error worth a toast
+   if(kind==='screen'&&/^(NotAllowedError|AbortError)$/.test(e.name))return;
+   toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'camera access was blocked — allow it in the browser to turn it on'
+    :(kind==='cam'?'camera':'screen share')+' failed: '+e.message,7000)}},
+
+ /** The video panel: every feed that is on, the pinned (or else the most important) one large. */
+ renderStage(c){
+  const st=$('#stage');
+  const feeds=c?[
+   ['pscreen',c.peerScreen&&c.remoteScreen,M.displayName(c.peer)+' · screen'],
+   ['pcam',c.peerCam&&c.remoteCam,M.displayName(c.peer)],
+   ['myscreen',c.screen&&c.screenStream,'your screen'],
+   ['mycam',c.cam&&c.camStream,'you']]:[];
+  const on=feeds.filter(f=>f[1]);
+  if(!on.length){
+   if(!st.hidden&&document.fullscreenElement===st)document.exitFullscreen().catch(()=>{});
+   st.hidden=true;st.classList.remove('big');this._pin=null;
+   for(const v of st.querySelectorAll('video'))if(v.srcObject)v.srcObject=null;
+   return}
+  st.hidden=false;
+  const main=on.find(f=>f[0]===this._pin)||on[0];
+  let i=0;
+  for(const [k,src,label] of feeds){
+   const el=st.querySelector('[data-tile='+k+']'),v=el.firstElementChild,s=src||null;
+   if(v.srcObject!==s){v.srcObject=s;if(s)v.play().catch(()=>{})}
+   el.hidden=!s;
+   el.classList.toggle('main',!!s&&main[0]===k);
+   el.classList.toggle('thumb',!!s&&main[0]!==k);
+   if(s&&main[0]!==k)el.style.setProperty('--i',i++);
+   el.title=s&&main[0]!==k?'show '+label+' large':'';
+   el.lastElementChild.textContent=label}
+  st.querySelector('[data-act=stage-size]').textContent=st.classList.contains('big')?'SHRINK':'EXPAND';
+  const fs=st.querySelector('[data-act=stage-full]');
+  fs.hidden=!st.requestFullscreen;fs.textContent=document.fullscreenElement===st?'EXIT FULLSCREEN':'FULLSCREEN'}
 };
 
 /** Incoming-call tone, synthesised so the file stays standalone. */
@@ -2566,6 +3411,9 @@ const Ring={ctx:null,timer:0,on:false,
 
 /* ---------- wiring ---------- */
 document.addEventListener('click',async e=>{
+ // a click on a filtered message that was clicked open hides it again (its image still opens)
+ const rv=e.target.closest('[data-reveil]');
+ if(rv&&!e.target.closest('button')){UI.S.unveiled.delete(UI.cur()+'|'+rv.dataset.reveil);UI.render();return}
  const t=e.target.closest('button');if(!t||t.closest('#overlay'))return;
  if(t.dataset.screen){UI.screen(t.dataset.screen);return}
  if(t.dataset.themeSet){const r=document.documentElement;r.classList.add('theme-fade');clearTimeout(UI._themeT);UI._themeT=setTimeout(()=>r.classList.remove('theme-fade'),350);r.dataset.theme=t.dataset.themeSet;store.set('theme',t.dataset.themeSet);UI.render();return}
@@ -2580,8 +3428,13 @@ document.addEventListener('click',async e=>{
  if(t.dataset.del){UI.askDelete(t.dataset.del);return}
  if(t.dataset.jump){UI.jump(t.dataset.jump);return}
  if(t.dataset.view){UI.viewImage(t.dataset.view);return}
+ if(t.dataset.vote){UI.vote(t.dataset.vote,Number(t.dataset.o));return}
+ if(t.dataset.unveil){UI.S.unveiled.add(UI.cur()+'|'+t.dataset.unveil);UI.render();return}
  if(t.dataset.emoji){UI.putEmoji(t.dataset.emoji);return}
  if(t.dataset.ecat){UI.emojiJump(t.dataset.ecat);return}
+ if(t.dataset.ac!=null){UI.acPick(Number(t.dataset.ac));return}
+ if(t.dataset.admSel){UI.admOpen(t.dataset.admSel);return}
+ if(t.dataset.adm){UI.admAct(t.dataset.adm,t);return}
  if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
  switch(t.dataset.act){
   case 'send':UI.send();break;
@@ -2591,6 +3444,7 @@ document.addEventListener('click',async e=>{
   case 'emoji':UI.emojiToggle();break;
   case 'back':
    if(UI.S.screen==='peers')UI.S.peer=null;else if(UI.S.screen==='settings')UI.S.set=false;
+   else if(UI.S.screen==='admin')UI.adm().sel=null;
    else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
    UI.render();break;
   case 'verify':UI.verify(UI.S.chat);break;
@@ -2600,6 +3454,11 @@ document.addEventListener('click',async e=>{
   case 'call-hangup':M.voice.hangup();break;
   case 'call-mute':M.voice.setMuted(!(M.voice.call&&M.voice.call.muted));break;
   case 'call-open':if(M.voice.call)UI.open(M.voice.call.peer);break;
+  case 'call-cam':UI.video('cam');break;
+  case 'call-screen':UI.video('screen');break;
+  case 'stage-pin':UI._pin=t.dataset.tile;UI.renderStage(M.voice.call);break;
+  case 'stage-size':$('#stage').classList.toggle('big');UI.renderStage(M.voice.call);break;
+  case 'stage-full':{const st=$('#stage');document.fullscreenElement===st?document.exitFullscreen().catch(()=>{}):st.requestFullscreen().catch(()=>{})}break;
   case 'profile':UI.showPeer(UI.S.chat);break;
   case 'leave':UI.leaveDiscord(UI.S.dc);break;
   case 'g-invite':UI.groupInvite(UI.S.chat);break;
@@ -2609,10 +3468,22 @@ document.addEventListener('click',async e=>{
   case 'av-pick':UI.pickAvatar();break;
   case 'av-clear':UI.clearAvatar();break;
   case 'g-leave':UI.groupLeave(UI.S.chat);break;
+  case 'purge':UI.purge(UI.S.chat);break;
+  case 'adm-more':UI.loadAdminUsers(true);break;
   case 'open-settings':UI.S.set=true;UI.render();break;
   case 'goto-discovery':UI.screen('settings');UI.S.set=true;UI.renderNow();
    {const s=$('#secDiscovery');if(s)s.scrollIntoView({block:'start'})}break;
   case 'global-more':UI.loadGlobal(true);break;
+  case 'filter-level':case 'filter-action':{
+   const err=$('#filterErr');err.textContent='';
+   try{await M.setFilter(t.dataset.act==='filter-level'?{level:t.dataset.v}:{action:t.dataset.v})}catch(x){err.textContent=x.message}
+   break}
+  case 'upd-on':case 'upd-off':store.set('autoupdate',t.dataset.act==='upd-on'?null:'off');UI.fillSettings();break;
+  case 'upd-notes':showNotes();break;
+  case 'upd-get':{
+   const err=$('#updErr');err.textContent='';t.disabled=true;
+   try{await saveLatest()}catch(x){err.textContent='could not download: '+x.message}
+   t.disabled=false;break}
   case 'disc-on':case 'disc-off':{
    const err=$('#discErr');err.textContent='';
    try{await M.setDiscoverable(t.dataset.act==='disc-on');UI.S.global.q=null}catch(x){err.textContent=x.message}
@@ -2624,14 +3495,22 @@ document.addEventListener('click',async e=>{
    break}}
 });
 document.addEventListener('keydown',e=>{
+ // the suggestion list takes the arrow keys, Tab and Enter while it is open
+ if(e.target.id==='composer'&&UI.acOpen()&&!e.isComposing){
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();UI.acMove(e.key==='ArrowDown'?1:-1);return}
+  if(e.key==='Tab'||(e.key==='Enter'&&!e.shiftKey)){e.preventDefault();UI.acPick();return}
+  if(e.key==='Escape'){e.preventDefault();UI.acClose();return}}
  if(e.target.id==='composer'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();UI.send()}
  if(e.key==='Escape'&&UI.emojiOpen()){UI.emojiClose();const ta=$('#composer');if(ta)ta.focus()}
  else if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
  else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply()});
+document.addEventListener('input',e=>{if(e.target.id==='composer')UI.acUpdate()});
+document.addEventListener('mousedown',e=>{if(UI.acOpen()&&!e.target.closest('#acPop,#composer'))UI.acClose()});
 let searchTimer=0;
 $('#search').addEventListener('input',e=>{
  UI.S.filter=e.target.value;UI.renderCol();
- if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}});
+ if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}
+ if(UI.S.screen==='admin'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadAdminUsers(),250)}});
 // the emoji browser closes on a click anywhere else
 document.addEventListener('mousedown',e=>{if(UI.emojiOpen()&&!e.target.closest('#emojiPop,[data-act=emoji]'))UI.emojiClose()});
 // images can be pasted into the composer, or dropped anywhere on an open chat
@@ -2647,12 +3526,12 @@ document.addEventListener('drop',e=>{
  e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
 document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target)},true);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.back();UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
 
 M.on('change',()=>UI.render());
 M.on('status',()=>UI.render());
 M.on('message',(peer,text)=>UI.notify(peer,text));
-M.on('backlog',(n,chats)=>toast(n+' new message'+(n>1?'s':'')+(chats>1?' in '+chats+' chats':''),5000));
+M.on('backlog',(n,chats)=>summary(n,chats));
 M.on('call',()=>{UI.renderCall();UI.render()});
 // closing the tab mid-call would drop it without telling the other side
 window.addEventListener('beforeunload',e=>{const c=M.voice.call;if(c&&c.state!=='ringing'){e.preventDefault();e.returnValue=''}});
@@ -2661,43 +3540,102 @@ M.on('peer',(kind,p)=>{
  else if(kind==='accepted')toast(p.username+' accepted your friend request',6000);
  else if(kind==='changed')toast('warning: '+p.username+' now belongs to a different identity than before',9000)});
 M.on('signedout',reason=>{
- store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',reply:null,
+ store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',reply:null,adm:null,
   global:{q:null,users:[],more:false,loading:false,err:'',seq:UI.S.global.seq+1}});
  $('#search').value='';UI.render();
  UI.auth('login',reason||'')});
 
 /* ---------- updates ---------- */
-/* Asks the Marmot server for the client it serves; if that one carries a newer
-   VERSION, a popup offers it as a download (saved from the fetched text,
-   since <a download> is ignored across origins). */
+/* With auto-update on (the default), boot asks the server which client it serves
+   before anything else starts. If that one is newer, GET /api/client carries the
+   whole file and document.write puts it in place of this page; the new copy then
+   shows its patch notes and offers itself as a download, since a current file on
+   disk starts without the swap. With auto-update off, a newer client is only
+   offered as a download. */
 function newerVer(a,b){
  const x=a.split('.').map(Number),y=b.split('.').map(Number);
  for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0}
  return false}
+const autoUpdates=()=>store.get('autoupdate')!=='off';
+/** The server to update from, or '' before one is known. */
+async function updateBase(){const b=SERVER?await reachServer():store.get('server');return b?b.replace(/\/+$/,''):''}
+async function getJSON(url,ms){
+ const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms);
+ try{const r=await fetch(url,{signal:ac.signal,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}
+ finally{clearTimeout(t)}}
+/** The newest client the server has, {v,html}, or null when this copy is current. */
+async function latestClient(){
+ const base=await updateBase();if(!base)return null;
+ const {v}=await getJSON(base+'/api/client/version',4000);
+ if(typeof v!=='string'||!newerVer(v,VERSION))return null;
+ const c=await getJSON(base+'/api/client',20000);
+ // the file must really be the version it claims, or every boot would swap again
+ if(c.v!==v||typeof c.html!=='string'||!c.html.includes("const VERSION='"+v+"'"))throw new Error('server sent a mismatched client');
+ return c}
+/** Swaps this page for the server's newer client. Resolves when there is nothing to swap;
+    after a swap it never resolves, so this copy's boot stops where it is. */
+async function autoUpdate(){
+ let c;
+ try{c=await latestClient()}catch(e){console.warn('Marmot auto-update skipped:',e.message)}
+ if(!c)return;
+ window.__marmotUpdate={from:VERSION,to:c.v,html:c.html};
+ document.open();document.write(c.html);document.close();
+ return new Promise(()=>{})}
+/** Auto-update off: offers a newer client as a download instead. */
 async function checkUpdate(){
- let html;
- try{
-  const base=SERVER?await reachServer():store.get('server');
-  if(!base)return;
-  const r=await fetch(base.replace(/\/+$/,'')+'/index.html',{cache:'no-store'});if(!r.ok)return;html=await r.text()}
- catch(e){console.warn('Marmot update check failed:',e.message);return}
- const m=html.match(/const VERSION='([\d.]+)'/);
- if(!m||!newerVer(m[1],VERSION))return;
- const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+ let c;
+ try{c=await latestClient()}catch(e){console.warn('Marmot update check failed:',e.message);return}
+ if(!c)return;
+ popup(brandHTML()+'<h3 style="margin-top:16px">Update available</h3>'+
+  '<div class="note" style="margin:0">Version '+esc(c.v)+' is out. Download the new file and open it in place of this one, or turn auto-update on in Settings.</div>'+
+  '<div class="pnotes">'+notesHTML(VERSION,c.html)+'</div>'+
+  '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="later">LATER</button>'+dlButton(c)+'</div>',
+  k=>{if(k==='get')toast('saved marmot.html — open it and close this tab',8000)})}
+function brandHTML(){return '<div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+esc(VERSION)+'</div></div>'}
+function dlButton(c){
+ const url=URL.createObjectURL(new Blob([c.html],{type:'text/html'}));
+ return '<a class="send" style="text-decoration:none" data-u="get" href="'+url+'" download="marmot.html">DOWNLOAD v'+esc(c.v)+'</a>'}
+/** Patch notes for the versions after `since` (every one without it), newest first.
+    With `html`, they are read out of that copy of the client (as data, never run). */
+function notesHTML(since,html){
+ let list=PATCH_NOTES;
+ if(html)try{list=JSON.parse(html.match(/<script type="application\/json" id="patchNotes">([\s\S]*?)<\/script>/)[1])}catch(e){return ''}
+ const part=(t,a)=>Array.isArray(a)&&a.length?'<div class="lbl">'+t+'</div><ol>'+a.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>':'';
+ return (Array.isArray(list)?list:[]).filter(n=>n&&typeof n.v==='string'&&(!since||newerVer(n.v,since))).map(n=>
+  '<div class="pnote"><div class="pnote-v">v'+esc(n.v)+'</div>'+part('NEW FEATURES',n.features)+part('BUG FIXES',n.fixes)+'</div>').join('')}
+/** A dialog above everything, the login screen included. pick gets each [data-u] click and
+    closes the dialog unless it returns false; a click outside closes it too. */
+function popup(html,pick){
  const box=document.createElement('div');
- box.innerHTML='<div class="scrim top"><div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="updT">'+
-  '<div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+esc(VERSION)+'</div></div>'+
-  '<h3 id="updT" style="margin-top:16px">Update available</h3>'+
-  '<div class="note" style="margin:0">Version '+esc(m[1])+' is out. Download the new file and open it in place of this one.</div>'+
-  '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="later">LATER</button>'+
-  '<a class="send" style="text-decoration:none" data-u="get" href="'+url+'" download="marmot.html">DOWNLOAD v'+esc(m[1])+'</a></div></div></div>';
+ box.innerHTML='<div class="scrim top"><div class="modal" role="alertdialog" aria-modal="true">'+html+'</div></div>';
  const scrim=box.firstChild;
  const shut=()=>{scrim.classList.add('out');setTimeout(()=>scrim.remove(),180)};
  scrim.addEventListener('click',e=>{const b=e.target.closest('[data-u]');
-  if(e.target===scrim||(b&&b.dataset.u==='later'))shut();
-  else if(b){toast('saved marmot.html — open it and close this tab',8000);shut()}});
+  if(e.target===scrim)shut();else if(b&&(!pick||pick(b.dataset.u)!==false))shut()});
  document.body.appendChild(scrim);
- scrim.querySelector('[data-u=get]').focus()}
+ const f=scrim.querySelector('[data-u]');if(f)f.focus();
+ return scrim}
+/** After an auto-update: what changed, and the new file to keep. */
+function showUpdated(u){
+ popup(brandHTML()+'<h3 style="margin-top:16px">Updated to v'+esc(VERSION)+'</h3>'+
+  '<div class="note" style="margin:0">Your copy was v'+esc(u.from)+', so Marmot loaded the latest version from the server. '+
+  'Download it to start faster next time, or keep auto-updating.</div>'+
+  '<div class="pnotes">'+notesHTML(u.from)+'</div>'+
+  '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="keep">KEEP AUTO-UPDATING</button>'+dlButton({v:VERSION,html:u.html})+'</div>',
+  k=>{if(k==='get')toast('saved marmot.html — open it in place of the old file',8000)})}
+/** Patch notes with nothing to decide: after opening a newer file, or from Settings. */
+function showNotes(since){
+ popup(brandHTML()+'<h3 style="margin-top:16px">Patch notes</h3>'+
+  '<div class="pnotes">'+(notesHTML(since)||'<div class="note">Nothing new.</div>')+'</div>'+
+  '<div class="modal-foot"><span class="grow"></span><button class="send" data-u="ok">OK</button></div>')}
+/** Settings → DOWNLOAD LATEST: saves the newest client the server has. */
+async function saveLatest(){
+ const base=await updateBase();if(!base)throw new Error('no server to download from');
+ const c=await getJSON(base+'/api/client',20000);
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([c.html],{type:'text/html'}));a.download='marmot.html';
+ document.body.appendChild(a);a.click();a.remove();
+ toast('saved marmot.html (v'+c.v+')',6000)}
 
 /* ---------- boot ---------- */
 (async function boot(){
@@ -2712,14 +3650,21 @@ async function checkUpdate(){
   return}
  if(ON_PAGES)$('#dlHtml').classList.remove('hidden');
  $('.rail .ver').textContent='v'+VERSION;
- checkUpdate();
  UI.renderNow();
+ // this page is the copy an auto-update just wrote: it is current, so no second check
+ const upd=window.__marmotUpdate;
+ if(!upd){if(autoUpdates())await autoUpdate();else checkUpdate()}
+ const seen=store.get('seen');
+ if(upd&&upd.to===VERSION)showUpdated(upd);
+ else if(seen?newerVer(VERSION,seen):store.get('server'))showNotes(seen);   // a newer file opened by hand
+ store.set('seen',VERSION);
  const s=store.sget();
  if(s&&s.token){
   try{await M.resume(s);UI.render();return}
   catch(e){store.sset(null);UI.auth('login',e.network?e.message:'session ended — sign in again');return}}
  UI.auth('login');
 })();
+}
 </script>
 </body>
 </html>

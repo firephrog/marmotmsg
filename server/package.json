@@ -1,10 +1,10 @@
 {
   "name": "marmot-server",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/e2e.test.js test/discord.test.js test/voice.test.js"
+    "test": "node --test test/e2e.test.js test/discord.test.js test/voice.test.js test/admin.test.js test/chatfilter.test.js test/update.test.js"
   },
   "description": "Marmot server: accounts, prekeys, encrypted mailbox and blob store",
   "dependencies": {
