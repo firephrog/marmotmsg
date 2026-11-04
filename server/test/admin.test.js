@@ -215,7 +215,7 @@ test('a ban deletes the account and signs it out', async () => {
   await live(carol);
   await boss.admin('POST', '/ban', { userId: carol.me.userId, reason: 'spam' });
   await waitFor(() => carol.out, 'carol to be signed out');
-  assert.match(carol.out, /removed by a moderator/);
+  assert.match(carol.out, /removed by Marmot staff/);
   assert.equal(srv.db.userRowByName('carol'), undefined);
 });
 

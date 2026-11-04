@@ -633,6 +633,52 @@ test('polls: every copy keeps the same count, votes change and come back, and cl
   await assert.rejects(pam.sendText(conv, 'x', undefined, undefined, undefined, { q: 'one?', opts: ['only'], ends: Date.now() + 1000 }), /not valid/);
 });
 
+test('reactions: every copy shows the same ones, they toggle, and a deleted message loses them', async () => {
+  const ann = client(), bo = client(), cy = client();
+  await ann.signup('reactann', PASS);
+  await bo.signup('reactbo', PASS);
+  await cy.signup('reactcy', PASS);
+  await Promise.all([ann, bo, cy].map(live));
+  const boId = await befriend(ann, bo);
+  await befriend(ann, cy);
+  const annId = ann.me.userId, cyId = cy.me.userId;
+  const same = (a, b) => require('util').isDeepStrictEqual(a, b);
+
+  // a direct chat: both sides see both reactions, and one taken back
+  const id = await ann.sendText(boId, 'react to this');
+  await waitFor(() => bo.get('msg:' + annId + ':' + id), 'direct message');
+  const dm = c => (c === ann ? ann.get('msg:' + boId + ':' + id) : bo.get('msg:' + annId + ':' + id)).reacts;
+  await bo.react(annId, id, '👍', true);
+  await ann.react(boId, id, '👍', true);
+  await bo.react(annId, id, '🇺🇸', true);
+  const want = { '👍': [boId, annId], '🇺🇸': [boId] };
+  await waitFor(() => same(dm(ann), want) && same(dm(bo), want), 'direct reactions');
+  await bo.react(annId, id, '🇺🇸', false);
+  await waitFor(() => same(dm(ann), { '👍': [boId, annId] }) && same(dm(bo), { '👍': [boId, annId] }), 'reaction taken back');
+
+  // nonsense is refused before anything is sent
+  await assert.rejects(bo.react(annId, id, 'lol', true), /not an emoji/);
+  await assert.rejects(bo.react(annId, id, '<b>', true), /not an emoji/);
+  await assert.rejects(bo.react(annId, 'nope', '👍', true), /gone/);
+
+  // a group: everyone's copy agrees
+  const gid = await ann.createGroup('reacts', [boId, cyId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => bo.group(gid) && cy.group(gid), 'both join');
+  const gm = await ann.sendText(conv, 'party?');
+  await waitFor(() => [bo, cy].every(c => c.get('msg:' + conv + ':' + gm)), 'group fan-out');
+  const rx = c => c.get('msg:' + conv + ':' + gm).reacts;
+  await cy.react(conv, gm, '🔥', true);
+  await bo.react(conv, gm, '🔥', true);
+  await ann.react(conv, gm, '❤️', true);
+  await waitFor(() => [ann, bo, cy].every(c => (rx(c) || {})['🔥'] && rx(c)['🔥'].length === 2 && same(rx(c)['❤️'], [annId])), 'group reactions');
+
+  // deleting the message for everyone takes its reactions with it
+  await ann.deleteMessage(conv, gm, true);
+  await waitFor(() => [ann, bo, cy].every(c => c.get('msg:' + conv + ':' + gm).deleted && !rx(c)), 'reactions gone with the message');
+  await assert.rejects(bo.react(conv, gm, '👍', true), /gone/);
+});
+
 test('step 1 databases are migrated', async () => {
   const Database = require('better-sqlite3');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-mig-'));

@@ -33,7 +33,10 @@ CREATE TABLE IF NOT EXISTS users (
   vault      TEXT NOT NULL,              -- sealed, and already encrypted by the client
   discoverable INTEGER NOT NULL DEFAULT 0, -- listed in everyone's global peers section
   avatar     TEXT,                       -- sealed profile picture (a small data: URL), or NULL
-  avatar_v   INTEGER NOT NULL DEFAULT 0  -- when it last changed; 0 = none. Clients cache by it
+  avatar_v   INTEGER NOT NULL DEFAULT 0, -- when it last changed; 0 = none. Clients cache by it
+  profile    TEXT,                       -- sealed {display, bio, status, accent}, or NULL
+  profile_v  INTEGER NOT NULL DEFAULT 0, -- when it last changed (or the username did); clients cache by it
+  presence   TEXT NOT NULL DEFAULT 'auto' -- auto | dnd | invisible: what others see while signed in
 );
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
@@ -102,7 +105,7 @@ CREATE INDEX IF NOT EXISTS discord_members_user ON discord_members(user_tag);
 CREATE TABLE IF NOT EXISTS groups (
   id         TEXT PRIMARY KEY,
   created    INTEGER NOT NULL,
-  body       TEXT NOT NULL               -- sealed {createdBy}
+  body       TEXT NOT NULL               -- sealed {createdBy, owner, mods, mutes, invite, tag, kicks}
 );
 CREATE TABLE IF NOT EXISTS group_members (
   group_id   TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -111,6 +114,14 @@ CREATE TABLE IF NOT EXISTS group_members (
   PRIMARY KEY (group_id, user_tag)
 );
 CREATE INDEX IF NOT EXISTS group_members_user ON group_members(user_tag);
+-- Requests to join a group through its tag, waiting for a group moderator.
+CREATE TABLE IF NOT EXISTS group_apps (
+  group_id   TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_tag   TEXT NOT NULL,
+  body       TEXT NOT NULL,              -- sealed {userId, reason, via, ts}
+  PRIMARY KEY (group_id, user_tag)
+);
+CREATE INDEX IF NOT EXISTS group_apps_user ON group_apps(user_tag);
 -- Moderation (see admin.js). A mute's end is plaintext so expired ones can be
 -- swept; who set it and why are sealed. An IP ban is found by a keyed tag of
 -- the address; the address itself is sealed, so a leaked database does not
@@ -138,7 +149,10 @@ const MIGRATIONS = [
   ['discord_links', 'public', 'ALTER TABLE discord_links ADD COLUMN public INTEGER NOT NULL DEFAULT 0'],
   ['users', 'avatar', 'ALTER TABLE users ADD COLUMN avatar TEXT'],
   ['users', 'avatar_v', 'ALTER TABLE users ADD COLUMN avatar_v INTEGER NOT NULL DEFAULT 0'],
-  ['users', 'last_ip', 'ALTER TABLE users ADD COLUMN last_ip TEXT']   // sealed; what an IP ban bans
+  ['users', 'last_ip', 'ALTER TABLE users ADD COLUMN last_ip TEXT'],   // sealed; what an IP ban bans
+  ['users', 'profile', 'ALTER TABLE users ADD COLUMN profile TEXT'],
+  ['users', 'profile_v', 'ALTER TABLE users ADD COLUMN profile_v INTEGER NOT NULL DEFAULT 0'],
+  ['users', 'presence', "ALTER TABLE users ADD COLUMN presence TEXT NOT NULL DEFAULT 'auto'"]
 ];
 
 function open(opts) {
@@ -184,7 +198,11 @@ function open(opts) {
     expireEnvelopes: db.prepare('DELETE FROM envelopes WHERE ts < ?'),
     setDiscoverable: db.prepare('UPDATE users SET discoverable = ? WHERE id = ?'),
     setAvatar: db.prepare('UPDATE users SET avatar = ?, avatar_v = ? WHERE id = ?'),
-    discoverable: db.prepare(`SELECT id, username, avatar_v FROM users WHERE discoverable = 1 AND id != ? AND uname LIKE ? ESCAPE '\\'
+    setProfile: db.prepare('UPDATE users SET profile = ?, profile_v = ? WHERE id = ?'),
+    bumpProfile: db.prepare('UPDATE users SET profile_v = ? WHERE id = ?'),
+    setPresence: db.prepare('UPDATE users SET presence = ? WHERE id = ?'),
+    rename: db.prepare('UPDATE users SET username = ?, uname = ? WHERE id = ?'),
+    discoverable: db.prepare(`SELECT id, username, avatar_v, profile, profile_v FROM users WHERE discoverable = 1 AND id != ? AND uname LIKE ? ESCAPE '\\'
                               ORDER BY uname LIMIT ? OFFSET ?`),
     peer: db.prepare('SELECT body FROM peers WHERE owner_id = ? AND tag = ?'),
     putPeer: db.prepare(`INSERT INTO peers (owner_id, tag, body) VALUES (?, ?, ?)
@@ -221,6 +239,13 @@ function open(opts) {
     groupMembersOf: db.prepare('SELECT user_tag, body FROM group_members WHERE group_id = ?'),
     countGroupMembers: db.prepare('SELECT COUNT(*) n FROM group_members WHERE group_id = ?'),
     groupsOfUser: db.prepare('SELECT group_id FROM group_members WHERE user_tag = ?'),
+    setGroup: db.prepare('UPDATE groups SET body = ? WHERE id = ?'),
+    putApp: db.prepare(`INSERT INTO group_apps (group_id, user_tag, body) VALUES (?, ?, ?)
+                        ON CONFLICT (group_id, user_tag) DO UPDATE SET body = excluded.body`),
+    delApp: db.prepare('DELETE FROM group_apps WHERE group_id = ? AND user_tag = ?'),
+    appsOf: db.prepare('SELECT user_tag, body FROM group_apps WHERE group_id = ?'),
+    appsOfUser: db.prepare('SELECT group_id FROM group_apps WHERE user_tag = ?'),
+    delUserApps: db.prepare('DELETE FROM group_apps WHERE user_tag = ?'),
     searchUsers: db.prepare(`SELECT * FROM users WHERE uname LIKE ? ESCAPE '\\' ORDER BY uname LIMIT ? OFFSET ?`),
     setLastIp: db.prepare('UPDATE users SET last_ip = ? WHERE id = ?'),
     deleteSessions: db.prepare('DELETE FROM sessions WHERE user_id = ?'),
@@ -265,6 +290,13 @@ function open(opts) {
   };
   const peersOf = owner => q.peersOf.all(owner).map(r => S.open(r.body, peerCtx(owner, r.tag)));
 
+  const openProfile = row => {
+    if (!row || !row.profile) return {};
+    try { return S.open(row.profile, 'users.profile:' + row.id) || {}; } catch (e) { return {}; }
+  };
+  /** The name to show for someone: their display name, or '' for none (show the username). */
+  const displayOf = row => openProfile(row).display || '';
+
   const publicUser = row => row && Object.assign(
     { userId: row.id, username: row.username, lastSeen: row.last_seen },
     S.open(row.identity, 'users.identity:' + row.id));
@@ -290,6 +322,7 @@ function open(opts) {
         for (const m of groupMembers(g)) others.add(m.userId);
       }
       q.delUserMemberships.run(memberTag(id));
+      q.delUserApps.run(gmTag(id));
       q.deleteUser.run(id);
       return [...others];
     }),
@@ -298,7 +331,7 @@ function open(opts) {
     setDiscoverable: (id, on) => q.setDiscoverable.run(on ? 1 : 0, id),
     discoverable(excludeId, search, limit, offset) {
       const like = '%' + String(search || '').toLowerCase().replace(/[\\%_]/g, c => '\\' + c) + '%';
-      return q.discoverable.all(excludeId, like, limit, offset).map(r => ({ userId: r.id, username: r.username, av: r.avatar_v }));
+      return q.discoverable.all(excludeId, like, limit, offset).map(r => ({ userId: r.id, username: r.username, av: r.avatar_v, pv: r.profile_v, dn: displayOf(r) }));
     },
     /** Sets (or, with null, clears) a profile picture; returns its new version. */
     setAvatar(id, data) {
@@ -307,6 +340,26 @@ function open(opts) {
       return v;
     },
     avatar: row => row.avatar ? S.open(row.avatar, 'users.avatar:' + row.id) : null,
+    /** Sets a profile {display, bio, status, accent} (already checked); returns its new version. */
+    setProfile(id, p) {
+      const v = Date.now();
+      q.setProfile.run(S.seal(p, 'users.profile:' + id), v, id);
+      return v;
+    },
+    profile: openProfile,
+    /** Moves the profile version on without changing it, so clients refetch it. */
+    bumpProfile: id => { const v = Date.now(); q.bumpProfile.run(v, id); return v; },
+    displayOf,
+    /** auto | dnd | invisible */
+    setPresence: (id, mode) => q.setPresence.run(mode, id),
+    /** Changes a username, and the profile version so clients refetch it; returns that version.
+        Throws a UNIQUE error if the name is taken (in any case). */
+    rename: db.transaction((id, username) => {
+      const v = Date.now();
+      q.rename.run(username, username.toLowerCase(), id);
+      q.bumpProfile.run(v, id);
+      return v;
+    }),
     /** One side of a relationship: {peer, state, since} or null. */
     peer: getPeer,
     peers: peersOf,
@@ -338,15 +391,27 @@ function open(opts) {
     groupMemberCount: groupId => q.countGroupMembers.get(groupId).n,
     inGroup: (groupId, userId) => !!q.groupMember.get(groupId, gmTag(userId)),
     /** Adds members; returns the ids that were not already in. */
-    addGroupMembers: db.transaction((groupId, invitedBy, ids) => {
+    /** `via` is whose profile tag they came through, if any. */
+    addGroupMembers: db.transaction((groupId, invitedBy, ids, via) => {
       const now = Date.now(), added = [];
       for (const m of ids) {
-        const tag = gmTag(m);
-        if (q.putGroupMember.run(groupId, tag, S.seal({ userId: m, joined: now, invitedBy }, gmCtx(groupId, tag))).changes) added.push(m);
+        const tag = gmTag(m), body = { userId: m, joined: now, invitedBy };
+        if (via) body.via = via;
+        if (q.putGroupMember.run(groupId, tag, S.seal(body, gmCtx(groupId, tag))).changes) added.push(m);
       }
       return added;
     }),
     leaveGroup: db.transaction(leaveGroup),
+    /** Replaces a group's sealed settings (everything but id and created). */
+    setGroup(id, body) {
+      const b = Object.assign({}, body); delete b.id; delete b.created;
+      q.setGroup.run(S.seal(b, 'groups:' + id), id);
+    },
+    /** Join requests: one per user per group, newest reason wins. */
+    putGroupApp(groupId, a) { const tag = gmTag(a.userId); q.putApp.run(groupId, tag, S.seal(a, 'group_apps:' + groupId + ':' + tag)); },
+    delGroupApp: (groupId, userId) => q.delApp.run(groupId, gmTag(userId)).changes > 0,
+    groupApps: groupId => q.appsOf.all(groupId).map(r => S.open(r.body, 'group_apps:' + groupId + ':' + r.user_tag)),
+    appliedGroups: userId => q.appsOfUser.all(gmTag(userId)).map(r => r.group_id),
     /** Whether two users are in at least one group together. */
     shareGroup: (a, b) => { const tb = gmTag(b); return groupIdsOf(a).some(g => !!q.groupMember.get(g, tb)); },
     /** Runs fn inside one transaction. */

@@ -22,15 +22,18 @@ const store = require('./db');
 const { Discord, Bridge } = require('./discord');
 const admin = require('./admin');
 
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;
 const LIMITS = {
   body: '6mb', puts: 600, putBytes: 256 * 1024, sends: 32, payloadBytes: 128 * 1024,
   opksPerCommit: 200, opksTotal: 500, blobsTotal: 100000, inbox: 300,
-  peers: 2000, globalPage: 50, groupMembers: 32, groups: 200
+  peers: 2000, globalPage: 50, groupMembers: 32, groups: 200, groupApps: 50, appReason: 200, groupTag: 4
 };
+const TAG_VIS = new Set(['off', 'friends', 'all']);
+const TAG_MODES = new Set(['join', 'apply']);
+const MAX_GMUTE = 365 * 24 * 3600 * 1000;
 const PEER_ACTIONS = new Set(['request', 'accept', 'remove', 'block', 'unblock']);
 const USERNAME = /^[a-zA-Z0-9._-]{3,24}$/;
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
@@ -39,6 +42,12 @@ const GROUPID = /^[0-9a-f]{24}$/;
 // A profile picture: already downscaled by the client to a small square image.
 const AVATAR = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const AVATAR_CHARS = 64 * 1024;
+/** What others see of someone while they are signed in: online/idle by activity, do not disturb, or offline. */
+const PRESENCE_MODES = new Set(['auto', 'dnd', 'invisible']);
+const PROFILE_MAX = { display: 32, bio: 300, status: 80 };
+const ACCENT = /^#[0-9a-fA-F]{6}$/;
+// control characters (a bio keeps its line breaks), and the bidi overrides that can make a name read as someone else's
+const UNSAFE = /[\u0000-\u0009\u000b-\u001f\u007f‪-‮⁦-⁩]/g;
 
 /* ------------------------------------------------------------- helpers */
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
@@ -82,6 +91,46 @@ function checkOpks(list, max) {
     if (!p || !Number.isInteger(p.id) || p.id < 1 || p.id > 2 ** 31 || !b64bytes(p.pub, 32)) throw bad('malformed prekey');
     return { id: p.id, pub: p.pub };
   });
+}
+/** One profile field as text: unsafe characters out, trimmed, at most `max` long. Only a bio keeps line breaks. */
+function profileText(v, max, what, lines) {
+  if (v == null) return '';
+  if (typeof v !== 'string') throw bad(what + ' must be text');
+  let s = v.normalize('NFC');
+  s = lines ? s.replace(/\r\n?/g, '\n').replace(UNSAFE, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
+    : s.replace(/\s+/g, ' ').replace(UNSAFE, '');
+  s = s.trim();
+  if (s.length > max) throw bad(what + ' can be at most ' + max + ' characters');
+  return s;
+}
+/** One emoji (a single grapheme that is a pictograph or a flag), or '' for none. */
+const EMOJI_PARTS = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|[\u200d\ufe0f\u20e3#*0-9])+$/u;
+const EMOJI_CORE = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+function checkEmoji(v) {
+  if (v == null || v === '') return '';
+  if (typeof v !== 'string' || v.length > 16) throw bad('the tag emoji must be one emoji');
+  const e = v.normalize('NFC').trim();
+  if (!e) return '';
+  if (!EMOJI_PARTS.test(e) || !EMOJI_CORE.test(e) || [...graphemes.segment(e)].length !== 1) throw bad('the tag emoji must be one emoji');
+  return e;
+}
+/** A profile update merged over the current one; fields left out stay as they were. */
+function checkProfile(b, cur) {
+  const out = { display: cur.display || '', bio: cur.bio || '', status: cur.status || '', accent: cur.accent || '' };
+  if (cur.gtag) out.gtag = cur.gtag;
+  if ('display' in b) out.display = profileText(b.display, PROFILE_MAX.display, 'a display name');
+  if ('bio' in b) out.bio = profileText(b.bio, PROFILE_MAX.bio, 'a bio', true);
+  if ('status' in b) out.status = profileText(b.status, PROFILE_MAX.status, 'a status');
+  if ('accent' in b) {
+    if (b.accent != null && b.accent !== '' && (typeof b.accent !== 'string' || !ACCENT.test(b.accent))) throw bad('the accent color must look like #f0a92a');
+    out.accent = b.accent ? b.accent.toLowerCase() : '';
+  }
+  if ('gtag' in b) {
+    if (b.gtag != null && b.gtag !== '' && (typeof b.gtag !== 'string' || !GROUPID.test(b.gtag))) throw bad('malformed group tag');
+    if (b.gtag) out.gtag = b.gtag; else delete out.gtag;
+  }
+  return out;
 }
 function checkPuts(list) {
   return asArray(list, LIMITS.puts, 'puts').map(p => {
@@ -198,6 +247,63 @@ function createServer(opts) {
     const m = db.mute(row.id);
     if (m) throw Object.assign(new HttpError(403, m.until ? 'you are muted until ' + new Date(m.until).toUTCString() : 'you are muted permanently'), { extra: { muted: m.until } });
   }
+  /** This account's own profile and presence mode, for a login or /api/me. */
+  const mine = row => ({ pv: row.profile_v, profile: db.profile(row), presence: row.presence || 'auto' });
+  /**
+   * What `viewer` may see of someone's profile in a list: its version, the display name, and
+   * presence (`pr`). Presence is only for people who can reach each other (friends, or members of
+   * a group in common, with no block either way); for anyone else `pr` is null.
+   */
+  function profView(row, viewer, reach) {
+    const see = row.id === viewer || (reach != null ? reach : canReach(viewer, row.id));
+    const pf = db.profile(row);
+    return { pv: row.profile_v, dn: pf.display || '', ps: pf.status || '', pr: see ? presenceOf(row.id, row) : null };
+  }
+  /** Everyone who might be showing this user: their peers and the people they share a group with. */
+  function audience(userId) {
+    const out = new Set(db.peers(userId).map(p => p.peer));
+    for (const g of db.groupIdsOf(userId)) for (const m of db.groupMembers(g)) out.add(m.userId);
+    out.delete(userId);
+    return out;
+  }
+  function pushProfile(row) {
+    const pf = db.profile(row);
+    const msg = { t: 'profile', userId: row.id, v: row.profile_v, username: row.username, dn: pf.display || '', ps: pf.status || '' };
+    for (const o of audience(row.id).add(row.id)) hub.push(o, msg);
+  }
+  /** online | idle | dnd | offline: what others see right now. Idle is every open socket saying so. */
+  function presenceOf(userId, row) {
+    row = row || db.userRow(userId);
+    const set = hub.sockets.get(userId);
+    if (!row || !set || !set.size || row.presence === 'invisible') return 'offline';
+    if (row.presence === 'dnd') return 'dnd';
+    for (const ws of set) if (!ws.idle) return 'online';
+    return 'idle';
+  }
+  /** Tells everyone who can see it when someone's presence moves. Going offline by losing the
+      socket waits out a short grace, so a reload or a network blip does not flicker. */
+  const shownPr = new Map(), prTimers = new Map();
+  const offlineGrace = opts.offlineGrace != null ? opts.offlineGrace : 8000;
+  let stopped = false;
+  /** Runs from socket events and timers, where a throw would take the process down: errors are logged instead. */
+  function presenceChanged(userId, now) {
+    clearTimeout(prTimers.get(userId)); prTimers.delete(userId);
+    if (stopped) return;
+    try { updatePresence(userId, now); } catch (e) { console.error('[marmot] presence update failed:', e.message); }
+  }
+  function updatePresence(userId, now) {
+    const row = db.userRow(userId), p = presenceOf(userId, row), was = shownPr.get(userId) || 'offline';
+    if (p === was) return;
+    if (p === 'offline' && !now && offlineGrace > 0) {
+      const t = setTimeout(() => { prTimers.delete(userId); presenceChanged(userId, true); }, offlineGrace);
+      if (t.unref) t.unref();
+      prTimers.set(userId, t);
+      return;
+    }
+    if (p === 'offline') shownPr.delete(userId); else shownPr.set(userId, p);
+    if (!row) return;
+    for (const o of audience(userId)) if (canReach(userId, o)) hub.push(o, { t: 'presence', userId, p });
+  }
   function issueToken(userId) {
     const token = crypto.randomBytes(32).toString('base64url');
     db.createSession(sha256(token), userId, TOKEN_TTL);
@@ -277,7 +383,7 @@ function createServer(opts) {
     db.deleteOtherSessions(row.id, sha256(token));
     hub.revoke(row.id);
     seenAt(row, req);
-    return Object.assign({ token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row));
+    return Object.assign({ token, userId: row.id, username: row.username, vault: db.vault(row), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row), mine(row));
   }));
 
   app.post('/api/logout', wrap(req => {
@@ -290,7 +396,7 @@ function createServer(opts) {
     const row = auth(req);
     const spk = db.spk(row);
     return Object.assign({ userId: row.id, username: row.username, created: row.created, spkId: spk.id,
-      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row));
+      opkCount: db.prekeyCount(row.id), blobCount: db.blobCount(row.id), discoverable: !!row.discoverable, av: row.avatar_v }, standing(row), mine(row));
   }));
 
   /**
@@ -305,12 +411,81 @@ function createServer(opts) {
       throw bad('the picture must be a small JPEG, PNG or WebP image');
     }
     const v = db.setAvatar(me.id, a);
-    // everyone who might be showing it: my peers and the people I share a group with
-    const others = new Set(db.peers(me.id).map(p => p.peer));
-    for (const g of db.groupIdsOf(me.id)) for (const m of db.groupMembers(g)) others.add(m.userId);
-    others.add(me.id);
-    for (const o of others) hub.push(o, { t: 'avatar', userId: me.id, v });
+    for (const o of audience(me.id).add(me.id)) hub.push(o, { t: 'avatar', userId: me.id, v });
     return { av: v };
+  }));
+
+  /**
+   * Profiles are public like pictures: a display name, a bio, a status line and an
+   * accent color. Views carry the version (`pv`) and the display name (`dn`), so lists
+   * can show the name straight away and fetch the rest once, when it is wanted.
+   */
+  app.get('/api/profile/:id', wrap(req => {
+    const me = auth(req);
+    const row = db.userRow(String(req.params.id));
+    if (!row) throw new HttpError(404, 'no such user');
+    return { user: Object.assign({ userId: row.id, username: row.username, created: row.created, av: row.avatar_v,
+      profile: db.profile(row), role: roleOf(row), muted: mutedOf(row), gtag: tagOf(row) }, profView(row, me.id)) };
+  }));
+
+  app.post('/api/me/profile', limiter(30), wrap(req => {
+    const me = auth(req);
+    const p = checkProfile(req.body || {}, db.profile(me));
+    if (p.gtag && p.gtag !== db.profile(me).gtag) {
+      const g = db.inGroup(p.gtag, me.id) && db.group(p.gtag);
+      if (!g) throw new HttpError(404, 'you are not in that group');
+      if (gset(g).tag.vis === 'off' || !gset(g).tag.text) throw new HttpError(409, 'that group has no tag to show');
+    }
+    const v = db.setProfile(me.id, p);
+    pushProfile(db.userRow(me.id));
+    return { pv: v, profile: p, gtag: tagOf(db.userRow(me.id)) };
+  }));
+
+  /** auto: online or idle by activity · dnd: do not disturb · invisible: shown offline. */
+  app.post('/api/me/presence', limiter(60), wrap(req => {
+    const me = auth(req);
+    const mode = (req.body || {}).mode;
+    if (!PRESENCE_MODES.has(mode)) throw bad('presence must be auto, dnd or invisible');
+    db.setPresence(me.id, mode);
+    presenceChanged(me.id, true);
+    return { presence: mode, pr: presenceOf(me.id) };
+  }));
+
+  /**
+   * A new username. It is what people log in with and find each other by, so it takes
+   * the password, like deleting the account. Identity is the keys, not the name: the
+   * user id stays, so friends, groups and chats carry over. Admins are named in the
+   * server's config and cannot rename here; a moderator's appointment moves with them.
+   */
+  app.post('/api/me/username', strict, wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const username = String(b.username || '').trim();
+    if (!USERNAME.test(username)) throw bad('usernames are 3-24 characters: letters, digits, dot, dash, underscore');
+    // 403, not 401: a wrong password here must not sign the client out
+    if (!b64bytes(b.auth, 32) || !checkVerifier(me.verifier, b.auth)) throw new HttpError(403, 'wrong password');
+    if (username === me.username) return { username, pv: me.profile_v };
+    const same = username.toLowerCase() === me.username.toLowerCase();
+    const other = db.userRowByName(username);
+    if (other && other.id !== me.id) throw new HttpError(409, 'that username is taken');
+    const was = staff.of(me.username);
+    if (was && was.role === 'admin') throw new HttpError(403, 'admins are named in the server config — change it there');
+    // staff go by username: a name the config already lists must not be taken by someone else
+    if (!same && staff.of(username)) throw new HttpError(409, 'that username is reserved');
+    const moving = !!was && !same;
+    if (moving) staff.setMod(username, was.perms);   // throws, changing nothing, if the config cannot be written
+    let v;
+    try { v = db.rename(me.id, username); }
+    catch (e) {
+      if (moving) try { staff.setMod(username, []); } catch (x) {}
+      if (/UNIQUE/.test(e.message)) throw new HttpError(409, 'that username is taken');
+      throw e;
+    }
+    if (moving) try { staff.setMod(me.username, []); } catch (e) { console.error('[marmot] could not drop the old name of renamed moderator ' + username + ':', e.message); }
+    db.log({ by: username, action: 'rename', target: me.username });
+    pushProfile(db.userRow(me.id));
+    if (was) for (const o of audience(me.id)) hub.push(o, { t: 'roles' });
+    return { username, pv: v };
   }));
 
   app.get('/api/avatar/:id', wrap(req => {
@@ -333,11 +508,11 @@ function createServer(opts) {
 
   /** Public identity only — fetching this does not consume a prekey. */
   app.get('/api/users/lookup', wrap(req => {
-    auth(req);
+    const me = auth(req);
     const row = req.query.id ? db.userRow(String(req.query.id)) : db.userRowByName(String(req.query.username || '').trim());
     if (!row) throw new HttpError(404, 'no such user');
     const u = db.publicUser(row);
-    return { user: { userId: u.userId, username: u.username, ik: u.ik, sk: u.sk, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) } };
+    return { user: Object.assign({ userId: u.userId, username: u.username, ik: u.ik, sk: u.sk, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) }, profView(row, me.id)) };
   }));
 
   /** Full prekey bundle for starting a session. Consumes one one-time prekey. */
@@ -376,15 +551,16 @@ function createServer(opts) {
   app.get('/api/inbox', wrap(req => ({ envelopes: db.inbox(auth(req).id, LIMITS.inbox) })));
 
   /* ------------------------------------------------------------ peers */
-  const peerView = p => {
+  const peerView = (me, p) => {
     const row = db.userRow(p.peer);
-    return row && { userId: row.id, username: row.username, state: p.state, since: p.since, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) };
+    return row && Object.assign({ userId: row.id, username: row.username, state: p.state, since: p.since, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) },
+      profView(row, me, p.state === 'friend' ? true : undefined));
   };
 
   /** Everyone I have a relationship with: friends, requests both ways, and people I blocked. */
   app.get('/api/peers', wrap(req => {
     const me = auth(req);
-    return { peers: db.peers(me.id).map(peerView).filter(Boolean) };
+    return { peers: db.peers(me.id).map(p => peerView(me.id, p)).filter(Boolean) };
   }));
 
   /** Users who turned on global discovery, minus anyone who blocked me. */
@@ -471,14 +647,102 @@ function createServer(opts) {
     const ab = db.peer(a, b), ba = db.peer(b, a);
     return !(ab && ab.state === 'blocked') && !(ba && ba.state === 'blocked');
   }
-  const groupView = g => ({
-    groupId: g.id, created: g.created, createdBy: g.createdBy,
-    members: db.groupMembers(g.id).map(m => {
-      const row = db.userRow(m.userId);
-      return row && { userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) };
-    }).filter(Boolean)
-  });
+  /*
+   * Inside a group there are three ranks: the owner, the group's moderators, and
+   * everyone else. These are separate from the server's own staff (admin.js).
+   * The owner is whoever started the group; if they leave, the longest-serving
+   * moderator takes over, or else the longest-serving member. Moderators kick
+   * and mute members below them, change the settings and handle join requests;
+   * only the owner appoints moderators.
+   *
+   * A group mute is enforced in two places: the server refuses envelopes the
+   * client labels as something said in that group (see /api/commit), and the
+   * other members' clients drop group texts from a muted member.
+   */
+  /** A group's settings with defaults filled in. */
+  function gset(g) {
+    const t = g.tag || {};
+    return {
+      owner: g.owner || g.createdBy || null,
+      mods: Array.isArray(g.mods) ? g.mods : [],
+      mutes: g.mutes && typeof g.mutes === 'object' ? g.mutes : {},
+      invite: g.invite === 'mods' ? 'mods' : 'all',
+      tag: { text: t.text || '', emoji: typeof t.emoji === 'string' ? t.emoji : '', vis: TAG_VIS.has(t.vis) ? t.vis : 'off', mode: TAG_MODES.has(t.mode) ? t.mode : 'join' },
+      kicks: Array.isArray(g.kicks) ? g.kicks : []
+    };
+  }
+  const saveGroup = (g, patch) => db.setGroup(g.id, Object.assign({}, g, patch));
+  /** The owner right now, given who is still in the group. */
+  function ownerOf(g, members) {
+    const s = gset(g), ids = new Set(members.map(m => m.userId));
+    if (s.owner && ids.has(s.owner)) return s.owner;
+    const byJoin = members.slice().sort((a, b) => a.joined - b.joined || (a.userId < b.userId ? -1 : 1));
+    const mod = byJoin.find(m => s.mods.includes(m.userId));
+    return (mod || byJoin[0] || {}).userId || null;
+  }
+  /** 2 owner · 1 moderator · 0 member · -1 not in the group. */
+  function grank(g, members, userId) {
+    if (!members.some(m => m.userId === userId)) return -1;
+    if (ownerOf(g, members) === userId) return 2;
+    return gset(g).mods.includes(userId) ? 1 : 0;
+  }
+  /** When a member's group mute ends (0 = never), or undefined if they are not muted there. */
+  function gmuteOf(g, userId, now) {
+    const u = gset(g).mutes[userId];
+    if (u == null) return undefined;
+    return u === 0 || u > (now || Date.now()) ? u : undefined;
+  }
+  const userBrief = (id, viewer) => {
+    const row = db.userRow(id);
+    return row && Object.assign({ userId: id, username: row.username, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row) }, profView(row, viewer));
+  };
+  const groupView = (g, viewer) => {
+    const members = db.groupMembers(g.id), s = gset(g), owner = ownerOf(g, members), now = Date.now();
+    const rank = grank(g, members, viewer);
+    const v = {
+      groupId: g.id, created: g.created, createdBy: g.createdBy, owner, mods: s.mods.filter(id => members.some(m => m.userId === id)),
+      invite: s.invite, tag: s.tag, kicks: s.kicks.slice(-20),
+      members: members.map(m => {
+        const row = db.userRow(m.userId);
+        return row && Object.assign({ userId: m.userId, username: row.username, joined: m.joined, invitedBy: m.invitedBy, via: m.via, av: row.avatar_v, role: roleOf(row), muted: mutedOf(row),
+          gr: m.userId === owner ? 'owner' : s.mods.includes(m.userId) ? 'mod' : undefined, gm: gmuteOf(g, m.userId, now) },
+          profView(row, viewer));
+      }).filter(Boolean)
+    };
+    // join requests are for the people who answer them
+    if (rank >= 1) v.apps = db.groupApps(g.id).map(a => Object.assign({ reason: a.reason, ts: a.ts, via: a.via }, userBrief(a.userId, viewer))).filter(a => a.username);
+    return v;
+  };
   const pushGroup = groupId => { for (const m of db.groupMembers(groupId)) hub.push(m.userId, { t: 'groups' }); };
+  /** The tag on someone's profile, if it still stands: they are in the group and its tag is on. */
+  function tagOf(row) {
+    const gid = db.profile(row).gtag;
+    if (!gid || !db.inGroup(gid, row.id)) return null;
+    const g = db.group(gid);
+    if (!g) return null;
+    const t = gset(g).tag;
+    if (t.vis === 'off' || !t.text) return null;
+    return { groupId: gid, text: t.text, emoji: t.emoji, vis: t.vis, mode: t.mode, n: db.groupMemberCount(gid) };
+  }
+  /** Profiles showing this group's tag change when the tag does: clients refetch them. */
+  function refreshTags(groupId) {
+    for (const m of db.groupMembers(groupId)) {
+      const row = db.userRow(m.userId);
+      if (row && db.profile(row).gtag === groupId) { db.bumpProfile(m.userId); pushProfile(db.userRow(m.userId)); }
+    }
+  }
+  /** Someone left or was removed: their profile stops showing the group's tag, and the group forgets their rank and mute. */
+  function afterLeave(groupId, userId) {
+    const row = db.userRow(userId);
+    if (row && db.profile(row).gtag === groupId) { const p = Object.assign({}, db.profile(row)); delete p.gtag; db.setProfile(userId, p); pushProfile(db.userRow(userId)); }
+    const g = db.group(groupId);
+    if (!g) return;
+    const s = gset(g), mutes = Object.assign({}, s.mutes), mods = s.mods.filter(id => id !== userId);
+    delete mutes[userId];
+    // a departing owner hands over for good, so ownership does not come back if they rejoin
+    const owner = ownerOf(Object.assign({}, g, { owner: s.owner === userId ? null : s.owner, createdBy: null, mods }), db.groupMembers(groupId));
+    saveGroup(g, { mods, mutes, owner });
+  }
   /** The invite list: distinct user ids, every one of them a friend of the inviter. */
   function invitees(me, list) {
     const ids = [...new Set(asArray(list, LIMITS.groupMembers, 'invitees').map(String))];
@@ -493,10 +757,27 @@ function createServer(opts) {
     if (!GROUPID.test(id) || !db.inGroup(id, me.id)) throw new HttpError(404, 'you are not in that group');
     return id;
   }
+  /** The group, its members and my rank in it; throws unless I am at least `need`. */
+  function asRank(me, id, need) {
+    id = myGroup(me, id);
+    const g = db.group(id), members = db.groupMembers(id), rank = grank(g, members, me.id);
+    if (rank < need) throw new HttpError(403, need >= 2 ? 'only the group owner can do that' : 'only group moderators can do that');
+    return { id, g, members, rank };
+  }
+  /** Someone I may act on: in the group, and ranked below me. */
+  function target(ctx, me, userId) {
+    userId = String(userId || '');
+    if (userId === me.id) throw bad('that is you');
+    const r = grank(ctx.g, ctx.members, userId);
+    if (r < 0) throw new HttpError(404, 'they are not in this group');
+    if (r >= ctx.rank) throw new HttpError(403, r === 2 ? 'nobody can do that to the group owner' : 'only the group owner can do that to a moderator');
+    return userId;
+  }
 
   app.get('/api/groups', wrap(req => {
     const me = auth(req);
-    return { groups: db.groupIdsOf(me.id).map(db.group).filter(Boolean).map(groupView) };
+    const applied = db.appliedGroups(me.id).map(id => { const g = db.group(id); return g && { groupId: id, text: gset(g).tag.text }; }).filter(Boolean);
+    return { groups: db.groupIdsOf(me.id).map(db.group).filter(Boolean).map(g => groupView(g, me.id)), applied };
   }));
 
   /** A new group with me in it, plus any friends invited straight away (none is fine). */
@@ -507,28 +788,175 @@ function createServer(opts) {
     if (db.groupIdsOf(me.id).length >= LIMITS.groups) throw new HttpError(507, 'you are in too many groups');
     const id = db.createGroup(me.id, [me.id].concat(ids));
     pushGroup(id);
-    return { group: groupView(db.group(id)) };
+    return { group: groupView(db.group(id), me.id) };
   }));
 
-  /** Any member can invite their own friends. */
+  /** Members invite their own friends; when invites are set to moderators only, only moderators can. */
   app.post('/api/groups/invite', limiter(120), wrap(req => {
     const me = auth(req);
     const b = req.body || {};
     const id = myGroup(me, b.group);
+    const g = db.group(id);
+    if (gset(g).invite === 'mods' && grank(g, db.groupMembers(id), me.id) < 1) throw new HttpError(403, 'only group moderators can invite people to this group');
     const ids = invitees(me, b.invite).filter(u => !db.inGroup(id, u));
     if (db.groupMemberCount(id) + ids.length > LIMITS.groupMembers) throw bad('groups are limited to ' + LIMITS.groupMembers + ' members');
     const added = db.addGroupMembers(id, me.id, ids);
+    for (const u of added) db.delGroupApp(id, u);
     if (added.length) pushGroup(id);
-    return { group: groupView(db.group(id)), added };
+    return { group: groupView(db.group(id), me.id), added };
   }));
 
   app.post('/api/groups/leave', wrap(req => {
     const me = auth(req);
     const id = myGroup(me, (req.body || {}).group);
     db.leaveGroup(id, me.id);
+    afterLeave(id, me.id);
     pushGroup(id);
     hub.push(me.id, { t: 'groups' });
     return {};
+  }));
+
+  /** The owner makes someone a group moderator, or takes it away. */
+  app.post('/api/groups/mod', limiter(120), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const ctx = asRank(me, b.group, 2);
+    const who = target(ctx, me, b.user);
+    if (typeof b.on !== 'boolean') throw bad('on must be true or false');
+    const mods = gset(ctx.g).mods.filter(x => x !== who);
+    if (b.on) mods.push(who);
+    saveGroup(ctx.g, { mods, owner: ownerOf(ctx.g, ctx.members) });
+    pushGroup(ctx.id);
+    return { group: groupView(db.group(ctx.id), me.id) };
+  }));
+
+  /** Removes a member. They can come back only by a new invite or through the tag. */
+  app.post('/api/groups/kick', limiter(120), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const ctx = asRank(me, b.group, 1);
+    const who = target(ctx, me, b.user);
+    db.leaveGroup(ctx.id, who);
+    const g = db.group(ctx.id);
+    saveGroup(g, { kicks: gset(g).kicks.concat({ userId: who, by: me.id, ts: Date.now() }).slice(-20) });
+    afterLeave(ctx.id, who);
+    pushGroup(ctx.id);
+    hub.push(who, { t: 'groups' });
+    return { group: groupView(db.group(ctx.id), me.id) };
+  }));
+
+  /** Mutes a member in this group only: `minutes` (0 = until unmuted), or `minutes: null` to unmute. */
+  app.post('/api/groups/mute', limiter(120), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const ctx = asRank(me, b.group, 1);
+    const who = target(ctx, me, b.user);
+    const mutes = Object.assign({}, gset(ctx.g).mutes);
+    if (b.minutes == null) delete mutes[who];
+    else {
+      if (!Number.isInteger(b.minutes) || b.minutes < 0 || b.minutes * 60000 > MAX_GMUTE) throw bad('a mute lasts 1 minute to a year, or 0 for until unmuted');
+      mutes[who] = b.minutes ? Date.now() + b.minutes * 60000 : 0;
+    }
+    // expired ones go, so the list does not grow forever
+    const now = Date.now();
+    for (const [k, u] of Object.entries(mutes)) if (u !== 0 && u <= now) delete mutes[k];
+    saveGroup(ctx.g, { mutes });
+    pushGroup(ctx.id);
+    return { group: groupView(db.group(ctx.id), me.id) };
+  }));
+
+  /** Moderators set who can invite, and the group's tag: its text, who can use it, and whether it joins or asks. */
+  app.post('/api/groups/settings', limiter(60), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const ctx = asRank(me, b.group, 1);
+    const s = gset(ctx.g), patch = {};
+    if ('invite' in b) {
+      if (b.invite !== 'all' && b.invite !== 'mods') throw bad('invites are all or mods');
+      patch.invite = b.invite;
+    }
+    if ('tag' in b) {
+      const t = b.tag || {}, tag = Object.assign({}, s.tag);
+      if ('text' in t) {
+        tag.text = profileText(t.text, 64, 'a group tag').replace(/^#/, '');
+        if (/\s/.test(tag.text)) throw bad('a group tag is one word');
+        if ([...tag.text].length > LIMITS.groupTag) throw bad('a group tag can be at most ' + LIMITS.groupTag + ' characters');
+      }
+      if ('emoji' in t) tag.emoji = checkEmoji(t.emoji);
+      if ('vis' in t) { if (!TAG_VIS.has(t.vis)) throw bad('the tag is off, friends or all'); tag.vis = t.vis; }
+      if ('mode' in t) { if (!TAG_MODES.has(t.mode)) throw bad('the tag is join or apply'); tag.mode = t.mode; }
+      if (tag.vis !== 'off' && !tag.text) throw bad('give the tag some text before turning it on');
+      patch.tag = tag;
+    }
+    saveGroup(ctx.g, patch);
+    if (patch.tag) refreshTags(ctx.id);
+    pushGroup(ctx.id);
+    return { group: groupView(db.group(ctx.id), me.id) };
+  }));
+
+  /**
+   * Joining through the tag on someone's profile (`via`). The tag must still be on
+   * that profile; when it is set to friends, `via` must be my friend. In join mode
+   * I am in at once; in apply mode my request waits for a group moderator.
+   */
+  app.post('/api/groups/join', limiter(30), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const via = db.userRow(String(b.via || ''));
+    const t = via && tagOf(via);
+    if (!t || t.groupId !== String(b.group || '')) throw new HttpError(404, 'that group tag is no longer on their profile');
+    const id = t.groupId;
+    if (db.inGroup(id, me.id)) throw new HttpError(409, 'you are already in this group');
+    if (t.vis === 'friends' && !db.isFriend(me.id, via.id)) throw new HttpError(403, 'only friends of ' + via.username + ' can join through this tag');
+    const pb = db.peer(via.id, me.id);
+    if (pb && pb.state === 'blocked') throw new HttpError(403, 'you cannot join through this tag');
+    if (db.groupMemberCount(id) >= LIMITS.groupMembers) throw new HttpError(409, 'this group is full');
+    if (db.groupIdsOf(me.id).length >= LIMITS.groups) throw new HttpError(507, 'you are in too many groups');
+    if (t.mode === 'apply') {
+      const reason = profileText(b.reason, LIMITS.appReason, 'a reason');
+      if (!reason) throw bad('say why you want to join');
+      const apps = db.groupApps(id);
+      if (!apps.some(a => a.userId === me.id) && apps.length >= LIMITS.groupApps) throw new HttpError(409, 'this group has too many requests waiting, try later');
+      db.putGroupApp(id, { userId: me.id, reason, via: via.id, ts: Date.now() });
+      pushGroup(id);
+      hub.push(me.id, { t: 'groups' });
+      return { applied: true };
+    }
+    db.addGroupMembers(id, null, [me.id], via.id);
+    db.delGroupApp(id, me.id);
+    pushGroup(id);
+    return { joined: true, group: groupView(db.group(id), me.id) };
+  }));
+
+  /** I take back my own request to join. */
+  app.post('/api/groups/withdraw', wrap(req => {
+    const me = auth(req);
+    const id = String((req.body || {}).group || '');
+    if (!GROUPID.test(id) || !db.delGroupApp(id, me.id)) throw new HttpError(404, 'you have no request waiting there');
+    pushGroup(id);
+    hub.push(me.id, { t: 'groups' });
+    return {};
+  }));
+
+  /** A group moderator lets someone in, or turns them down. */
+  app.post('/api/groups/answer', limiter(120), wrap(req => {
+    const me = auth(req);
+    const b = req.body || {};
+    const ctx = asRank(me, b.group, 1);
+    const who = String(b.user || '');
+    if (typeof b.accept !== 'boolean') throw bad('accept must be true or false');
+    const a = db.groupApps(ctx.id).find(x => x.userId === who);
+    if (!a) throw new HttpError(404, 'that request is gone');
+    if (b.accept) {
+      if (!db.userRow(who)) { db.delGroupApp(ctx.id, who); throw new HttpError(404, 'that account no longer exists'); }
+      if (db.groupMemberCount(ctx.id) >= LIMITS.groupMembers) throw new HttpError(409, 'this group is full');
+      if (db.groupIdsOf(who).length >= LIMITS.groups) throw new HttpError(507, 'they are in too many groups');
+      db.addGroupMembers(ctx.id, me.id, [who], a.via);
+    }
+    db.delGroupApp(ctx.id, who);
+    pushGroup(ctx.id);
+    hub.push(who, { t: 'groups' });
+    return { group: groupView(db.group(ctx.id), me.id) };
   }));
 
   /* ------------------------------------------------------ discord link */
@@ -581,10 +1009,15 @@ function createServer(opts) {
         if (m.to === me.id) throw bad('cannot send to yourself');
         if (!db.userRow(m.to)) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
         if (!canReach(me.id, m.to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
-        return { to: m.to, payload: m.payload, say: m.say === true };
+        return { to: m.to, payload: m.payload, say: m.say === true, g: typeof m.g === 'string' && GROUPID.test(m.g) ? m.g : null };
       }).filter(Boolean)
     };
     if (c.send.some(m => m.say)) checkMute(me);
+    // `g` is the client's label for an envelope sent as part of a group, like `say`
+    for (const gid of new Set(c.send.filter(m => m.say && m.g).map(m => m.g))) {
+      const g = db.inGroup(gid, me.id) && db.group(gid), u = g && gmuteOf(g, me.id);
+      if (u !== undefined) throw Object.assign(new HttpError(403, u ? 'you are muted in this group until ' + new Date(u).toUTCString() : 'you are muted in this group'), { extra: { gmuted: u, group: gid } });
+    }
     if (c.opks.length && db.prekeyCount(me.id) + c.opks.length > LIMITS.opksTotal) throw bad('too many prekeys outstanding');
     if (c.puts.length && db.blobCount(me.id) + c.puts.length > LIMITS.blobsTotal) throw new HttpError(507, 'storage quota reached');
     const sent = db.commit(me.id, c);
@@ -671,7 +1104,11 @@ function createServer(opts) {
     ws.on('message', data => {
       let m;
       try { m = JSON.parse(data); } catch (e) { return ws.close(4000, 'bad frame'); }
-      if (ws.userId) return;  // nothing else is accepted over the socket; all writes go through /api/commit
+      if (ws.userId) {
+        // the one thing a signed-in socket says: whether its user has gone idle. All writes go through /api/commit.
+        if (m.t === 'idle' && typeof m.idle === 'boolean' && ws.idle !== m.idle) { ws.idle = m.idle; presenceChanged(ws.userId, true); }
+        return;
+      }
       if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4000, 'auth first');
       const hash = sha256(m.token);
       const s = db.session(hash);
@@ -682,12 +1119,14 @@ function createServer(opts) {
       if (!hub.sockets.has(s.user_id)) hub.sockets.set(s.user_id, new Set());
       hub.sockets.get(s.user_id).add(ws);
       db.touch(s.user_id, Date.now());
+      ws.idle = m.idle === true;
       ws.send(JSON.stringify({ t: 'ready', v: VERSION, ts: Date.now() }));
+      presenceChanged(s.user_id, true);
     });
     ws.on('close', () => {
       clearTimeout(timeout);
       const set = ws.userId && hub.sockets.get(ws.userId);
-      if (set) { set.delete(ws); if (!set.size) hub.sockets.delete(ws.userId); }
+      if (set) { set.delete(ws); if (!set.size) hub.sockets.delete(ws.userId); presenceChanged(ws.userId); }
     });
   });
 
@@ -710,7 +1149,7 @@ function createServer(opts) {
     bridge.started = bridge.start().catch(e => console.error('[discord] could not start:', e.message));
   }
 
-  server.on('close', () => { clearInterval(heartbeat); clearInterval(sweeper); wss.close(); if (bridge) bridge.stop(); });
+  server.on('close', () => { stopped = true; clearInterval(heartbeat); clearInterval(sweeper); for (const t of prTimers.values()) clearTimeout(t); wss.close(); if (bridge) bridge.stop(); });
 
   return { app, server, db, hub, staff, get bridge() { return bridge; } };
 }
