@@ -134,6 +134,18 @@ button:disabled{opacity:.4;cursor:default}
 /* the emoji browser */
 .emojipop{position:absolute;left:-1px;bottom:calc(100% + 8px);z-index:20;width:min(352px,calc(100vw - 24px));height:340px;display:flex;flex-direction:column;background:var(--rail);border:1px solid var(--line2);box-shadow:0 18px 44px rgba(0,0,0,.34);animation:replyIn .16s ease both}
 .emojipop .search{margin:8px 8px 6px;width:auto}
+.emojipop.react{position:fixed;left:0;top:0;bottom:auto;z-index:40}
+.acpop .emo{width:26px;text-align:center;font-size:19px;line-height:1;flex:none}
+/* reactions under a bubble */
+.reacts{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.reacts.indent{padding-left:36px}
+.msg.out .reacts{justify-content:flex-end}
+.rx{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;background:var(--panel);border:1px solid var(--line2);font-size:14px;line-height:1;transition:background .12s,border-color .12s;animation:replyIn .16s ease both}
+.rx span{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:10.5px;color:var(--muted)}
+.rx:not(:disabled):hover{background:var(--row);border-color:var(--accent)}
+.rx.mine{background:var(--accent-wash);border-color:var(--accent)}
+.rx.mine span{color:var(--accent-soft)}
+.rx:disabled{cursor:default}
 .etabs{display:flex;gap:2px;padding:0 6px 6px;border-bottom:1px solid var(--line)}
 .etabs button{flex:1;height:30px;font-size:16px;filter:grayscale(1);opacity:.6;transition:opacity .12s,filter .12s,background .12s}
 .etabs button:hover,.etabs button[aria-pressed=true]{filter:none;opacity:1;background:var(--row)}
@@ -230,6 +242,36 @@ select.inp{cursor:pointer}
 .pick .row-main{font-weight:500}
 .pick .chip{margin-left:auto}
 .picks .grouplbl{padding:12px 10px}
+/* group control panel and tags */
+.modal.wide{width:580px}
+.gp-tabs{margin:14px 0 12px}
+.gp-row{display:flex;align-items:center;gap:10px;padding:9px 10px;font-size:13px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.gp-row:last-child{border-bottom:0}
+.gp-row .row-main{flex:1;min-width:140px;font-weight:500}
+.gp-row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.gp-row .acts .tbtn{padding:4px 7px;font-size:9px}
+.gp-durs{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;padding-top:2px}
+.gp-durs .tbtn{padding:4px 7px;font-size:9px}
+.gp-reason{flex-basis:100%;margin-left:36px;font-size:12.5px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.gp-sec{margin-top:14px}
+.gp-sec:first-child{margin-top:0}
+.gp-sec .lbl{margin-bottom:6px}
+.gp-sec .auth-seg{margin:0 0 8px}
+.gp-sec .auth-seg button:disabled{cursor:default;opacity:.55}
+.gp-sec .note{margin:6px 0 0}
+.chip.own{color:var(--accent-soft);border-color:var(--accent)}
+.gtag{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.06em;color:var(--accent-soft);border:1px solid var(--accent);background:var(--accent-wash);padding:2px 6px;margin-top:8px;cursor:pointer}
+.gtag:hover{filter:brightness(1.15)}
+.pcard.mini .gtag{cursor:default}
+.gp-emo{margin:0 0 8px;border:1px solid var(--line2);background:var(--rail)}
+.gp-emo .search{margin:8px 8px 4px;width:calc(100% - 16px)}
+.gp-emo .egrid{max-height:190px}
+.gp-tagrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.gp-tagrow .inp{max-width:140px;text-transform:uppercase}
+.gp-emobtn{width:38px;height:34px;font-size:20px;line-height:1;border:1px solid var(--line2);background:var(--rail)}
+.gp-emobtn[aria-pressed=true]{border-color:var(--accent)}
+.gp-emobtn:disabled{opacity:.55;cursor:default}
+.badge-n{display:inline-block;min-width:14px;padding:0 4px;margin-left:5px;font-size:9px;line-height:14px;text-align:center;background:var(--accent);color:var(--bg,#000)}
 /* replies and deletes */
 .msg{position:relative;outline:none}
 .bub{position:relative}
@@ -314,11 +356,19 @@ button.quote:hover{background:var(--row)}
 .mrow{display:flex;align-items:flex-end;gap:8px}
 .msg.out .mrow{flex-direction:row-reverse}
 .mrow>.bub{min-width:0}
+.mrow>.bub.has-re{min-width:min(240px,60vw)}
 .mav{width:28px;height:28px;font-size:10px}
 .mav.ghost{visibility:hidden}
 .msg.in .mrow~.stamp,.msg.in>.who{margin-left:36px}
 .msg.out .mrow~.stamp{margin-right:36px}
+/* a run of messages from one sender sits as one group: tight together, the name on the first,
+   the time on the last (a failed one keeps its stamp for retry / discard) */
+.msg.cont{margin-top:-9px}
+.msg.mid:not(.failed)>.stamp{display:none}
 .sys.new{animation:fade .3s ease both}
+.sys.held{position:sticky;bottom:0;max-width:none;animation:fade .2s ease both}
+.sys.held button{padding:6px 14px;background:var(--panel);border:1px solid var(--line2);border-left:2px solid var(--accent);color:var(--muted);font:inherit;letter-spacing:.06em;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
+.sys.held button:hover{color:var(--accent)}
 /* theme switch: everything eases between palettes for a moment */
 .theme-fade,.theme-fade *,.theme-fade *::before,.theme-fade *::after{transition:background-color .3s ease,color .3s ease,border-color .3s ease,box-shadow .3s ease!important}
 @keyframes drop{from{opacity:0;transform:translateY(-8px)}}
@@ -335,6 +385,81 @@ button.quote:hover{background:var(--row)}
 @keyframes lift{from{opacity:0;transform:translateY(12px) scale(.98)}}
 @keyframes slide{from{opacity:0;transform:translateX(-14px)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+/* presence: a square in the corner of a picture, in the color of what others see */
+.av{position:relative}
+.pdot{position:absolute;right:0;bottom:0;width:32%;height:32%;min-width:7px;min-height:7px;max-width:14px;max-height:14px;background:var(--faint);box-shadow:0 0 0 2px var(--ring,var(--list))}
+.pdot.online,.pi.online{background:var(--ok)}.pdot.idle,.pi.idle{background:var(--warn)}.pdot.dnd,.pi.dnd{background:var(--bad)}
+.pdot.dnd::after,.pi.dnd::after{content:'';position:absolute;left:22%;right:22%;top:calc(50% - 1px);height:2px;background:var(--ring,var(--list))}
+.pdot.offline,.pdot.invisible{background:var(--ring,var(--list));box-shadow:inset 0 0 0 2px var(--faint),0 0 0 2px var(--ring,var(--list))}
+.pi{position:relative;display:inline-block;width:8px;height:8px;flex:none;background:var(--faint);--ring:var(--panel)}
+.pi.offline,.pi.invisible{background:none;box-shadow:inset 0 0 0 2px var(--faint)}
+.tbtn .pi{margin-right:4px;vertical-align:-1px;--ring:var(--bg)}
+.row:hover,.row[aria-current=true]{--ring:var(--row)}
+.pane-head{--ring:var(--bg)}.modal,.acpop,.side{--ring:var(--rail)}.me,.pcard{--ring:var(--panel)}
+.live.bad{color:var(--bad)}
+.live span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the account box in the rail opens your profile */
+.me{display:block;width:calc(100% - 24px);transition:border-color .15s}
+.me:hover{border-color:var(--accent)}
+.me .fp{display:block}
+[data-pf]{cursor:pointer}
+.who .pf:hover,.pane-title[data-pf]:hover{text-decoration:underline}
+.av-80{width:80px;height:80px;font-size:22px}
+/* a profile card: the accent banner, then picture, names, presence, status and bio */
+.pcard{position:relative;background:var(--panel);border:1px solid var(--line2);overflow:hidden;text-align:left}
+.pcard .banner{height:62px;background:var(--pacc,var(--row));border-bottom:1px solid var(--line)}
+.pcard.mini .banner{height:48px}
+.pc-top{display:flex;align-items:flex-end;padding:0 14px;margin-top:-34px}
+.pcard.mini .pc-top{margin-top:-28px}
+.pc-top .av{box-sizing:content-box;border:3px solid var(--panel)}
+.pc-body{padding:10px 14px 14px}
+.pc-name{font-size:17px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.pc-user{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);overflow-wrap:anywhere}
+.pc-user .chip{font-size:8.5px}
+.pc-pres{display:flex;align-items:center;gap:7px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.pc-status{margin-top:6px;font-size:13px;line-height:1.45;color:var(--text);overflow-wrap:anywhere}
+.pc-sec{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.pc-sec .lbl{margin-bottom:5px}
+.pc-bio{font-size:13px;line-height:1.5;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.pcard.mini .pc-bio{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pc-hint{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--faint)}
+/* the mini profile that hovering a picture brings up */
+.hovercard{position:fixed;z-index:35;width:290px;max-width:calc(100vw - 16px);box-shadow:0 18px 44px rgba(0,0,0,.4)}
+.hovercard[hidden]{display:none}
+.hovercard:not([hidden]){animation:replyIn .14s ease both}
+.hovercard .pcard{border-color:var(--line2)}
+.hovercard:hover .pc-hint{color:var(--accent-soft)}
+/* someone's full profile, on the right of the conversation */
+.side{width:330px;flex:none;display:flex;flex-direction:column;min-height:0;background:var(--rail);border-left:1px solid var(--line);animation:sideIn .24s cubic-bezier(.2,.85,.25,1) both}
+.side-head{display:flex;align-items:center;gap:8px;min-height:65px;padding:0 12px 0 18px;border-bottom:1px solid var(--line)}
+.side-head .lbl{flex:1;margin:0}
+.side-body{flex:1;overflow-y:auto;padding:16px}
+.pc-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.pc-acts>:first-child{flex:1;text-align:center}
+.pc-acts .tbtn,.pc-acts .send{padding:8px 12px}
+.pc-kv{display:flex;gap:10px;padding:5px 0;font-family:'JetBrains Mono',monospace;font-size:10px}
+.pc-kv b{flex:none;width:92px;font-weight:400;color:var(--faint)}
+.pc-kv span{min-width:0;color:var(--muted);overflow-wrap:anywhere}
+.pc-kv span.mono{font-size:9px;color:var(--dim)}
+.pc-foot{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.pc-foot .tbtn{flex:1;text-align:center;padding:7px 8px;font-size:9.5px;color:var(--dim)}
+@keyframes sideIn{from{opacity:0;transform:translateX(18px)}}
+/* settings → profile: the form, with a live preview of the card beside it */
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start;max-width:1000px}
+.pgrid .preview{position:sticky;top:0}
+.pgrid .preview .lbl{margin-bottom:8px}
+textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Space Grotesk',system-ui,sans-serif}
+.count{max-width:480px;margin-top:5px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint)}
+.swatches{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.sw{width:28px;height:28px;background:var(--c);border:1px solid var(--line2);transition:transform .12s,box-shadow .12s}
+.sw:hover{transform:scale(1.08)}
+.sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+.sw.none{background:repeating-linear-gradient(45deg,var(--input) 0 4px,var(--row) 4px 8px)}
+.sw-custom{display:inline-flex;align-items:center;gap:8px;padding:4px 6px 4px 10px}
+.sw-custom input{width:26px;height:20px;padding:0;border:0;background:none;cursor:pointer}
+.hint.dirty{margin-left:0;color:var(--warn)}
+@media (max-width:1180px){.side{position:absolute;top:0;right:0;bottom:0;z-index:15;box-shadow:-18px 0 44px rgba(0,0,0,.32)}}
+@media (max-width:1100px){.pgrid{grid-template-columns:minmax(0,1fr)}.pgrid .preview{position:static;order:-1;max-width:340px}}
 /* narrow screens: one column at a time */
 @media (max-width:820px){
  .rail{display:none}
@@ -354,6 +479,8 @@ button.quote:hover{background:var(--row)}
  .thread{padding:16px}
  .composer{margin:0 12px 12px}
  .pane.enter{animation-name:paneSide}
+ .side{width:100%;border-left:0;z-index:16;box-shadow:none}
+ .side .back{display:none}
 }
 </style>
 </head>
@@ -371,11 +498,11 @@ button.quote:hover{background:var(--row)}
       <button data-screen="admin" id="navAdmin" class="hidden"><i class="dot"></i>Moderation<span class="n"></span></button>
     </div>
     <div class="spacer"></div>
-    <div class="me">
-      <div class="me-top"><div class="av av-26" id="meAv">··</div><div style="font-size:13px;font-weight:500" id="meName">signed out</div></div>
-      <div class="fp" id="meFp"></div>
-      <div class="live off" id="meLive"><i></i><span id="meStatus">offline</span></div>
-    </div>
+    <button class="me" data-act="me-open" title="Your profile">
+      <span class="me-top"><span class="av av-26" id="meAv">··</span><span style="font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="meName">signed out</span></span>
+      <span class="fp" id="meFp"></span>
+      <span class="live off" id="meLive"><i></i><span id="meStatus">offline</span></span>
+    </button>
     <a class="tbtn dl hidden" id="dlHtml" href="index.html" download="marmot.html">DOWNLOAD HTML</a>
     <div class="seg" id="themeSeg">
       <button data-theme-set="light" aria-pressed="false">LIGHT</button>
@@ -392,14 +519,16 @@ button.quote:hover{background:var(--row)}
       <button data-screen="peers">PEERS<span class="n" id="tabPeers"></span></button>
       <button data-screen="discord" id="tabDiscord" class="hidden">DISCORD<span class="n" id="tabDc"></span></button>
       <button data-screen="settings">SETTINGS</button>
-      <button data-screen="admin" id="tabAdmin" class="hidden">ADMIN</button>
+      <button data-screen="admin" id="tabAdmin" class="hidden">STAFF</button>
     </div>
     <div class="status"><i id="statusDot" class="idle"></i><span id="statusText">not connected</span></div>
   </div>
 
   <div class="pane" id="pane"></div>
+  <aside class="side hidden" id="side" aria-label="Profile"></aside>
 </div>
 <div class="toasts" id="toasts"></div>
+<div class="hovercard" id="hovercard" data-pf="" hidden></div>
 <div id="callbar" role="status" aria-live="polite"></div>
 <audio id="callAudio" autoplay playsinline></audio>
 <div id="stage" class="stage" hidden>
@@ -413,6 +542,7 @@ button.quote:hover{background:var(--row)}
 
 <script type="application/json" id="patchNotes">
 [
+ {"v": "0.6.0", "features": ["Added profiles: a display name, a bio, a custom status and an accent color, edited in Settings → Profile with a live preview", "You can now change your username (it takes your password)", "Online status: see when friends are online, idle or on do not disturb, and choose to show as online, do not disturb or invisible", "Hover over someone's picture in a chat for a mini profile; click it to open their full profile on the right", "Peers keeps your conversation open: picking someone there opens their profile beside it", "Do not disturb silences message toasts and the call ringtone"], "fixes": []},
  {"v": "0.5.0", "features": ["Added auto updating (longer start times, can download latest html for faster start times).", "Added Video and Screenshare to calls", "Added admin panel, moderators, and muting", "Added customizable chat filter (completely client side, disableable)", "Added patch notes display"], "fixes": ["Fixed Burst loading, where messages would load in a burst after inactivity"]}
 ]
 </script>
@@ -438,17 +568,23 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.5.0';
+const VERSION='0.6.0';
 /** What each release changed, newest first; the top entry is VERSION. The list itself is
     the #patchNotes data block above this script, where an older copy can read it too. */
 const PATCH_NOTES=JSON.parse(document.getElementById('patchNotes').textContent);
 
 /** The first configured server that answers at all (any HTTP status counts). */
 async function reachServer(){
- const list=[SERVER,...FALLBACK_SERVERS].filter(u=>u&&!(location.protocol==='https:'&&/^http:/i.test(u)));
+ // served by a Marmot server (not opened from disk, not the GitHub Pages copy): that server first
+ const own=/^https?:$/.test(location.protocol)&&!ON_PAGES?location.origin:null;
+ const list=[own,SERVER,...FALLBACK_SERVERS].filter(u=>u&&!(location.protocol==='https:'&&/^http:/i.test(u)));
  for(const u of list){
   const ac=new AbortController(),t=setTimeout(()=>ac.abort(),5000);
-  try{await fetch(u.replace(/\/+$/,'')+'/api/ice',{signal:ac.signal,cache:'no-store'});return u}
+  // any answer counts for a configured server; the page's own host must really be a Marmot server
+  try{
+   if(u!==own){await fetch(u.replace(/\/+$/,'')+'/api/ice',{signal:ac.signal,cache:'no-store'});return u}
+   const r=await fetch(u+'/api/health',{signal:ac.signal,cache:'no-store'});
+   if(r.ok&&(await r.json()).service==='marmot')return u}
   catch(e){console.warn('Marmot server not reachable:',u)}
   finally{clearTimeout(t)}}
  throw new Error('cannot reach the Marmot server')}
@@ -469,6 +605,7 @@ const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
 const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
 const PAGE=40;   // messages drawn per page of a thread; older pages load as you scroll up
+const BURST=3;   // more arrivals than this at once is catching up: drawn as is, summed up in one toast
 const AVSIZE=128,AVCHARS=48000;   // pictures are shrunk to AVSIZE² and at most AVCHARS of data: URL
 /** A picture as it may come off the wire: a small base64 JPEG, PNG or WebP data: URL. */
 const PICRE=/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
@@ -480,6 +617,25 @@ const isImg=x=>typeof x==='string'&&x.length<=IMGCHARS&&PICRE.test(x);
 const dim=n=>Number.isInteger(n)&&n>0&&n<=8192?n:undefined;
 /** The image a message carries {img,w,h}, cleaned up when it comes off the wire, or {}. */
 const imgOf=x=>x&&isImg(x.img)?{img:x.img,w:dim(x.w),h:dim(x.h)}:{};
+/** Profiles: what the server allows (see PROFILE_MAX in server.js), and what presence can be. */
+const PROFMAX={display:32,bio:300,status:80};
+const ACCENTRE=/^#[0-9a-f]{6}$/i;
+/** What others see of someone (online / idle / dnd / offline), and the modes a user picks from. */
+const PRESENCES=['online','idle','dnd','offline'],PRESENCE_MODES=['auto','dnd','invisible'];
+/** A profile as it comes off the wire, cleaned up: {display, bio, status, accent}, '' for each one unset. */
+function cleanProfile(x){
+ x=x&&typeof x==='object'?x:{};
+ const t=(v,n)=>typeof v==='string'?v.slice(0,n):'';
+ return {display:t(x.display,PROFMAX.display),bio:t(x.bio,PROFMAX.bio),status:t(x.status,PROFMAX.status),
+  accent:typeof x.accent==='string'&&ACCENTRE.test(x.accent)?x.accent.toLowerCase():'',
+  ...(typeof x.gtag==='string'&&/^[0-9a-f]{24}$/.test(x.gtag)?{gtag:x.gtag}:{})}}
+/** The group tag shown on a profile, as the server describes it, or null. */
+function cleanTag(t){
+ if(!t||typeof t!=='object'||typeof t.groupId!=='string'||!/^[0-9a-f]{24}$/.test(t.groupId)||typeof t.text!=='string'||!t.text)return null;
+ return {groupId:t.groupId,text:[...t.text].slice(0,4).join(''),emoji:typeof t.emoji==='string'&&t.emoji.length<=16?t.emoji:'',
+  vis:t.vis==='friends'?'friends':'all',mode:t.mode==='apply'?'apply':'join',n:Number.isFinite(t.n)?t.n:0}}
+/** How a group tag reads: its emoji and text, or #text without an emoji. */
+const tagLabel=t=>(t.emoji?t.emoji+' ':'#')+t.text;
 /** A message in one line: its text, or that it is a photo. */
 const gist=m=>m.text||(m.img?'sent a photo':'');
 
@@ -645,6 +801,10 @@ function funCommand(text,user){
   return Object.assign(said('📊 '+q+'\n'+opts.map((o,i)=>(i+1)+'. '+o).join('\n')),{poll:{q,opts,ends:Date.now()+min*60000},min})}
  return null}
 const says=x=>x.k==='text'||(x.k==='call'&&x.t==='offer')||(x.k==='group'&&(x.t==='name'||x.t==='icon')&&!!x.announce);
+/** How many different emoji one message can carry as reactions. */
+const REACTMAX=20;
+/** Whether e can be a reaction: one short emoji (sequences such as flags, skin tones and keycaps included), no plain text. */
+const isReact=e=>typeof e==='string'&&e.length>0&&e.length<=16&&/\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u.test(e)&&!/[\s<>"'&\\a-zA-Z]/.test(e);
 /** The quote a reply carries {id, from, t}, cleaned up when it comes off the wire. */
 const reOf=x=>x&&typeof x.id==='string'&&x.id&&x.id.length<=64
  ?{id:x.id,from:typeof x.from==='string'?x.from.slice(0,64):'',t:typeof x.t==='string'?x.t.slice(0,200):''}:undefined;
@@ -1155,7 +1315,8 @@ class MarmotClient{
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
    peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
-   groups:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set(),staff:null,mute:null,roles:new Map(),mutes:new Map(),pinged:new Set()})}
+   groups:new Map(),applied:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set(),staff:null,mute:null,roles:new Map(),mutes:new Map(),pinged:new Set(),
+   prof:new Map(),profc:new Map(),_pfReq:new Set(),_pfFail:new Map(),myProfile:cleanProfile(),presenceMode:'auto',idle:false})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -1176,7 +1337,7 @@ class MarmotClient{
   catch(e){const err=new Error('cannot reach the server at '+this.server);err.network=true;throw err}
   let j={};try{j=await res.json()}catch(e){}
   if(!res.ok||j.ok===false){
-   const err=new Error(j.error||('server error '+res.status));err.status=res.status;
+   const err=new Error(res.status===404&&j.error==='unknown endpoint'?'the server needs updating for this (it is running an older version of Marmot)':j.error||('server error '+res.status));err.status=res.status;
    if(res.status===401&&this.token&&path!=='/api/account/delete')this._signedOut(err.message);
    if(j.banned&&this.token)this._signedOut(err.message);
    if(j.muted!=null&&this.token){this.mute={until:j.muted};this.emit('change')}
@@ -1239,7 +1400,7 @@ class MarmotClient{
     identity:{ik:id.ik.pub,sk:id.sk.pub},spk:{id:id.spk.id,pub:id.spk.pub,sig:id.spk.sig},
     opks:opks.map(o=>({id:o.id,pub:o.pub})),puts:tx.puts});
    tx.apply();
-   this.token=r.token;this.vk=d.vkRaw;this.me.username=r.username;this.opkCount=opks.length;this.peersLoaded=true;
+   this.token=r.token;this.vk=d.vkRaw;this.me.username=r.username;this.opkCount=opks.length;this.peersLoaded=true;this._mine({});
   }catch(e){this._reset();throw e}
   this.connect();this.emit('change');
   return this.me}
@@ -1252,7 +1413,7 @@ class MarmotClient{
    const r=await this.api('POST','/api/login',{username,auth:d.auth});
    this.token=r.token;this.vk=d.vkRaw;this.discoverable=!!r.discoverable;this._standing(r);
    await this._openVault(r.vault,d.vaultKey,r.userId,r.username);
-   this._learnAv(r.userId,r.av);
+   this._learnAv(r.userId,r.av);this._mine(r);
   }catch(e){this._reset();throw e}
   this.connect();this.replenish().catch(()=>{});this.emit('change');
   return this.me}
@@ -1264,7 +1425,7 @@ class MarmotClient{
    const me=await this.api('GET','/api/me');
    const v=await this.api('GET','/api/vault');
    await this._openVault(v.vault,await CR.aesKey(ub64(s.vk)),me.userId,me.username);
-   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._learnAv(me.userId,me.av);this._standing(me);
+   this.opkCount=me.opkCount;this.discoverable=!!me.discoverable;this._learnAv(me.userId,me.av);this._standing(me);this._mine(me);
   }catch(e){this._reset();throw e}
   this.connect();this.replenish().catch(()=>{});this.emit('change');
   return this.me}
@@ -1314,7 +1475,7 @@ class MarmotClient{
   this.closing=false;
   const ws=new this.WS(this.server.replace(/^http/i,'ws')+'/ws');
   this.ws=ws;this.wsState='connecting';this.emit('status');
-  ws.onopen=()=>ws.send(JSON.stringify({t:'auth',token:this.token}));
+  ws.onopen=()=>ws.send(JSON.stringify({t:'auth',token:this.token,idle:this.idle}));
   ws.onmessage=ev=>{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
    if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{});this.loadLinks().catch(()=>{})}
@@ -1324,9 +1485,13 @@ class MarmotClient{
    else if(m.t==='links')this.loadLinks().catch(()=>{});
    else if(m.t==='prekeys')this.replenish().catch(()=>{});
    else if(m.t==='avatar'){if(this._learnAv(m.userId,m.v))this.emit('change')}
+   else if(m.t==='profile'){
+    if(this.me&&m.userId===this.me.userId&&typeof m.username==='string')this.me.username=m.username;
+    if(this._learnProf({userId:m.userId,username:m.username,dn:m.dn,ps:m.ps,pv:m.v}))this.emit('change')}
+   else if(m.t==='presence'){if(this._learnProf({userId:m.userId,pr:m.p}))this.emit('change')}
    else if(m.t==='me')this.refreshStanding().catch(()=>{});
    else if(m.t==='roles'){this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{})}
-   else if(m.t==='revoked')this._signedOut(m.why==='banned'?'this account was removed by a moderator':m.why==='ipban'?'this network was banned from this server':'this account was signed in on another device')};
+   else if(m.t==='revoked')this._signedOut(m.why==='banned'?'this account was removed by Marmot staff':m.why==='ipban'?'this network was banned from this server':'this account was signed in on another device')};
   ws.onerror=()=>{};
   ws.onclose=()=>{
    if(this.ws!==ws)return;
@@ -1360,7 +1525,16 @@ class MarmotClient{
   this.queued.add(e.id);
   this.inq=this.inq.then(()=>this._handle(e,quiet)).catch(err=>{
    console.warn('envelope '+e.id+' not processed yet:',err.message);
-   this._retrySoon()}).finally(()=>this.queued.delete(e.id))}
+   this._retrySoon()}).finally(()=>{
+    this.queued.delete(e.id);
+    // a burst the socket handed over (see catchingUp) is summed up once it is all through
+    if(!this.queued.size&&this.burst){const b=this.burst;this.burst=null;if(this.token)this.emit('backlog',b.n,b.peers.size)}})}
+
+ /** True while a pile of envelopes is being worked through rather than news trickling in:
+     draining the mailbox, or a burst the socket delivered at once. A tab the browser froze
+     or throttled while it sat in the background gets everything that came in meanwhile as
+     one flood of socket frames when it wakes, not through drain(). */
+ catchingUp(){return !!this._draining||this.queued.size>BURST}
 
  _retrySoon(){clearTimeout(this._retryTimer);this._retryTimer=setTimeout(()=>{if(this.token)this.drain().catch(()=>{})},4000)}
 
@@ -1368,7 +1542,7 @@ class MarmotClient{
   const have=this.get('peer:'+peerId);if(have)return have;
   let p={userId:peerId,username:null,verified:false,added:Date.now()};
   try{const r=await this.api('GET','/api/users/lookup?id='+encodeURIComponent(peerId));
-   if(await Acct.userId(r.user.ik,r.user.sk)===peerId){p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk});this._learnAv(peerId,r.user.av);this._learnRole(peerId,r.user.role,r.user.muted)}}
+   if(await Acct.userId(r.user.ik,r.user.sk)===peerId){p=Object.assign(p,{username:r.user.username,ik:r.user.ik,sk:r.user.sk});this._learnAv(peerId,r.user.av);this._learnRole(peerId,r.user.role,r.user.muted);this._learnProf(r.user)}}
   catch(e){if(e.network)throw e}
   await tx.put('peer:'+peerId,p);return p}
 
@@ -1413,6 +1587,8 @@ class MarmotClient{
      await this._tombstone(tx,'msg:'+peerId+':'+inner.id,m=>m.dir==='in')
     }else if(inner.k==='vote'&&typeof inner.id==='string'){
      await this._vote(tx,'msg:'+peerId+':'+inner.id,peerId,inner,e.ts)
+    }else if(inner.k==='react'&&typeof inner.id==='string'){
+     await this._react(tx,'msg:'+peerId+':'+inner.id,peerId,inner)
     }else if(inner.k==='receipt'&&Array.isArray(inner.ids)){
      for(const id of inner.ids.slice(0,100)){
       const key='msg:'+peerId+':'+id,m=this.get(key);
@@ -1445,6 +1621,8 @@ class MarmotClient{
   if(!this.inGroup(gid,peerId))await this.loadGroups().catch(()=>{});
   if(!this.inGroup(gid,peerId))return none;
   const conv='g:'+gid;
+  // a member muted in this group by its moderators: what they say is dropped here too
+  if((says(inner)||inner.k==='react')&&this.groupMuted(gid,peerId))return none;
   if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
    const key='msg:'+conv+':'+inner.id;let note=null;
    if(!this.get(key)){
@@ -1466,6 +1644,7 @@ class MarmotClient{
    await this._tombstone(tx,'msg:'+conv+':'+inner.id,m=>m.dir==='in'&&m.from===peerId);
    return none}
   if(inner.k==='vote'&&typeof inner.id==='string'){await this._vote(tx,'msg:'+conv+':'+inner.id,peerId,inner,e.ts);return none}
+  if(inner.k==='react'&&typeof inner.id==='string'){await this._react(tx,'msg:'+conv+':'+inner.id,peerId,inner);return none}
   if(inner.k==='receipt'&&Array.isArray(inner.ids)){
    for(const id of inner.ids.slice(0,100)){
     const key='msg:'+conv+':'+id,m=this.get(key);
@@ -1500,7 +1679,7 @@ class MarmotClient{
    if(this.done.has(e.id))return;
    const tx=new Tx(this);tx.ack.push(e.id);
    if(p&&p.k==='mod'&&p.t==='del'&&Array.isArray(p.msgs)&&!isDiscord(conv)){
-    const by=String(p.by||'a moderator').slice(0,24);
+    const by=String(p.by||'staff').slice(0,24);
     for(const r of p.msgs.slice(0,500)){
      if(!r||typeof r.id!=='string'||typeof r.from!=='string')continue;
      await this._tombstone(tx,'msg:'+conv+':'+r.id,m=>(m.dir==='out'?this.me.userId:m.from||conv)===r.from,{mod:by})}}
@@ -1575,8 +1754,10 @@ class MarmotClient{
    const r=await this.api('GET','/api/groups');
    if(!this.token)return;
    const now=new Map(r.groups.map(g=>[g.groupId,g]));
-   const known=new Map();for(const g of now.values())for(const m of g.members){known.set(m.userId,m.username);this._learnAv(m.userId,m.av);this._learnRole(m.userId,m.role,m.muted)}
+   this.applied=new Map((r.applied||[]).map(a=>[a.groupId,a]));
+   const known=new Map();for(const g of now.values())for(const m of g.members){known.set(m.userId,m.username);this._learnAv(m.userId,m.av);this._learnRole(m.userId,m.role,m.muted);this._learnProf(m)}
    const name=id=>!id?'someone':id===this.me.userId?'you':known.get(id)||this.displayName(id);
+   const whose=id=>id===this.me.userId?'your':name(id)+"'s";
    const tx=new Tx(this);
    let n=0;const line=async(gid,text)=>{const id='j'+Date.now().toString(36)+'-'+(n++);
     await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:this.serverNow(),text})};
@@ -1584,14 +1765,19 @@ class MarmotClient{
     const ids=g.members.map(m=>m.userId).sort(),rec=this.get('grp:'+g.groupId);
     if(!rec||rec.left){
      const me=g.members.find(m=>m.userId===this.me.userId)||{};
-     await line(g.groupId,me.invitedBy?name(me.invitedBy)+' added you':'you created this group')}
+     await line(g.groupId,me.invitedBy?name(me.invitedBy)+(me.via?' let you in':' added you'):me.via?'you joined through '+whose(me.via)+' group tag':g.createdBy===this.me.userId?'you created this group':'you joined this group')}
     else{
-     for(const m of g.members)if(!rec.members.includes(m.userId))await line(g.groupId,name(m.invitedBy)+' added '+name(m.userId));
-     for(const id of rec.members)if(!ids.includes(id))await line(g.groupId,name(id)+' left')}
-    if(!rec||rec.left||rec.members.join()!==ids.join())await tx.put('grp:'+g.groupId,{members:ids})}
+     for(const m of g.members)if(!rec.members.includes(m.userId))await line(g.groupId,
+      m.invitedBy?name(m.invitedBy)+(m.via?' let in ':' added ')+name(m.userId):name(m.userId)+' joined'+(m.via?' through '+whose(m.via)+' group tag':''));
+     const kicks=g.kicks||[];
+     for(const id of rec.members)if(!ids.includes(id)){
+      const k=kicks.filter(x=>x.userId===id).pop();
+      await line(g.groupId,k&&k.ts>(rec.at||0)-60000?name(id)+' was removed by '+name(k.by):name(id)+' left')}}
+    if(!rec||rec.left||rec.members.join()!==ids.join())await tx.put('grp:'+g.groupId,{members:ids,at:this.serverNow()})}
    for(const [k,rec] of this.recs)if(k.startsWith('grp:')&&!rec.left&&!now.has(k.slice(4))){
-    await line(k.slice(4),'you left this group');await tx.put(k,{members:[],left:true})}
-   this.groups=now;
+    const gid=k.slice(4);
+    await line(gid,this._leaving===gid?'you left this group':'you are no longer in this group');await tx.put(k,{members:[],left:true})}
+   this.groups=now;this._prunePresence();
    if(tx.puts.length)await tx.commit();
    this.emit('change')})}
 
@@ -1636,8 +1822,51 @@ class MarmotClient{
 
  async leaveGroup(gid){
   gid=String(gid).replace(/^g:/,'');
-  await this.api('POST','/api/groups/leave',{group:gid});
-  await this.loadGroups()}
+  this._leaving=gid;
+  try{await this.api('POST','/api/groups/leave',{group:gid});await this.loadGroups()}finally{this._leaving=null}}
+
+ /* ---- group roles: owner, group moderators, members ---- */
+ /** 'owner', 'mod' or null for someone in a group (this account by default). */
+ groupRole(gid,userId){const g=this.group(gid);if(!g)return null;userId=userId||this.me.userId;
+  const m=g.members.find(x=>x.userId===userId);return m&&m.gr||null}
+ /** 2 owner · 1 group moderator · 0 member · -1 not in it. */
+ groupRank(gid,userId){const g=this.group(gid);userId=userId||this.me.userId;
+  if(!g||!g.members.some(m=>m.userId===userId))return -1;const r=this.groupRole(gid,userId);return r==='owner'?2:r==='mod'?1:0}
+ /** When someone's mute in a group ends (0 = never), or undefined if they are not muted there. */
+ groupMuteEnd(gid,userId){const g=this.group(gid);if(!g)return undefined;userId=userId||this.me.userId;
+  const m=g.members.find(x=>x.userId===userId);const u=m&&m.gm;
+  return Number.isFinite(u)&&(u===0||u>this.serverNow())?u:undefined}
+ groupMuted(gid,userId){return this.groupMuteEnd(gid,userId)!==undefined}
+ canInvite(gid){const g=this.group(gid);return !!g&&(g.invite!=='mods'||this.groupRank(gid)>=1)}
+ async _groupPost(path,body){
+  const r=await this.api('POST','/api/groups/'+path,body);
+  await this.loadGroups();return r}
+ setGroupMod(gid,userId,on){return this._groupPost('mod',{group:String(gid).replace(/^g:/,''),user:userId,on:!!on})}
+ kickFromGroup(gid,userId){return this._groupPost('kick',{group:String(gid).replace(/^g:/,''),user:userId})}
+ /** minutes: a number (0 = until unmuted), or null to unmute. */
+ muteInGroup(gid,userId,minutes){return this._groupPost('mute',{group:String(gid).replace(/^g:/,''),user:userId,minutes})}
+ /** patch: {invite?: 'all'|'mods', tag?: {text?, vis?: 'off'|'friends'|'all', mode?: 'join'|'apply'}} */
+ groupSettings(gid,patch){return this._groupPost('settings',Object.assign({group:String(gid).replace(/^g:/,'')},patch))}
+ /** Joins (or asks to join, with a reason) through the tag on `via`'s profile. */
+ async joinByTag(gid,via,reason){
+  const r=await this._groupPost('join',{group:gid,via,reason:reason||''});
+  // a newcomer by tag was not handed the name and icon by an inviter: ask the members for them
+  if(r.joined&&this.group(gid))this._sendGroup(gid,{k:'group',t:'want',g:gid},null,null).catch(()=>{});
+  return r}
+ withdrawApp(gid){return this._groupPost('withdraw',{group:gid})}
+ async answerApp(gid,userId,accept){
+  gid=String(gid).replace(/^g:/,'');
+  const r=await this._groupPost('answer',{group:gid,user:userId,accept:!!accept});
+  if(accept&&this.inGroup(gid,userId))await this._sendGroupMeta(gid,[userId]);
+  return r}
+ /** Shows (or, with '', stops showing) one of my groups' tags on my profile. */
+ async showTag(gid){
+  const r=await this.api('POST','/api/me/profile',{gtag:gid||''});
+  this.myProfile=cleanProfile(r.profile);
+  this._learnProf({userId:this.me.userId,pv:r.pv});this.emit('change')}
+ /** The tag this account's profile shows, from the group it belongs to, or null. */
+ myTag(){const gid=this.myProfile&&this.myProfile.gtag,g=gid&&this.group(gid);
+  return g&&g.tag&&g.tag.vis!=='off'&&g.tag.text?{groupId:gid,text:g.tag.text,emoji:g.tag.emoji||'',vis:g.tag.vis,mode:g.tag.mode,n:g.members.length}:null}
 
  /** Names (or, with '', unnames) a group for every member. */
  async renameGroup(gid,name,announce){
@@ -1675,7 +1904,7 @@ class MarmotClient{
    for(const id of to){
     let env;
     try{env=await this._encryptTo(id,inner,tx)}catch(e){if(e.status===403||e.status===404)continue;throw e}
-    tx.send.push({to:id,payload:JSON.stringify(env),optional:true,say:says(inner)})}
+    tx.send.push({to:id,payload:JSON.stringify(env),optional:true,say:says(inner),g:gid})}
    if(more)await more(tx);
    await tx.commit()};
   await to.reduceRight((fn,id)=>()=>this.lock(id,fn),run)()}
@@ -1688,7 +1917,7 @@ class MarmotClient{
   const r=await this.api('GET','/api/users/lookup?username='+encodeURIComponent(username));
   const u=r.user;
   if(await Acct.userId(u.ik,u.sk)!==u.userId)throw new Error('the server returned keys that do not match this user');
-  this._learnAv(u.userId,u.av);this._learnRole(u.userId,u.role,u.muted);
+  this._learnAv(u.userId,u.av);this._learnRole(u.userId,u.role,u.muted);this._learnProf(u);
   const clash=[...this.recs.entries()].find(([k,p])=>k.startsWith('peer:')&&p.userId!==u.userId&&
    p.username&&p.username.toLowerCase()===u.username.toLowerCase());
   if(!this.get('peer:'+u.userId)){
@@ -1710,13 +1939,21 @@ class MarmotClient{
   const r=await this.api('GET','/api/peers');
   const before=this.peers,first=!this.peersLoaded;
   this.peers=new Map(r.peers.map(p=>[p.userId,p]));this.peersLoaded=true;
-  for(const p of r.peers){this._learnAv(p.userId,p.av);this._learnRole(p.userId,p.role,p.muted)}
+  for(const p of r.peers){this._learnAv(p.userId,p.av);this._learnRole(p.userId,p.role,p.muted);this._learnProf(p)}
   for(const p of this.peers.values()){
    const was=before.get(p.userId);
    if(!first&&p.state==='incoming'&&(!was||was.state!=='incoming'))this.emit('peer','request',p);
    if(!first&&p.state==='friend'&&was&&was.state==='outgoing')this.emit('peer','accepted',p);
    if(p.state==='friend'&&!this.get('peer:'+p.userId))this._pinId(p.userId).catch(()=>{})}
+  this._prunePresence();
   this.emit('change')}
+ /** Forgets the presence of anyone this account can no longer reach: unfriended, blocked, or no
+     group in common any more. The server stops telling us, so what we last heard would go stale. */
+ _prunePresence(){
+  const keep=new Set();
+  for(const p of this.peers.values())if(p.state==='friend')keep.add(p.userId);
+  for(const g of this.groups.values())for(const m of g.members)keep.add(m.userId);
+  for(const [id,f] of this.prof)if(f.pr!=null&&!keep.has(id)&&!(this.me&&id===this.me.userId))this.prof.set(id,Object.assign({},f,{pr:null}))}
 
  /** action: request | accept | remove | block | unblock. target: a user id, or {username}. */
  async peerAction(action,target){
@@ -1755,7 +1992,7 @@ class MarmotClient{
  /** Users who opted into global discovery; q filters by username. */
  async discover(q,offset){
   const r=await this.api('GET','/api/peers/global?q='+encodeURIComponent(q||'')+'&offset='+(offset||0));
-  for(const u of r.users)this._learnAv(u.userId,u.av);
+  for(const u of r.users){this._learnAv(u.userId,u.av);this._learnProf(u)}
   return {users:r.users,more:r.more}}
 
  /* ---- profile pictures ---- */
@@ -1789,6 +2026,103 @@ class MarmotClient{
   if(src&&!isPic(src))throw new Error('that picture is not in a supported format');
   const r=await this.api('POST','/api/me/avatar',{avatar:src||null});
   this.avc.set(this.me.userId,{v:r.av,src:src||null});this.avv.set(this.me.userId,r.av);this.emit('change')}
+
+ /* ---- profiles and presence ---- */
+ /* Profiles are public like pictures, and like them are not end-to-end encrypted: a display
+    name, a bio, a status line and an accent color. this.prof holds, per user, what the server
+    last said in passing: {u: username, dn: display name, pv: profile version, pr: presence}.
+    The rest of a profile is fetched once it is wanted, and again when pv moves on.
+    Presence (pr) is only ever sent for people who can reach each other; null means unknown. */
+ /** This account's own profile and presence mode, from a login or /api/me. */
+ _mine(r){
+  this.myProfile=cleanProfile(r.profile);
+  this.presenceMode=PRESENCE_MODES.includes(r.presence)?r.presence:'auto';
+  if(this.me)this.prof.set(this.me.userId,{u:this.me.username,dn:this.myProfile.display,ps:this.myProfile.status,pv:Number.isFinite(r.pv)?r.pv:0,pr:null})}
+ /** Someone's custom status line, or ''. */
+ status(id){
+  if(this.me&&id===this.me.userId)return this.myProfile.status;
+  const f=this.prof.get(id),c=this.profc.get(id);
+  return f&&typeof f.ps==='string'?f.ps:c?c.data.status:''}
+ /** Notes what a view of a user says about their profile; true if anything moved. A view
+     without a `pr` key (the global list) says nothing about presence, so it is left alone. */
+ _learnProf(u){
+  if(!u||typeof u.userId!=='string'||!u.userId)return false;
+  const o=this.prof.get(u.userId)||{},n=Object.assign({},o);
+  if(typeof u.username==='string'&&u.username)n.u=u.username;
+  if(typeof u.dn==='string')n.dn=u.dn.slice(0,PROFMAX.display);
+  if(typeof u.ps==='string')n.ps=u.ps.slice(0,PROFMAX.status);
+  if(Number.isFinite(u.pv))n.pv=u.pv;
+  if('pr' in u)n.pr=PRESENCES.includes(u.pr)?u.pr:null;
+  if(n.u===o.u&&n.dn===o.dn&&n.ps===o.ps&&n.pv===o.pv&&n.pr===o.pr)return false;
+  this.prof.set(u.userId,n);return true}
+ /** Someone's current username, as the server last said. */
+ username(id){
+  if(this.me&&id===this.me.userId)return this.me.username;
+  const f=this.prof.get(id),r=this.peers.get(id),p=this.peer(id);
+  if(f&&f.u)return f.u;
+  if(r&&r.username)return r.username;
+  if(p.username)return p.username;
+  for(const g of this.groups.values()){const m=g.members.find(x=>x.userId===id);if(m)return m.username}
+  return null}
+ /** Someone's whole profile {username, created, display, bio, status, accent}, or null until it
+     arrives: it is fetched the first time it is asked for and again when its version moves on;
+     'change' fires once it is in. */
+ profile(id){
+  if(!id||isDiscord(id)||isGroup(id))return null;
+  if(this.me&&id===this.me.userId)return Object.assign({username:this.me.username,created:this.me.created||0},this.myProfile,{tag:this.myTag()});
+  const f=this.prof.get(id),c=this.profc.get(id);
+  if(c&&(!f||!Number.isFinite(f.pv)||c.v===f.pv))return c.data;
+  const failed=this._pfFail.get(id);
+  if(this.token&&!this._pfReq.has(id)&&!(failed&&Date.now()-failed<30000))this.fetchProfile(id).catch(()=>{});
+  return c?c.data:null}
+ /** Fetches someone's profile now, cached or not, and returns it. Changes to a profile are only
+     pushed to people who can reach its owner, so a stranger's copy (and the group tag on it) is
+     refreshed this way whenever it is opened. */
+ async fetchProfile(id){
+  if(this.me&&id===this.me.userId)return this.profile(id);
+  this._pfReq.add(id);
+  try{
+   const r=await this.api('GET','/api/profile/'+encodeURIComponent(id));
+   if(!this.token)return null;
+   const u=r.user;if(!u||u.userId!==id)throw new Error('wrong profile');
+   this._learnProf(u);this._learnAv(id,u.av);this._learnRole(id,u.role,u.muted);
+   const data=Object.assign({username:String(u.username||''),created:Number.isFinite(u.created)?u.created:0},cleanProfile(u.profile),{tag:cleanTag(u.gtag)});
+   this.profc.set(id,{v:u.pv,data});
+   this._pfFail.delete(id);this.emit('change');return data}
+  catch(e){this._pfFail.set(id,Date.now());throw e}
+  finally{this._pfReq.delete(id)}}
+ /** Changes any of {display, bio, status, accent}; fields left out stay as they are. */
+ async setProfile(o){
+  const r=await this.api('POST','/api/me/profile',o);
+  this.myProfile=cleanProfile(r.profile);
+  this._learnProf({userId:this.me.userId,dn:this.myProfile.display,ps:this.myProfile.status,pv:r.pv});
+  this.emit('change');return this.myProfile}
+ /** What others see of this account: 'online', 'idle', 'dnd', 'offline', or 'invisible' (signed in, shown offline). */
+ presence(id){
+  if(this.me&&id===this.me.userId){
+   if(this.wsState!=='live')return 'offline';
+   return this.presenceMode==='invisible'?'invisible':this.presenceMode==='dnd'?'dnd':this.idle?'idle':'online'}
+  const f=this.prof.get(id);return f&&f.pr||null}
+ /** auto (online or idle, by activity), dnd (do not disturb) or invisible. */
+ async setPresence(mode){
+  if(!PRESENCE_MODES.includes(mode))throw new Error('unknown presence');
+  const r=await this.api('POST','/api/me/presence',{mode});
+  this.presenceMode=r.presence;this.emit('change');return r.presence}
+ /** Whether the user has been away from the keyboard; the server shows them idle while they are. */
+ setIdle(idle){
+  idle=!!idle;if(idle===this.idle)return;
+  this.idle=idle;
+  if(this.ws&&this.wsState==='live'){try{this.ws.send(JSON.stringify({t:'idle',idle}))}catch(e){}}
+  this.emit('change')}
+ /** A new username. It takes the password, which is checked against the current one. */
+ async rename(username,pass){
+  username=String(username||'').trim();
+  const pre=await this.api('POST','/api/prelogin',{username:this.me.username});
+  const d=await Acct.derive(pass,pre.salt,pre.iter);
+  const r=await this.api('POST','/api/me/username',{username,auth:d.auth});
+  this.me.username=r.username;
+  this._learnProf({userId:this.me.userId,username:r.username,pv:r.pv});
+  this.emit('change');return r.username}
 
  relation(id){const p=this.peers.get(id);return p?p.state:'none'}
  isFriend(id){return this.relation(id)==='friend'}
@@ -1903,7 +2237,9 @@ class MarmotClient{
  _note(peer,text,quiet){
   this.unread.set(peer,(this.unread.get(peer)||0)+1);
   if(this.pings(text))this.pinged.add(peer);
-  if(quiet&&this.backlog){this.backlog.n++;this.backlog.peers.add(peer)}
+  const pile=quiet&&this.backlog?this.backlog
+   :this.queued.size>BURST?(this.burst=this.burst||{n:0,peers:new Set()}):null;
+  if(pile){pile.n++;pile.peers.add(peer)}
   else this.emit('message',peer,text)}
 
  /** One line of call history in the chat; a missed call also counts as unread. */
@@ -1952,11 +2288,34 @@ class MarmotClient{
   else if(Number.isInteger(o)&&o>=0&&o<m.poll.opts.length)votes[who]=o;
   else return;
   await tx.put(key,Object.assign({},m,{votes}))}
+ /** Adds my reaction e to the message msgId in peerId, or takes it back with on = false.
+     Like a vote it goes to everyone in the chat, so every copy shows the same reactions. */
+ async react(peerId,msgId,e,on){
+  const key='msg:'+peerId+':'+msgId,m=this.get(key);
+  if(!m||m.dir==='sys'||m.deleted)throw new Error('that message is gone');
+  if(!isReact(e))throw new Error('that is not an emoji');
+  on=on!==false;
+  const r=m.reacts||{};
+  if(on&&!r[e]&&Object.keys(r).length>=REACTMAX)throw new Error('this message has as many different reactions as it can take');
+  const mine=tx=>this._react(tx,key,this.me.userId,{e,on});
+  if(isGroup(peerId)){const gid=peerId.slice(2);return this._sendGroup(gid,{k:'react',g:gid,id:msgId,e,on},mine)}
+  if(isDiscord(peerId)||!this.isFriend(peerId))throw new Error('you can only react while you are friends');
+  return this._sendInner(peerId,{k:'react',id:msgId,e,on},mine)}
+ /** Records `who` adding (on) or taking back the reaction {e} on the message at `key`. */
+ async _react(tx,key,who,v){
+  const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
+  if(!m||m.dir==='sys'||m.deleted||!isReact(v.e))return;
+  const e=v.e,on=v.on!==false,reacts=Object.assign({},m.reacts),list=reacts[e]||[];
+  if(on===list.includes(who))return;
+  if(on){if(!list.length&&Object.keys(reacts).length>=REACTMAX)return;reacts[e]=list.concat(who)}
+  else{const rest=list.filter(x=>x!==who);if(rest.length)reacts[e]=rest;else delete reacts[e]}
+  const t=Object.assign({},m,{reacts});if(!Object.keys(reacts).length)delete t.reacts;
+  await tx.put(key,t)}
  /** Blanks the message at `key` into a placeholder, if there is one and ok(it) says so. */
  async _tombstone(tx,key,ok,extra){
   const m=tx.mem.has(key)?tx.mem.get(key)[0]:this.get(key);
   if(!m||m.dir==='sys'||m.deleted||!ok(m))return false;
-  const t=Object.assign({},m,{text:'',deleted:true},extra);delete t.re;delete t.img;delete t.w;delete t.h;delete t.poll;delete t.votes;
+  const t=Object.assign({},m,{text:'',deleted:true},extra);delete t.re;delete t.img;delete t.w;delete t.h;delete t.poll;delete t.votes;delete t.reacts;
   await tx.put(key,t);return true}
 
  /** Tops the server back up with one-time prekeys when it runs low. */
@@ -1992,10 +2351,9 @@ class MarmotClient{
    const g=this.group(id);if(!g)return 'group';
    const others=g.members.filter(m=>m.userId!==this.me.userId).map(m=>m.username);
    return others.length?others.slice(0,3).join(', ')+(others.length>3?' +'+(others.length-3):''):'empty group'}
-  const p=this.peer(id),r=this.peers.get(id);
-  if(p.username||(r&&r.username))return p.username||r.username;
-  for(const g of this.groups.values()){const m=g.members.find(x=>x.userId===id);if(m)return m.username}
-  return 'user '+String(id).slice(0,8)}
+  const f=this.prof.get(id);
+  if(f&&f.dn)return f.dn;
+  return this.username(id)||'user '+String(id).slice(0,8)}
  sessionState(id){const r=this.get('sess:'+id);if(!r||!r.active)return 'none';return r.active.pre?'handshake sent':'established'}
  thread(peerId){
   const list=[...(this.byPeer.get(peerId)||new Map()).values()];
@@ -2078,6 +2436,8 @@ function toast(msg,ms){const box=$('#toasts'),t=document.createElement('div');t.
  box.appendChild(t);
  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
 /** One toast for a batch of messages, e.g. what came in while away. */
+/** A count as a badge shows it: blank for none, capped at 99+, "+" while more are on the way. */
+function count(n,more){return !n?'':n>99?'99+':n+(more?'+':'')}
 function summary(n,chats){toast(n+' new message'+(n>1?'s':'')+(chats>1?' in '+chats+' chats':''),5000)}
 const store={
  get(k){try{return localStorage.getItem('marmot.'+k)}catch(e){return null}},
@@ -2098,46 +2458,68 @@ const EMOJI=[
  ['💡','Objects',`⌚ watch,📱 phone mobile,💻 laptop computer,⌨️ keyboard,🖥️ desktop,🖨️ printer,🖱️ mouse computer,💾 floppy disk save,💿 cd,📷 camera photo,📸 camera flash,🎥 movie camera,📺 tv,📻 radio,🎙️ studio mic,⏰ alarm clock,⏳ hourglass,🔋 battery,🔌 plug,💡 bulb idea,🔦 flashlight,🕯️ candle,🧯 extinguisher,💸 money wings,💵 dollar,💰 money bag,💳 credit card,💎 gem diamond,⚖️ scales,🔧 wrench,🔨 hammer,🛠️ tools,⛏️ pick,🔩 nut bolt,⚙️ gear,🧲 magnet,🔫 water pistol,💣 bomb,🔪 knife,🗡️ dagger,⚔️ swords,🛡️ shield,🔮 crystal ball,🧿 nazar,💈 barber,🔭 telescope,🔬 microscope,💊 pill,💉 syringe,🧬 dna,🧪 test tube,🌡️ thermometer,🧹 broom,🧻 toilet paper,🧼 soap,🔑 key,🗝️ old key,🚪 door,🛋️ couch,🛏️ bed,🧸 teddy bear,🖼️ framed picture,🛍️ shopping bags,🛒 cart,✉️ envelope,📧 email,📨 incoming envelope,📦 package box,📫 mailbox,📝 memo note,📄 page,📅 calendar,📆 tear off calendar,🗒️ notepad,📊 bar chart,📈 chart up,📉 chart down,📋 clipboard,📌 pin,📍 round pin,📎 paperclip,✂️ scissors,🗑️ wastebasket,🔒 lock,🔓 unlock,🔏 lock pen,🔐 lock key,📚 books,📖 open book,🔗 link,🧷 safety pin,✏️ pencil,🖊️ pen,🖍️ crayon`],
  ['❤️','Symbols',`❤️ red heart love,🧡 orange heart,💛 yellow heart,💚 green heart,💙 blue heart,💜 purple heart,🖤 black heart,🤍 white heart,🤎 brown heart,💔 broken heart,❣️ heart exclamation,💕 two hearts,💞 revolving hearts,💓 beating heart,💗 growing heart,💖 sparkling heart,💘 cupid,💝 heart ribbon,💯 hundred 100,💢 anger,💥 boom collision,💫 dizzy star,💦 sweat drops,💨 dash,💬 speech bubble,💭 thought bubble,🗯️ anger bubble,💤 zzz sleep,✅ check mark yes,☑️ ballot check,✔️ check,❌ cross no,❎ cross button,➕ plus,➖ minus,➗ divide,✖️ multiply,❓ question,❔ white question,❗ exclamation,❕ white exclamation,‼️ double exclamation,⁉️ interrobang,⚠️ warning,🚫 prohibited,⛔ no entry,🔞 18,📵 no phones,🔴 red circle,🟠 orange circle,🟡 yellow circle,🟢 green circle,🔵 blue circle,🟣 purple circle,⚫ black circle,⚪ white circle,🟥 red square,🟩 green square,🟦 blue square,⬛ black square,⬜ white square,🔶 orange diamond,🔷 blue diamond,🔺 red triangle up,🔻 red triangle down,⬆️ up arrow,⬇️ down arrow,⬅️ left arrow,➡️ right arrow,↩️ return,🔄 counterclockwise refresh,🔁 repeat,🔀 shuffle,▶️ play,⏸️ pause,⏹️ stop,⏺️ record,⏩ fast forward,⏪ rewind,🔊 loud speaker,🔇 mute,🔔 bell,🔕 no bell,📣 megaphone,♻️ recycle,⚜️ fleur de lis,🔰 beginner,✳️ eight spoked,❇️ sparkle,©️ copyright,®️ registered,™️ trademark,🆗 ok button,🆕 new,🆒 cool button,🆓 free,🆘 sos,🏳️ white flag,🏴 black flag,🏁 checkered flag,🚩 red flag,🏳️‍🌈 rainbow flag pride,🏴‍☠️ pirate flag`]
 ].map(([icon,name,list])=>({icon,name,list:list.split(',').map(x=>{const i=x.indexOf(' ');return {e:x.slice(0,i),k:x.slice(i+1)}})}));
+/** :shortcodes: for the emoji above, from their keywords: each word on its own (:sob:, :skull:),
+    and the first two and all of them joined (:thumbs_up:, :slight_smile:). The first emoji to
+    claim a name keeps it; a few common names are pinned to the emoji people expect. */
+const ECODE=(()=>{
+ const c=new Map([['heart','❤️'],['+1','👍'],['-1','👎'],['thumbsup','👍'],['thumbsdown','👎'],['100','💯'],['smile','😄'],['laughing','😆'],['cry','😢']]);
+ for(const cat of EMOJI)for(const x of cat.list){
+  const w=x.k.split(' ').filter(Boolean);
+  for(const n of [w.join('_'),w.slice(0,2).join('_')].concat(w))if(n&&!c.has(n))c.set(n,x.e)}
+ return c})();
+/** Turns every :shortcode: that names an emoji into that emoji; anything else is left as typed. */
+const emojify=t=>t.replace(/:([a-z][a-z0-9_]{0,31}|[+-]1|100):/gi,(all,n)=>ECODE.get(n.toLowerCase())||all);
 
 const ICON={
  smile:svg('<circle cx="8" cy="8" r="6"/><path d="M5.5 9.75c.6.8 1.45 1.25 2.5 1.25s1.9-.45 2.5-1.25"/><path d="M6 6.25v.5M10 6.25v.5"/>'),
  image:svg('<rect x="2" y="3" width="12" height="10"/><path d="m2.5 11.5 3.5-3.5 3 3 2-2 2.5 2.5"/><path d="M10.25 5.75h.5v.5h-.5z"/>'),
  reply:svg('<path d="M6.5 3.5 2.5 7.5l4 4"/><path d="M3 7.5h5.5a5 5 0 0 1 5 5v.5"/>'),
+ react:svg('<path d="M13.5 8A5.5 5.5 0 1 1 8 2.5"/><path d="M5.75 9.5c.55.7 1.3 1.05 2.25 1.05s1.7-.35 2.25-1.05"/><path d="M6 6.25v.5M10 6.25v.5"/><path d="M12.5 1.5v4M10.5 3.5h4"/>'),
  trash:svg('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.75 7v4.5M9.25 7v4.5"/>'),
  x:svg('<path d="M4 4l8 8M12 4l-8 8"/>')};
 
 const UI={
- S:{screen:'messages',chat:null,dc:null,peer:null,set:false,filter:'',paneKey:'',reply:null,unveiled:new Set(),
+ S:{screen:'messages',chat:null,dc:null,last:'chat',side:null,sideErr:'',set:false,pf:null,filter:'',paneKey:'',reply:null,unveiled:new Set(),
     global:{q:null,users:[],more:false,loading:false,err:'',seq:0},adm:null},
  _raf:0,
  /** Replays el's entrance animation: for when what it shows changes, not for every re-render. */
  enter(el){el.classList.remove('enter');void el.offsetWidth;el.classList.add('enter')},
- render(){if(this._raf)return;this._raf=requestAnimationFrame(()=>{this._raf=0;this.renderNow()})},
- renderNow(){this.renderRail();this.renderCol();this.renderPane();this.renderStatus()},
- /** The conversation open on the current screen: a Discord channel on Discord, a person on Messages. */
- cur(){return this.S.screen==='discord'?this.S.dc:this.S.screen==='messages'?this.S.chat:null},
+ render(){if(this._gp)this.renderGroupPanel();clearTimeout(this._lazy);this._lazy=0;if(this._raf)return;this._raf=requestAnimationFrame(()=>{this._raf=0;this.renderNow()})},
+ /** A redraw for a change in the data: while catching up, at most a few a second, so the
+     screen is not redrawn for every one of hundreds of messages. What the user does still
+     redraws at once (render). */
+ renderSoon(){
+  if(!M.catchingUp())return this.render();
+  if(!this._lazy&&!this._raf)this._lazy=setTimeout(()=>{this._lazy=0;this.render()},250)},
+ renderNow(){this.renderRail();this.renderCol();this.renderPane();this.renderSide();this.renderStatus();this.refreshHover()},
+ /** The conversation open on the current screen: a Discord channel on Discord, a person on Messages.
+     Peers keeps showing whichever was open last, beside the list (on a narrow screen, only the list). */
+ cur(){const s=this.S.screen;
+  if(s==='peers')return this.narrow()?null:this.S.last==='dc'?this.S.dc:this.S.chat;
+  return s==='discord'?this.S.dc:s==='messages'?this.S.chat:null},
+ narrow(){return matchMedia('(max-width:820px)').matches},
 
  renderRail(){
   document.querySelectorAll('#nav button,#tabs button').forEach(b=>
    b.dataset.screen===this.S.screen?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'));
-  let unread=0,dcUnread=0;M.unread.forEach((n,id)=>isDiscord(id)?dcUnread+=n:unread+=n);
+  let unread=0,dcUnread=0;M.unread.forEach((n,id)=>{n=this.shownUnread(id,n);isDiscord(id)?dcUnread+=n:unread+=n});
   const requests=[...M.peers.values()].filter(p=>p.state==='incoming').length;
-  $('#navUnread').textContent=$('#tabUnread').textContent=unread||'';
-  $('#navPeers').textContent=$('#tabPeers').textContent=requests||'';
-  $('#navDc').textContent=$('#tabDc').textContent=dcUnread||'';
+  $('#navUnread').textContent=$('#tabUnread').textContent=count(unread);
+  $('#navPeers').textContent=$('#tabPeers').textContent=count(requests);
+  $('#navDc').textContent=$('#tabDc').textContent=count(dcUnread);
   const dcOn=!!M.me&&(M.discordEnabled||M.links.size>0);
   $('#navDiscord').classList.toggle('hidden',!dcOn);$('#tabDiscord').classList.toggle('hidden',!dcOn);
   $('#navAdmin').classList.toggle('hidden',!M.staff);$('#tabAdmin').classList.toggle('hidden',!M.staff);
   if(!M.staff&&this.S.screen==='admin'){this.S.screen='messages';this.S.adm=null}
   const total=unread+requests+dcUnread,vc=M.voice.call;
-  document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+total+') ':'')+'Marmot';
+  document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+count(total)+') ':'')+'Marmot';
   if(M.me){
-   this.setAv($('#meAv'),M.me.userId,M.me.username);$('#meName').textContent=M.me.username;
-   $('#meFp').textContent='id '+M.me.userId.slice(0,16)}
+   this.setAv($('#meAv'),M.me.userId,M.me.username);$('#meName').textContent=M.displayName(M.me.userId);
+   $('#meFp').textContent='@'+M.me.username}
   else{$('#meAv').textContent='··';$('#meName').textContent='signed out';$('#meFp').textContent=''}
-  const live=M.wsState==='live';
-  $('#meLive').className='live'+(live?'':(M.token?' warn':' off'));
-  $('#meStatus').textContent=live?'online':(M.token?'reconnecting…':'offline');
+  const live=M.wsState==='live',pr=M.me?M.presence(M.me.userId):'offline',sx=M.me?M.status(M.me.userId):'';
+  $('#meLive').className='live'+(!live?(M.token?' warn':' off'):{idle:' warn',dnd:' bad',invisible:' off'}[pr]||'');
+  $('#meStatus').textContent=live?this.PRES[pr]+(sx?' · '+sx:''):(M.token?'reconnecting…':'offline');
   document.querySelectorAll('#themeSeg button').forEach(b=>
    b.setAttribute('aria-pressed',String(b.dataset.themeSet===document.documentElement.dataset.theme)))},
 
@@ -2148,18 +2530,27 @@ const UI={
   if(M.wsState==='live'){dot.className='';txt.textContent='connected · '+host}
   else{dot.className='bad';txt.textContent=(M.wsState==='connecting'?'connecting · ':'disconnected · ')+host}},
 
+ /** Sets a list's rows, updating the ones that stay in place instead of rebuilding them all.
+     A row replaced between pressing and releasing the mouse never gets the click, and while
+     messages pour in (catching up) the list is redrawn many times a second. */
+ fill(rows,html){
+  if(rows.innerHTML===html)return;
+  const d=n=>n.dataset;
+  this.patch(rows,html,n=>{const s=d(n);return s.chat||s.dc||s.dcpub||s.peer||s.admSel||s.act||n.className+'|'+n.textContent})},
  renderCol(){
   const rows=$('#rows'),scr=this.S.screen;
   if(this._colScreen!==scr){if(this._colScreen)this.enter(rows);this._colScreen=scr}
-  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord',admin:'Admin'}[scr]||'Messages';
+  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord',admin:'Staff'}[scr]||'Messages';
   $('#colAction').textContent=scr==='peers'?'+ ADD':scr==='discord'?'+ JOIN':'+ NEW';
   $('#colAction').classList.toggle('hidden',scr==='settings'||scr==='admin');
   const search=$('#search');
   search.classList.toggle('hidden',scr==='settings');
   search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':scr==='admin'?'search accounts…':'search conversations…';
   if(scr==='settings'){
-   rows.innerHTML='<button class="row" data-act="open-settings" aria-current="true"><div class="row-main"><div class="row-name">Account &amp; security</div>'+
-    '<div class="row-sub">identity, discovery, chat filter, connection, session</div></div></button>';
+   const sec=this.S.set||'profile',row=(v,name,sub)=>'<button class="row" data-act="open-settings" data-v="'+v+'"'+(sec===v?' aria-current="true"':'')+'>'+
+    '<div class="row-main"><div class="row-name">'+name+'</div><div class="row-sub">'+sub+'</div></div></button>';
+   rows.innerHTML=row('profile','Profile','customize your profile')+
+    row('account','Account &amp; security','security and account settings');
    return}
   if(!M.me){rows.innerHTML='';return}
   if(scr==='peers')return this.renderPeers(rows);
@@ -2167,8 +2558,8 @@ const UI={
   if(scr==='admin')return this.renderAdminCol(rows);
   const f=this.S.filter.toLowerCase();
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
-  rows.innerHTML=list.length?list.map(c=>{
-   const p=M.peer(c.id),n=M.unread.get(c.id)||0,t=this.thread(c.id),l=t[t.length-1],grp=isGroup(c.id);
+  this.fill(rows,list.length?list.map(c=>{
+   const p=M.peer(c.id),{l,n,more}=this.rowState(c.id),grp=isGroup(c.id);
    const sub=l?(l.dir==='out'?'you: ':l.dir==='sys'?'· ':l.author?l.author+': ':l.from?M.displayName(l.from)+': ':'')+(l.deleted?'message deleted':this.gist(c.id,l)):(grp?'no messages yet · '+this.memberCount(c.id):'no messages yet');
    return '<button class="row" data-chat="'+esc(c.id)+'"'+(c.id===this.S.chat?' aria-current="true"':'')+'>'+
     this.av(c.id,'av-34')+
@@ -2176,15 +2567,42 @@ const UI={
     (p.verified?'<span class="chip ok">VERIFIED</span>':'')+(isDiscord(c.id)?'<span class="chip dc">DISCORD</span>':'')+
     (grp?'<span class="chip">'+(M.group(c.id)?'GROUP':'LEFT')+'</span>':'')+'</div>'+
     '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
-    '<div class="row-right"><div class="time">'+esc(shortTime(l?l.ts:c.ts))+'</div>'+(n?'<div class="badge'+(M.pinged.has(c.id)?' at" title="You were mentioned">@ ':'">')+n+'</div>':'')+'</div></button>'}).join('')
-   :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO START A GROUP')+'</div>'},
+    '<div class="row-right"><div class="time">'+esc(shortTime(l?l.ts:c.ts))+'</div>'+(n?'<div class="badge'+(M.pinged.has(c.id)?' at" title="You were mentioned">@ ':'">')+count(n,more)+'</div>':'')+'</div></button>'}).join('')
+   :'<div class="grouplbl">'+(f?'NO MATCHES':'NO CONVERSATIONS YET<br>MESSAGE A FRIEND, OR USE + NEW TO START A GROUP')+'</div>')},
+ /** What a chat's row in the list shows: its last message (l) and unread count (n).
+     When a pile of messages comes in for a chat that is not open (catching up), the row
+     stops at the first of them, with its count frozen and marked "+" (more) while the rest
+     are still being worked through. It stays on that message until the chat is opened,
+     or until something newer arrives once the catch-up is over. */
+ rowState(id){
+  const t=this.thread(id),l=t[t.length-1]||null,n=M.unread.get(id)||0,lid=l&&l.id;
+  const busy=M.catchingUp(),seen=this._rowLast,prev=seen.get(id);seen.set(id,lid);
+  let s=this._snap.get(id);
+  // the row stops at the first unread message, however far the catch-up has got by the time
+  // the list is drawn (right after logging in, that is often well into it)
+  if(!s&&busy&&n&&lid!==prev&&id!==this.cur()&&l&&l.dir!=='out')
+   this._snap.set(id,s={l:t[Math.max(0,t.length-n)]||l,n,done:undefined});
+  if(!s)return {l,n,more:false};
+  if(!busy){
+   // first look after the catch-up: remember where it ended; anything past that is news
+   if(s.done===undefined)s.done=lid;
+   else if(lid!==s.done){this._snap.delete(id);return {l,n,more:false}}}
+  return {l:s.l,n:busy?s.n:n,more:busy}},
+ /** The unread count the list shows for id (see rowState), for the totals in the nav. */
+ shownUnread(id,n){const s=this._snap.get(id);return s&&M.catchingUp()?s.n:n},
+ _snap:new Map(),_rowLast:new Map(),
  /** An avatar tile: the picture if there is one, else initials (# for a Discord channel). */
- av(id,cls,name,attrs){return '<div class="av '+cls+(isGroup(id)?' grp':'')+'"'+(attrs||'')+'>'+this.avInner(id,name)+'</div>'},
- avInner(id,name){
+ av(id,cls,name,attrs){return '<div class="av '+cls+(isGroup(id)?' grp':'')+'"'+(attrs||'')+'>'+this.avInner(id,name,!/\bmav\b/.test(cls))+'</div>'},
+ /** The inside of an avatar tile; with `dot`, the corner square showing the person's presence, when it is known. */
+ avInner(id,name,dot){
   if(isDiscord(id))return '#';
   const src=isGroup(id)?M.groupIcon(id):M.avatar(id);
-  return src?'<img src="'+esc(src)+'" alt="">':esc(initials(name||M.displayName(id)))},
- setAv(el,id,name){const h=this.avInner(id,name);if(el&&el.innerHTML!==h)el.innerHTML=h},
+  const n=name||M.displayName(id),pr=dot&&!isGroup(id)&&M.presence(id);
+  return (src?'<img src="'+esc(src)+'" alt="">':esc(initials(/[a-z0-9]/i.test(n)?n:(M.username(id)||n))))+
+   (pr?'<i class="pdot '+pr+'" title="'+this.PRES[pr]+'"></i>':'')},
+ setAv(el,id,name){const h=this.avInner(id,name,true);if(el&&el.innerHTML!==h)el.innerHTML=h},
+ /** What presence reads as, in words. */
+ PRES:{online:'online',idle:'idle',dnd:'do not disturb',offline:'offline',invisible:'invisible'},
  memberCount(id){const g=M.group(id),n=g?g.members.length:0;return n+' member'+(n===1?'':'s')},
 
  /* ---------- discord ---------- */
@@ -2210,34 +2628,38 @@ const UI={
   const left=M.conversations().filter(c=>isDiscord(c.id)&&!M.link(c.id)&&c.last);
   if(left.length&&!f)html+='<div class="grouplbl">LEFT · '+left.length+'</div>'+left.map(c=>this.dcRow(c.id,null)).join('');
   if(!html)html='<div class="grouplbl">'+(f?'NO MATCHES':'NO DISCORD CHANNELS YET<br>ASK A DISCORD MODERATOR FOR AN INVITE CODE,<br>THEN USE + JOIN')+'</div>';
-  rows.innerHTML=html},
+  this.fill(rows,html)},
  pubRow(l){
   return '<button class="row" data-dcpub="'+esc(l.linkId)+'">'+
    '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">#'+esc(l.channel)+'</span><span class="chip dc">PUBLIC</span></div>'+
    '<div class="row-sub">'+esc(l.guild)+' · '+l.members+' on Marmot</div></div>'+
    '<div class="row-right"><span class="chip">JOIN</span></div></button>'},
  dcRow(id,l){
-  const t=this.thread(id),last=t[t.length-1],n=M.unread.get(id)||0;
+  const {l:last,n,more}=this.rowState(id);
   const sub=last?(last.dir==='out'?'you: ':last.dir==='sys'?'· ':last.author?last.author+': ':'')+(last.deleted?'message deleted':this.gist(id,last)):(l?'no messages yet':'');
   return '<button class="row" data-dc="'+esc(id)+'"'+(id===this.S.dc?' aria-current="true"':'')+'>'+
    '<div class="av av-34">#</div><div class="row-main"><div class="row-top"><span class="row-name">'+esc(M.displayName(id))+'</span></div>'+
    '<div class="row-sub">'+esc(sub.slice(0,120))+'</div></div>'+
-   '<div class="row-right"><div class="time">'+esc(last?shortTime(last.ts):'')+'</div>'+(n?'<div class="badge'+(M.pinged.has(id)?' at" title="You were mentioned">@ ':'">')+n+'</div>':'')+'</div></button>'},
+   '<div class="row-right"><div class="time">'+esc(last?shortTime(last.ts):'')+'</div>'+(n?'<div class="badge'+(M.pinged.has(id)?' at" title="You were mentioned">@ ':'">')+count(n,more)+'</div>':'')+'</div></button>'},
 
  /* ---------- peers ---------- */
  STATE:{friend:['FRIEND','ok'],incoming:['WANTS TO BE FRIENDS','warn'],outgoing:['REQUEST SENT',''],blocked:['BLOCKED','bad'],none:['NOT CONNECTED','']},
  peerRow(p,sub){
-  const st=M.relation(p.userId),[label,cls]=st==='incoming'?['REQUEST','warn']:this.STATE[st];
-  return '<button class="row" data-peer="'+esc(p.userId)+'"'+(p.userId===this.S.peer?' aria-current="true"':'')+'>'+
-   this.av(p.userId,'av-34',p.username)+
-   '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(p.username)+'</span>'+this.staffTag(p.userId)+
-   (M.peer(p.userId).verified?'<span class="chip ok">VERIFIED</span>':'')+'</div>'+
+  const id=p.userId,st=M.relation(id),[label,cls]=st==='incoming'?['REQUEST','warn']:this.STATE[st];
+  const user=M.username(id)||p.username,name=M.displayName(id),sx=M.status(id);
+  // a custom status takes the place of the usual line; a display name brings the @username along
+  sub=(name!==user?'@'+user+' · ':'')+(sx||sub);
+  return '<button class="row" data-peer="'+esc(id)+'"'+(id===this.S.side?' aria-current="true"':'')+'>'+
+   this.av(id,'av-34',user)+
+   '<div class="row-main"><div class="row-top"><span class="row-name">'+esc(name)+'</span>'+this.staffTag(id)+
+   (M.peer(id).verified?'<span class="chip ok">VERIFIED</span>':'')+'</div>'+
    '<div class="row-sub">'+esc(sub)+'</div></div>'+
    (st==='none'?'':'<div class="row-right"><span class="chip '+cls+'">'+label+'</span></div>')+'</button>'},
  renderPeers(rows){
   const f=this.S.filter.trim().toLowerCase(),G=this.S.global;
-  const mine=[...M.peers.values()].filter(p=>!f||p.username.toLowerCase().includes(f))
-   .sort((a,b)=>a.username.localeCompare(b.username));
+  const shown=p=>M.displayName(p.userId).toLowerCase();
+  const mine=[...M.peers.values()].filter(p=>!f||(M.username(p.userId)||p.username).toLowerCase().includes(f)||shown(p).includes(f))
+   .sort((a,b)=>shown(a).localeCompare(shown(b)));
   const by=s=>mine.filter(p=>p.state===s);
   const since=p=>p.since?new Date(p.since).toLocaleDateString():'';
   let html='';
@@ -2254,7 +2676,7 @@ const UI={
   if(G.more)html+='<button class="tbtn more" data-act="global-more">LOAD MORE</button>';
   html+='<div class="grouplbl note2">'+(M.discoverable?'YOU ARE LISTED IN GLOBAL':'YOU ARE HIDDEN FROM GLOBAL')+' · <button data-act="goto-discovery" style="text-decoration:underline">CHANGE</button></div>';
   group('BLOCKED',by('blocked'),()=>'cannot message or request you');
-  rows.innerHTML=html},
+  this.fill(rows,html)},
  /** Global list for the current search; stale responses are ignored. */
  async loadGlobal(more){
   const G=this.S.global,q=this.S.filter.trim();
@@ -2271,33 +2693,185 @@ const UI={
  peerInfo(id){
   return M.peers.get(id)||this.S.global.users.find(u=>u.userId===id)||{userId:id,username:M.displayName(id)}},
 
- peerPaneHTML(id){
-  const p=this.peerInfo(id),st=M.relation(id),pin=M.peer(id),name=esc(p.username);
-  const notes={
-   friend:'You are friends. Either of you can message the other, and remove the friendship at any time.',
-   incoming:name+' wants to be friends. Accept to let each of you message the other.',
-   outgoing:'Your request is waiting for '+name+'. You can message once they accept.',
-   blocked:'You blocked '+name+'. They cannot message you or send you requests, and they no longer see you in global.',
-   none:'Send a friend request. Nobody can message you, or be messaged by you, without one.'};
-  const b=(act,label,cls)=>'<button class="'+(cls||'tbtn')+'" data-peer-act="'+act+'">'+label+'</button>';
-  const acts={
-   friend:b('message','MESSAGE','send')+b('call','CALL')+(pin.ik?b('verify','VERIFY'):'')+b('remove','REMOVE FRIEND','tbtn danger')+b('block','BLOCK','tbtn danger'),
-   incoming:b('accept','ACCEPT','send')+b('remove','DECLINE')+b('block','BLOCK','tbtn danger'),
-   outgoing:b('remove','CANCEL REQUEST')+b('block','BLOCK','tbtn danger'),
+ /** A profile card: the accent banner, picture with presence, names, status and bio. `mini` is the
+     hover card; `draft` shows unsaved changes to this account's own profile (the settings preview). */
+ cardHTML(id,o){
+  o=o||{};
+  const me=!!M.me&&id===M.me.userId,pf=o.draft||M.profile(id)||{},user=M.username(id)||pf.username||'';
+  const name=(o.draft?pf.display:'')||(o.draft?'':M.displayName(id))||user;
+  const pr=M.presence(id),sx=o.draft?pf.status:M.status(id);
+  let h='<div class="pcard'+(o.mini?' mini':'')+'"'+(pf.accent?' style="--pacc:'+esc(pf.accent)+'"':'')+'><div class="banner"></div>'+
+   '<div class="pc-top">'+this.av(id,o.mini?'av-64':'av-80',user)+'</div><div class="pc-body">'+
+   '<div class="pc-name">'+esc(name)+'</div>'+
+   '<div class="pc-user"><span>@'+esc(user)+'</span>'+this.staffTag(id)+(M.peer(id).verified?' <span class="chip ok">VERIFIED</span>':'')+(me?' <span class="chip">YOU</span>':'')+'</div>'+
+   this.tagChip(id,o.draft?(me?M.myTag():null):pf.tag)+
+   (pr?'<div class="pc-pres"><i class="pi '+pr+'"></i>'+this.PRES[pr]+'</div>':'')+
+   (sx?'<div class="pc-status">'+esc(sx)+'</div>':'')+
+   (o.acts?'<div class="pc-acts">'+o.acts+'</div>':'');
+  if(pf.bio)h+='<div class="pc-sec"><div class="lbl">ABOUT ME</div><div class="pc-bio">'+esc(pf.bio)+'</div></div>';
+  if(!o.mini&&!o.more&&pf.created)h+='<div class="pc-sec"><div class="lbl">MEMBER SINCE</div><div class="pc-bio">'+esc(new Date(pf.created).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}))+'</div></div>';
+  if(o.more)h+=o.more;
+  if(o.foot)h+='<div class="pc-foot">'+o.foot+'</div>';
+  return h+'</div></div>'},
+
+ /** The profile panel on the right: someone's card, what can be done with them, and the details. */
+ renderSide(){
+  const el=$('#side'),id=M.me?this.S.side:null;
+  if(!id){if(!el.classList.contains('hidden')){el.classList.add('hidden');el.innerHTML=''}this._sideFor=null;this._sideHtml='';return}
+  const html=this.sideHTML(id);
+  if(this._sideFor!==id){
+   this._sideFor=id;this._sideHtml=html;el.innerHTML=html;
+   el.classList.remove('hidden');el.style.animation='none';void el.offsetWidth;el.style.animation='';return}
+  if(this._sideHtml===html)return;
+  const body=el.querySelector('.side-body'),top=body?body.scrollTop:0;
+  this._sideHtml=html;el.innerHTML=html;
+  const b2=el.querySelector('.side-body');if(b2)b2.scrollTop=top},
+ sideHTML(id){
+  const me=id===M.me.userId,st=me?'none':M.relation(id),pin=M.peer(id),r=M.peers.get(id);
+  const b=(act,label,cls)=>'<button class="'+(cls||'tbtn')+'" data-peer-act="'+act+'" data-id="'+esc(id)+'">'+label+'</button>';
+  // the main actions sit under the name; the ones that end something sit at the foot of the card
+  const acts=me?'<button class="send" data-act="me-open">EDIT PROFILE</button>':{
+   friend:b('message','MESSAGE','send')+b('call','CALL')+(pin.ik?b('verify','VERIFY'):''),
+   incoming:b('accept','ACCEPT','send')+b('remove','DECLINE'),
+   outgoing:b('remove','CANCEL REQUEST'),
    blocked:b('unblock','UNBLOCK'),
-   none:b('request','ADD FRIEND','send')+b('block','BLOCK','tbtn danger')}[st];
-  const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
-  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
-   this.av(id,'av-34',p.username)+'<div style="min-width:0"><div class="pane-title">'+name+this.staffTag(id)+
-   (pin.verified?' <span class="chip ok">VERIFIED</span>':'')+'</div><div class="meta">'+this.STATE[st][0].toLowerCase()+'</div></div></div>'+
-   '<div class="sheet"><div class="sec"><div class="btnrow" style="margin-top:0">'+acts+'</div>'+
-   '<div class="err" id="peerErr"></div></div>'+
-   '<div class="sec"><h3>Identity</h3>'+kv('username',p.username)+kv('user id',id)+
-   (p.since&&st==='friend'?kv('friends since',new Date(p.since).toLocaleString()):'')+
-   kv('keys',pin.ik?(pin.verified?'pinned · safety number verified':'pinned · not yet verified'):'not pinned yet')+'</div></div>'},
+   none:b('request','ADD FRIEND','send')}[st];
+  const foot=me?'':(st==='friend'?b('remove','REMOVE FRIEND','tbtn danger'):'')+(st==='blocked'?'':b('block','BLOCK','tbtn danger'));
+  const pf=M.profile(id)||{},day=t=>new Date(t).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+  const kv=(k,v,mono)=>'<div class="pc-kv"><b>'+k+'</b><span'+(mono?' class="mono"':'')+'>'+esc(v)+'</span></div>';
+  const more='<div class="pc-sec"><div class="lbl">DETAILS</div>'+
+   (pf.created?kv('member since',day(pf.created)):'')+
+   (r&&r.since&&st==='friend'?kv('friends since',day(r.since)):'')+
+   (me||st==='friend'?'':kv('relationship',this.STATE[st][0].toLowerCase()))+
+   (me?'':kv('keys',pin.ik?(pin.verified?'verified':'not yet verified'):'not pinned yet'))+
+   kv('user id',id,true)+'</div>'+
+   (this.S.sideErr?'<div class="err">'+esc(this.S.sideErr)+'</div>':'');
+  return '<div class="side-head"><div class="lbl">'+(me?'YOUR PROFILE':'PROFILE')+'</div>'+
+   '<button class="cbtn" data-act="side-close" title="Close" aria-label="Close profile">'+ICON.x+'</button></div>'+
+   '<div class="side-body">'+this.cardHTML(id,{acts,more,foot})+'</div>'},
+ closeSide(){this.S.side=null;this.S.sideErr='';this.render()},
+
+ /* ---- the mini profile on hover ---- */
+ /** Hovering anything marked data-pf (a picture beside a message, a name) shows that person's
+     card after a moment; moving between cards is quicker. A click opens the full profile. */
+ hoverWant(el){
+  clearTimeout(this._hcHide);
+  const c=$('#hovercard');
+  if(this._hc&&this._hc.el===el&&!c.hidden)return;
+  if(this._hcPend===el)return;
+  clearTimeout(this._hcShow);this._hcPend=el;
+  this._hcShow=setTimeout(()=>{this._hcPend=null;this.hoverShow(el)},c.hidden?380:90)},
+ hoverShow(el){
+  const id=el.dataset.pf,c=$('#hovercard');
+  if(!id||!el.isConnected||!M.me||isDiscord(id)||isGroup(id))return;
+  this._hc={id,el};this._hcHtml=this.cardHTML(id,{mini:true});
+  c.dataset.pf=id;c.innerHTML=this._hcHtml;
+  if(!c.hidden){c.hidden=true;void c.offsetWidth}
+  c.hidden=false;this.placeHover()},
+ placeHover(){
+  const c=$('#hovercard'),h=this._hc;if(!h||c.hidden)return;
+  const r=h.el.getBoundingClientRect(),w=c.offsetWidth,ht=c.offsetHeight,vw=innerWidth,vh=innerHeight;
+  let x=r.right+10;
+  if(x+w>vw-8)x=r.left-10-w;
+  if(x<8)x=Math.max(8,Math.min(vw-w-8,r.left));
+  c.style.left=x+'px';c.style.top=Math.max(8,Math.min(vh-ht-8,r.top-14))+'px'},
+ hoverLeave(){
+  clearTimeout(this._hcShow);this._hcPend=null;
+  if(!$('#hovercard').hidden){clearTimeout(this._hcHide);this._hcHide=setTimeout(()=>this.hoverHide(),200)}},
+ hoverHide(){
+  clearTimeout(this._hcShow);clearTimeout(this._hcHide);this._hcPend=null;
+  const c=$('#hovercard');if(c&&!c.hidden){c.hidden=true;c.innerHTML=''}this._hc=null},
+ /** Fills in a hover card whose profile has just arrived (or changed). */
+ refreshHover(){
+  const c=$('#hovercard'),h=this._hc;if(!c||c.hidden||!h)return;
+  const html=this.cardHTML(h.id,{mini:true});
+  if(html!==this._hcHtml){this._hcHtml=html;c.innerHTML=html;this.placeHover()}},
+
+ /* ---- settings → profile ---- */
+ ACCENTS:['#f0a92a','#e5484d','#f76b15','#30a46c','#12a594','#3e63dd','#8e4ec6','#d6409f','#8d8d86'],
+ profileHTML(){
+  const sw=c=>'<button class="sw'+(c?'':' none')+'" data-act="pf-accent" data-v="'+c+'" title="'+(c||'no accent')+'" aria-label="'+(c?'accent '+c:'no accent')+'"'+(c?' style="--c:'+c+'"':'')+'></button>';
+  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Profile</div>'+
+   '<div class="meta">public · not end-to-end encrypted</div></div></div>'+
+   '<div class="sheet"><div class="pgrid"><div>'+
+   '<div class="sec"><h3>Profile picture</h3>'+
+   '<div class="btnrow" style="align-items:center"><div class="av av-64" id="setAv"></div><button class="tbtn" data-act="av-pick">CHANGE PICTURE</button>'+
+   '<button class="tbtn danger" data-act="av-clear" id="avClear">REMOVE</button></div><div class="err" id="avErr"></div></div>'+
+   '<div class="sec"><h3>Display name</h3>'+
+   '<input class="inp" id="pfDisplay" maxlength="'+PROFMAX.display+'" autocomplete="off" style="max-width:360px"></div>'+
+   '<div class="sec"><h3>Status</h3>'+
+   '<div class="lbl">SHOW ME AS</div><div class="btnrow" style="margin-top:0">'+
+   [['auto','online','ONLINE'],['dnd','dnd','DO NOT DISTURB'],['invisible','offline','INVISIBLE']].map(([v,c,l])=>
+    '<button class="tbtn" data-act="pf-presence" data-v="'+v+'"><i class="pi '+c+'"></i>'+l+'</button>').join('')+'</div>'+
+   '<div class="note" id="pfPresNote" style="margin:8px 0 0"></div><div class="err" id="pfPresErr" style="margin-bottom:6px"></div>'+
+   '<div class="lbl">CUSTOM STATUS</div><input class="inp" id="pfStatus" maxlength="'+PROFMAX.status+'" placeholder="what are you up to?" autocomplete="off" style="max-width:360px"></div>'+
+   '<div class="sec"><h3>About me</h3>'+
+   '<textarea class="inp" id="pfBio" maxlength="'+PROFMAX.bio+'" rows="4" placeholder="a few words about yourself" style="max-width:480px"></textarea><div class="count" id="pfBioCount"></div></div>'+
+   '<div class="sec"><h3>Accent color</h3><div class="swatches">'+
+   ['',...this.ACCENTS].map(sw).join('')+'<label class="tbtn sw-custom" title="Pick any color">CUSTOM<input type="color" id="pfAccentPick" value="#f0a92a"></label></div></div>'+
+   '<div class="sec"><h3>Group tag</h3><div class="note" style="margin-top:0"></div>'+
+   '<div class="btnrow" id="pfTags"></div><div class="err" id="pfTagErr"></div></div>'+
+   '<div class="btnrow"><button class="send" data-act="pf-save" id="pfSave">SAVE PROFILE</button><button class="tbtn" data-act="pf-reset" id="pfReset">DISCARD CHANGES</button>'+
+   '<span class="hint dirty" id="pfDirty"></span></div><div class="err" id="pfErr"></div>'+
+   '<div class="sec" style="margin-top:34px"><h3>Username</h3><div class="note">You log in with your new username next time. Your old one becomes free for anyone to take.</div>'+
+   '<div class="kv"><b>current</b><span id="pfUserNow"></span></div>'+
+   '<div class="field" style="max-width:360px;margin-top:14px"><div class="lbl">NEW USERNAME</div><input class="inp" id="pfUser" spellcheck="false" autocomplete="off" maxlength="24" placeholder="3-24 letters, digits, . _ -"></div>'+
+   '<div class="field" style="max-width:360px"><div class="lbl">PASSWORD</div><input class="inp" type="password" id="pfUserPass" autocomplete="current-password"></div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="pf-rename">CHANGE USERNAME</button></div><div class="err" id="pfUserErr"></div></div>'+
+   '</div><div class="preview"><div class="lbl">PREVIEW</div><div id="pfPreview"></div></div></div></div>'},
+ /** Puts the saved profile into the form, as the draft to edit. */
+ initProfileForm(){
+  const d=this.S.pf=Object.assign({},M.myProfile);
+  const set=(sel,v)=>{const el=$(sel);if(el)el.value=v||''};
+  set('#pfDisplay',d.display);set('#pfStatus',d.status);set('#pfBio',d.bio);
+  if(d.accent){const pk=$('#pfAccentPick');if(pk)pk.value=d.accent}
+  this.fillProfile()},
+ pfDirty(){
+  const d=this.S.pf,p=M.myProfile;if(!d)return false;
+  return ['display','status','bio'].some(k=>(d[k]||'').trim()!==(p[k]||''))||(d.accent||'')!==(p.accent||'')},
+ fillProfile(){
+  if(!M.me||!$('#pfPreview'))return;
+  const d=this.S.pf||M.myProfile;
+  const pic=$('#setAv');this.setAv(pic,M.me.userId,M.me.username);$('#avClear').classList.toggle('hidden',!M.avatar(M.me.userId));
+  for(const b of document.querySelectorAll('[data-act=pf-presence]'))b.setAttribute('aria-pressed',String(b.dataset.v===M.presenceMode));
+  $('#pfPresNote').textContent={auto:'',dnd:'Notifications and the ringtone are silenced.',invisible:'You appear offline.'}[M.presenceMode];
+  for(const b of document.querySelectorAll('[data-act=pf-accent]'))b.setAttribute('aria-pressed',String(b.dataset.v===(d.accent||'')));
+  const custom=!!d.accent&&!this.ACCENTS.includes(d.accent);
+  $('.sw-custom').setAttribute('aria-pressed',String(custom));
+  $('#pfDisplay').placeholder=M.me.username;
+  $('#pfUserNow').textContent='@'+M.me.username;
+  $('#pfBioCount').textContent=(d.bio||'').length+' / '+PROFMAX.bio;
+  const tags=[...M.groups.values()].filter(g=>g.tag&&g.tag.vis!=='off'&&g.tag.text),cur=M.myTag(),cg=cur&&cur.groupId;
+  const th=tags.length?'<button class="tbtn" data-act="pf-gtag" data-v="" aria-pressed="'+!cg+'">NONE</button>'+
+   tags.map(g=>'<button class="tbtn" data-act="pf-gtag" data-v="'+esc(g.groupId)+'" aria-pressed="'+(cg===g.groupId)+'" title="'+esc(M.displayName('g:'+g.groupId))+'">'+
+    esc(tagLabel(g.tag))+' · '+esc(M.displayName('g:'+g.groupId))+'</button>').join('')
+   :'<div class="note" style="margin:0">None of your groups has a tag turned on. A group’s moderators can set one in MANAGE → SETTINGS.</div>';
+  const pt=$('#pfTags');if(pt&&pt.innerHTML!==th)pt.innerHTML=th;
+  const dirty=this.pfDirty();
+  $('#pfDirty').textContent=dirty?'unsaved changes':'';$('#pfReset').classList.toggle('hidden',!dirty);$('#pfSave').disabled=!dirty;
+  const html=this.cardHTML(M.me.userId,{draft:Object.assign({},d,{display:(d.display||'').trim(),status:(d.status||'').trim(),bio:(d.bio||'').trim()})});
+  if(html!==this._pvHtml){this._pvHtml=html;$('#pfPreview').innerHTML=html}},
+ async saveProfile(btn){
+  const d=this.S.pf,err=$('#pfErr');if(!d)return;
+  err.textContent='';btn.disabled=true;
+  try{await M.setProfile({display:d.display,status:d.status,bio:d.bio,accent:d.accent||null});this.initProfileForm();toast('profile saved')}
+  catch(e){err.textContent=e.message;btn.disabled=false}},
+ async renameMe(btn){
+  const err=$('#pfUserErr'),name=$('#pfUser').value.trim(),pass=$('#pfUserPass').value;
+  err.textContent='';
+  if(!/^[a-zA-Z0-9._-]{3,24}$/.test(name))return void(err.textContent='usernames are 3-24 characters: letters, digits, dot, dash, underscore');
+  if(name===M.me.username)return void(err.textContent='that is already your username');
+  if(!pass)return void(err.textContent='enter your password to change your username');
+  btn.disabled=true;btn.textContent='CHECKING…';
+  try{
+   const u=await M.rename(name,pass);
+   $('#pfUser').value='';$('#pfUserPass').value='';
+   toast('you are now @'+u+' — log in with it next time',8000)}
+  catch(e){err.textContent=e.message}
+  finally{btn.disabled=false;btn.textContent='CHANGE USERNAME'}},
 
  async peerAct(act,id){
-  const name=this.peerInfo(id).username;
+  const name=M.displayName(id);
   if(act==='message')return this.open(id);
   if(act==='call')return this.call(id);
   if(act==='verify')return this.verify(id);
@@ -2307,12 +2881,12 @@ const UI={
      :'Neither of you will be able to message the other until you are friends again. Your chat history stays on this account.',
     act==='block'?'BLOCK':'REMOVE');
    if(!ok)return}
-  const err=$('#peerErr');if(err)err.textContent='';
+  this.S.sideErr='';
   try{
    const p=await M.peerAction(act,id);
    if(act==='accept')toast('you and '+name+' are now friends');
    if(act==='request')toast(p.state==='friend'?'you and '+name+' are now friends':'request sent to '+name)}
-  catch(e){const err=$('#peerErr');if(err)err.textContent=e.message;else toast(e.message)}},
+  catch(e){if(this.S.side===id){this.S.sideErr=e.message;this.render()}else toast(e.message)}},
 
  confirm(title,note,go){
   return new Promise(res=>{
@@ -2325,31 +2899,27 @@ const UI={
  /* ---------- pane ---------- */
  renderPane(){
   const pane=$('#pane'),scr=this.S.screen;
-  const sel=scr==='settings'?this.S.set:scr==='peers'?!!this.S.peer:scr==='admin'?!!(this.S.adm&&this.S.adm.sel):!!this.cur();
+  // on a narrow screen Peers is only ever the list: a profile opens over it
+  const sel=scr==='settings'?!!this.S.set:scr==='peers'?false:scr==='admin'?!!(this.S.adm&&this.S.adm.sel):!!this.cur();
   $('#app').classList.toggle('in-pane',sel);
-  if(scr==='peers'){
-   // no inputs live in this pane, so it is simply rebuilt
-   const pk='peers:'+(this.S.peer||'');
-   if(this.S.paneKey!==pk){this.S.paneKey=pk;this.enter(pane)}
-   pane.innerHTML=this.S.peer?this.peerPaneHTML(this.S.peer):
-    '<div class="empty">'+(M.me?'SELECT A PEER<br>OR ADD ONE BY USERNAME WITH + ADD':'')+'</div>';
-   return}
   if(scr==='admin'){
    // rebuilt only when the selection or its data changes, so half-typed reasons survive other renders
    const A=this.adm(),pk='admin:'+(A.sel||'')+':'+A.v;
    if(this.S.paneKey!==pk){if(!this.S.paneKey.startsWith('admin:'+(A.sel||'')+':'))this.enter(pane);this.S.paneKey=pk;pane.innerHTML=this.adminPaneHTML()}
    return}
-  const chat=this.cur();
-  const key=scr==='settings'?'settings':(scr+':'+(chat||''));
+  const chat=this.cur(),sec=this.S.set||'profile';
+  // a conversation keeps its pane across Messages and Peers, so switching between them does not redraw it
+  const key=scr==='settings'?'settings:'+sec:chat?'conv:'+chat:'empty:'+scr;
   if(key!==this.S.paneKey){
    this.S.paneKey=key;this.enter(pane);
-   if(scr==='settings')pane.innerHTML=this.settingsHTML();
-   else if(!chat)pane.innerHTML='<div class="empty">'+(!M.me?'':scr==='discord'?'SELECT A CHANNEL<br>OR JOIN ONE WITH + JOIN':'SELECT A CONVERSATION<br>OR START ONE WITH + NEW')+'</div>';
+   if(scr==='settings'){pane.innerHTML=sec==='profile'?this.profileHTML():this.settingsHTML();if(sec==='profile')this.initProfileForm()}
+   else if(!chat)pane.innerHTML='<div class="empty">'+(!M.me?'':scr==='discord'?'SELECT A CHANNEL<br>OR JOIN ONE WITH + JOIN':scr==='peers'?'PICK SOMEONE TO SEE THEIR PROFILE<br>OR ADD A FRIEND WITH + ADD':'SELECT A CONVERSATION<br>OR START ONE WITH + NEW')+'</div>';
    else{
+    const dm=!isGroup(chat)&&!isDiscord(chat),pf=dm?' data-pf="'+esc(chat)+'"':'';
     pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
-     '<div class="av av-34" id="chatAv"></div><div style="min-width:0"><div class="pane-title" id="chatName"></div><div class="meta" id="chatMeta"></div></div>'+
+     '<div class="av av-34" id="chatAv"'+pf+'></div><div style="min-width:0"><div class="pane-title" id="chatName"'+pf+'></div><div class="meta" id="chatMeta"></div></div>'+
      '<div class="acts" id="chatActs">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
-      :isGroup(chat)?(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members">MEMBERS</button><button class="tbtn" data-act="g-icon">ICON</button><button class="tbtn" data-act="g-rename">RENAME</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
+      :isGroup(chat)?(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members" id="gManage">MANAGE</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
       :(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
      '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><div class="attbar hidden" id="attBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
@@ -2358,7 +2928,7 @@ const UI={
      '<span class="hint" id="cHint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
-  if(scr==='settings')this.fillSettings();
+  if(scr==='settings')sec==='profile'?this.fillProfile():this.fillSettings();
   else if(chat){this.renderThread();this.renderReply();this.renderAtt();this.renderHint();if(!this._follow)this.more()}},
  /** The composer's hint line, which says so while this account is muted. */
  renderHint(){
@@ -2374,7 +2944,8 @@ const UI={
   const p=M.peer(id),st=M.relation(id);
   this.setAv($('#chatAv'),id);
   $('#chatName').innerHTML=esc(M.displayName(id))+this.staffTag(id)+(p.verified?' <span class="chip ok">VERIFIED</span>':'');
-  $('#chatMeta').textContent='id '+id.slice(0,16)+' · '+(st==='friend'?'session '+M.sessionState(id):this.STATE[st][0].toLowerCase());
+  const pr=M.presence(id);
+  $('#chatMeta').textContent=[pr&&this.PRES[pr],M.status(id),st==='friend'?'session '+M.sessionState(id):this.STATE[st][0].toLowerCase()].filter(Boolean).join(' · ');
   // only friends can be messaged: otherwise the composer gives way to the next step
   const gate=$('#gate'),friend=st==='friend',vc=M.voice.call;
   $('#composerBox').classList.toggle('hidden',!friend);gate.classList.toggle('hidden',friend);
@@ -2403,18 +2974,19 @@ const UI={
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :' · '+m.state):'';
-   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend,av:this.runEnd(id,shown,i)})});
-  this.patch(th,html);
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:friend,av:this.runEnd(id,shown,i),run:this.runCls(id,shown,i)})});
+  this.patch(th,html+this.heldBar());
   this.settle(th,atBottom,opened)},
 
  /** Makes el's children match html while keeping the nodes that stay (matched by data-k),
      so a bubble that is still animating in, or easing from sending to sent, is not cut short. */
- patch(el,html){
+ patch(el,html,key){
+  key=key||(n=>n.dataset.k);
   const t=document.createElement('div');t.innerHTML=html;
-  const old=new Map();for(const c of el.children)if(c.dataset.k)old.set(c.dataset.k,c);
+  const old=new Map();for(const c of el.children){const k=key(c);if(k)old.set(k,c)}
   const want=[...t.childNodes].map(n=>{
-   const o=n.nodeType===1&&n.dataset.k&&old.get(n.dataset.k);
-   if(o&&o.tagName===n.tagName){old.delete(n.dataset.k);this.morph(o,n);return o}
+   const k=n.nodeType===1&&key(n),o=k&&old.get(k);
+   if(o&&o.tagName===n.tagName){old.delete(k);this.morph(o,n);return o}
    return n});
   want.forEach((n,i)=>{if(el.childNodes[i]!==n)el.insertBefore(n,el.childNodes[i]||null)});
   while(el.childNodes.length>want.length)el.lastChild.remove()},
@@ -2436,11 +3008,27 @@ const UI={
      each time the reader nears the top (more), and back to one page once they are at the
      bottom again. The window starts at a timestamp, so new arrivals only add to it. */
  win(id,list,atBottom){
-  if(this._winFor!==id){this._winFor=id;this._from=null}
+  if(this._winFor!==id){this._winFor=id;this._from=null;this._hold=false}
+  if(!M.catchingUp())this._released=false;
+  // a pile arriving in the open thread is held back (see heldBar) instead of drawn one by one
+  if(this._seenFor===id&&!this._hold&&!this._released&&M.catchingUp())this._hold=true;
   let i=this._from==null?-1:list.findIndex(m=>m.ts>=this._from);
-  if(i<0||atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-PAGE);this._from=list.length?list[i].ts:null}
+  if(i<0||!this._hold&&atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-PAGE);this._from=list.length?list[i].ts:null}
   this._more=i>0;
-  return list.slice(i)},
+  let shown=list.slice(i);this._heldN=0;
+  if(this._hold){
+   const seen=this._seen,all=shown;
+   shown=all.filter(m=>seen.has(m.id)||m.dir==='out');this._heldN=all.length-shown.length;
+   if(!this._heldN&&!M.catchingUp())this._hold=false}
+  return shown},
+ /** While a thread holds back a pile of arrivals: the line at its foot that draws them. */
+ heldBar(){
+  const n=this._heldN;if(!n)return '';
+  return '<div class="sys held" data-k="held"><button data-show-held>'+n+' new message'+(n>1?'s':'')+' · show</button></div>'},
+ /** Lets go of what the open thread held back, drawing the newest page of it at once. */
+ showHeld(){
+  this._hold=false;this._released=true;this._from=null;this._stick=true;this._follow=true;
+  this.renderThread()},
  /** Whether the thread stays pinned to the newest message: the reader has not scrolled up
      since they were last at the bottom. The scroll position alone cannot tell: when a burst
      arrives (catching up after being offline), a smooth scroll to the bottom is still running
@@ -2488,7 +3076,7 @@ const UI={
   const first=this._seenFor!==id;
   if(first){this._seenFor=id;this._seen=new Set()}
   const seen=this._seen;
-  const calm=first||!!M._draining||document.hidden||shown.reduce((n,m)=>n+!seen.has(m.id),0)>3;
+  const calm=first||M.catchingUp()||document.hidden||shown.reduce((n,m)=>n+!seen.has(m.id),0)>BURST;
   return m=>{if(seen.has(m.id))return '';seen.add(m.id);return calm?'':' new'}},
 
  /* ---- chat filter (see chatFilter) ---- */
@@ -2513,18 +3101,30 @@ const UI={
    // a filtered message clicked open: outlined, and a click on it hides it again
    rv=!veil&&M.filtered(m)?' unveiled" data-reveil="'+esc(m.id)+'" title="Click to hide again':'';
   const acts=settled?'<div class="macts">'+
-   (o.reply&&!m.deleted?'<button data-reply="'+esc(m.id)+'" title="Reply" aria-label="Reply">'+ICON.reply+'</button>':'')+
+   (o.reply&&!m.deleted?'<button data-react="'+esc(m.id)+'" title="Add reaction" aria-label="Add reaction" aria-haspopup="true">'+ICON.react+'</button>'+
+    '<button data-reply="'+esc(m.id)+'" title="Reply" aria-label="Reply">'+ICON.reply+'</button>':'')+
    '<button class="del" data-del="'+esc(m.id)+'" title="Delete" aria-label="Delete">'+ICON.trash+'</button></div>':'';
-  return '<div class="msg '+m.dir+o.fresh+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+(m.deleted?' gone':'')+
-   (r&&r.conv===conv&&r.id===m.id?' replying':'')+(m.dir==='in'&&!m.deleted&&M.pings(m.text)?' pinged':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1">'+(o.who||'')+
-   (o.av==null?'':'<div class="mrow">'+(o.av?this.av(this.sender(conv,m),'mav'):'<div class="av mav ghost"></div>'))+
+  const run=o.run||'';
+  return '<div class="msg '+m.dir+o.fresh+run+(m.state==='failed'?' failed':'')+(m.state==='sending'?' sending':'')+(m.deleted?' gone':'')+
+   (r&&r.conv===conv&&r.id===m.id?' replying':'')+(m.dir==='in'&&!m.deleted&&M.pings(m.text)?' pinged':'')+'" data-k="m'+esc(m.id)+'" tabindex="-1"'+
+   (run.includes('mid')?' title="'+esc(hm(m.ts))+'"':'')+'>'+(run.includes('cont')?'':o.who||'')+
+   (o.av==null?'':'<div class="mrow">'+(o.av?this.av(this.sender(conv,m),'mav','',isDiscord(conv)?'':' data-pf="'+esc(this.sender(conv,m))+'"'):'<div class="av mav ghost"></div>'))+
    '<div class="bub'+(m.re&&!m.deleted&&!veil?' has-re':'')+'">'+acts+(m.re&&!m.deleted&&!veil?this.quoteHTML(conv,m.re,true):'')+
    (veil?'<button class="body veil" data-unveil="'+esc(m.id)+'" title="Show this message">hidden by your chat filter · click to show</button></div>'
    :m.poll&&!m.deleted?'<div class="body'+rv+'">'+this.rich(m.text.split('\n')[0])+this.pollHTML(m)+'</div></div>'
    :m.img&&!m.deleted?'<div class="body has-img'+rv+'">'+this.imgHTML(m)+(m.text?'<div class="cap">'+this.rich(m.text)+'</div>':'')+'</div></div>'
-    :'<div class="body'+rv+'">'+(m.deleted?(m.mod?'removed by a moderator':m.dir==='out'?'you deleted this message':'message deleted'):this.rich(m.text))+'</div></div>')+
-   (o.av==null?'':'</div>')+
+    :'<div class="body'+rv+'">'+(m.deleted?(m.mod?'removed by staff':m.dir==='out'?'you deleted this message':'message deleted'):this.rich(m.text))+'</div></div>')+
+   (o.av==null?'':'</div>')+(m.deleted||veil?'':this.reactsHTML(m,o.reply&&settled,o.av!=null))+
    '<div class="stamp">'+hm(m.ts)+(m.deleted?'':o.state)+'</div></div>'},
+ /** The reactions under a bubble, one chip per emoji with how many chose it; hover one
+     to see who. When `can`, a click adds my reaction or takes it back. */
+ reactsHTML(m,can,indent){
+  const r=Object.entries(m.reacts||{}).filter(([e,who])=>Array.isArray(who)&&who.length);
+  if(!r.length)return '';
+  return '<div class="reacts'+(indent?' indent':'')+'">'+r.map(([e,who])=>{
+   const mine=who.includes(M.me.userId),names=who.map(x=>x===M.me.userId?'you':M.displayName(x)).join(', ');
+   return '<button class="rx'+(mine?' mine':'')+'"'+(can?' data-rx="'+esc(m.id)+'" data-e="'+esc(e)+'"':' disabled')+
+    ' title="'+esc(names)+' reacted with '+esc(e)+'" aria-pressed="'+mine+'">'+esc(e)+'<span>'+who.length+'</span></button>'}).join('')+'</div>'},
  /** A poll's options as buttons, each with its share of the votes; hover one to see who picked it. */
  pollHTML(m){
   const p=m.poll,votes=m.votes||{},n=p.opts.map(()=>[]),left=p.ends-M.serverNow(),open=left>0;
@@ -2571,20 +3171,39 @@ const UI={
  /* ---- emoji browser ---- */
  emojiOpen(){return !!$('#emojiPop')},
  emojiClose(){const p=$('#emojiPop');if(p)p.remove();const b=document.querySelector('[data-act=emoji]');if(b)b.setAttribute('aria-expanded','false')},
- emojiToggle(){
-  if(this.emojiOpen())return this.emojiClose();
-  const box=$('#composerBox');if(!box)return;
-  const pop=document.createElement('div');pop.className='emojipop';pop.id='emojiPop';
+ /** Opens the emoji browser over the composer, or with `react` (a message id) beside
+     that message, where picking an emoji reacts to it instead of typing it. */
+ emojiToggle(react){
+  const was=$('#emojiPop'),same=was&&(was.dataset.react||'')===(react||'');
+  if(was){this.emojiClose();if(same)return}
+  const box=react?document.body:$('#composerBox');if(!box)return;
+  const pop=document.createElement('div');pop.className='emojipop'+(react?' react':'');pop.id='emojiPop';
+  if(react)pop.dataset.react=react;
   pop.innerHTML='<input class="search" placeholder="search emoji…" aria-label="Search emoji" spellcheck="false">'+
    '<div class="etabs">'+(this.recentEmoji().length?'<button data-ecat="-1" title="Recent">🕘</button>':'')+
    EMOJI.map((c,i)=>'<button data-ecat="'+i+'" title="'+c.name+'">'+c.icon+'</button>').join('')+'</div><div class="egrid"></div>';
   box.appendChild(pop);
-  document.querySelector('[data-act=emoji]').setAttribute('aria-expanded','true');
+  if(react)this.emojiPlace();
+  else document.querySelector('[data-act=emoji]').setAttribute('aria-expanded','true');
   const q=pop.querySelector('input');
   q.addEventListener('input',()=>this.emojiFill(q.value));
   q.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const b=pop.querySelector('.egrid [data-emoji]');if(b)this.putEmoji(b.dataset.emoji)}});
   this.emojiFill('');
   if(matchMedia('(hover:hover)').matches)q.focus()},
+ /** Keeps the reaction picker beside its message: above it when there is room, else below. */
+ emojiPlace(){
+  const pop=$('#emojiPop');if(!pop||!pop.dataset.react)return;
+  const msg=document.querySelector('.msg[data-k="m'+CSS.escape(pop.dataset.react)+'"] .bub');
+  if(!msg){this.emojiClose();return}
+  const r=msg.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight,pad=8;
+  const left=Math.max(pad,Math.min(r.left,innerWidth-w-pad));
+  const top=r.top-h-8>=pad?r.top-h-8:Math.min(r.bottom+8,innerHeight-h-pad);
+  pop.style.left=left+'px';pop.style.top=Math.max(pad,top)+'px'},
+ /** A click on a reaction chip, or a pick in the reaction picker: mine goes on, or comes off if it is there. */
+ async react(id,e){
+  const conv=this.cur(),m=M.get('msg:'+conv+':'+id);if(!m)return;
+  const on=!((m.reacts||{})[e]||[]).includes(M.me.userId);
+  try{await M.react(conv,id,e,on)}catch(err){toast('reaction not sent: '+err.message)}},
  /** Fills the grid: every category with its heading, or the matches for q. */
  emojiFill(q){
   const grid=$('#emojiPop .egrid');if(!grid)return;
@@ -2603,8 +3222,13 @@ const UI={
   if(h)grid.scrollTop=h.offsetTop-grid.offsetTop-4;
   document.querySelectorAll('#emojiPop .etabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.ecat===String(i))))},
  recentEmoji(){try{const r=JSON.parse(store.get('emoji.recent')||'[]');return Array.isArray(r)?r.filter(x=>typeof x==='string').slice(0,24):[]}catch(e){return []}},
- /** Types an emoji at the caret; the browser stays open for more. */
+ /** Types an emoji at the caret; the browser stays open for more. In the reaction
+     picker it reacts to the message instead, and the picker closes. */
  putEmoji(e){
+  const pop=$('#emojiPop');
+  if(pop&&pop.dataset.react){
+   const id=pop.dataset.react;this.emojiClose();this.react(id,e);
+   store.set('emoji.recent',JSON.stringify([e].concat(this.recentEmoji().filter(x=>x!==e)).slice(0,24)));return}
   const ta=$('#composer');if(!ta)return;
   const a=ta.selectionStart,b=ta.selectionEnd;
   ta.setRangeText(e,a==null?ta.value.length:a,b==null?ta.value.length:b,'end');
@@ -2613,11 +3237,19 @@ const UI={
 
  /** Who wrote m: me, the group member it came from, or the person a direct chat is with. */
  sender(conv,m){return m.dir==='out'?M.me.userId:m.from||conv},
- /** Whether shown[i] ends a run of messages from one sender (the next is someone else,
-     a system line, or more than five minutes or a day later), so it carries their picture. */
- runEnd(conv,shown,i){
-  const m=shown[i],n=shown[i+1];
-  return !n||n.dir==='sys'||this.sender(conv,n)!==this.sender(conv,m)||n.ts-m.ts>5*60000||dayLabel(n.ts)!==dayLabel(m.ts)},
+ /** Whether b directly follows a in one run: same sender (for Discord, same author), no system
+     line between, within a minute, on the same day, and b is not a reply (a reply starts its own
+     run). A run is drawn as one group. */
+ joins(conv,a,b){
+  if(!a||!b||a.dir==='sys'||b.dir==='sys'||a.dir!==b.dir||(b.re&&!b.deleted))return false;
+  const who=m=>isDiscord(conv)&&m.dir==='in'?'d:'+m.author+'|'+m.src:this.sender(conv,m);
+  return who(a)===who(b)&&b.ts-a.ts<=60000&&dayLabel(a.ts)===dayLabel(b.ts)},
+ /** Whether shown[i] ends a run of messages from one sender, so it carries their picture and the time. */
+ runEnd(conv,shown,i){return !this.joins(conv,shown[i],shown[i+1])},
+ /** Whether shown[i] starts a run, so it carries the sender's name. */
+ runStart(conv,shown,i){return !this.joins(conv,shown[i-1],shown[i])},
+ /** The run classes for shown[i]: ' cont' if it continues one, ' mid' if more follow it. */
+ runCls(conv,shown,i){return (this.runStart(conv,shown,i)?'':' cont')+(this.runEnd(conv,shown,i)?'':' mid')},
  /** The quoted message, as it reads now if it is still here, else as it was quoted. */
  quoteHTML(conv,re,jump){
   const live=M.get('msg:'+conv+':'+re.id),gone=!!(live&&live.deleted);
@@ -2673,7 +3305,7 @@ const UI={
    '<div class="err" id="delMsgErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
    '<button class="'+(all?'tbtn danger':'hang')+'" data-m="me">'+(m.deleted?'REMOVE':'DELETE FOR ME')+'</button>'+
    (all?'<button class="hang" data-m="all">DELETE FOR EVERYONE</button>':'')+
-   (mod?'<button class="hang" data-m="mod" title="Replaces it with “removed by a moderator” for everyone in this chat">REMOVE AS MODERATOR</button>':'')+'</div>',
+   (mod?'<button class="hang" data-m="mod" title="Replaces it with “removed by staff” for everyone in this chat">REMOVE AS STAFF</button>':'')+'</div>',
    async(act,btn)=>{
     if(act==='cancel')return this.close();
     if(act!=='me'&&act!=='all'&&act!=='mod')return;
@@ -2699,16 +3331,16 @@ const UI={
   let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
   const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
   if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
-  for(const m of shown){
+  shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
-   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';continue}
+   if(m.dir==='sys'){html+='<div class="sys'+fresh(m)+'" data-k="m'+esc(m.id)+'">'+esc(m.text)+'</div>';return}
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':''):'';
-   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:false,
-    who:m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':''})}
-  this.patch(th,html);
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:false,run:this.runCls(id,shown,i),
+    who:m.dir==='in'?'<div class="who">'+esc(m.author)+(m.src==='marmot'?' <i>· marmot</i>':'')+'</div>':''})});
+  this.patch(th,html+this.heldBar());
   this.settle(th,atBottom,opened)},
 
  /** A group chat: each message shows who sent it, and mine show how many members confirmed delivery. */
@@ -2717,11 +3349,14 @@ const UI={
   this.setAv($('#chatAv'),id);$('#chatAv').classList.add('grp');
   $('#chatName').textContent=M.displayName(id);
   $('#chatMeta').textContent=g?this.memberCount(id)+' · end-to-end encrypted':'you are no longer in this group';
-  const gate=$('#gate');
-  $('#composerBox').classList.toggle('hidden',!g);gate.classList.toggle('hidden',!!g);
-  const ghtml='<span class="grow">You left this group. A member can invite you back if you are friends with them.</span>';
-  if(!g&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
+  const gate=$('#gate'),gm=g?M.groupMuteEnd(id):undefined,muted=gm!==undefined;
+  $('#composerBox').classList.toggle('hidden',!g||muted);gate.classList.toggle('hidden',!!g&&!muted);
+  const ghtml=!g?'<span class="grow">You are not in this group any more. A member can invite you back if you are friends with them.</span>'
+   :'<span class="grow">A group moderator muted you in this group '+(gm?'until '+esc(new Date(gm).toLocaleString()):'until they unmute you')+'. You can still read it.</span>';
+  if((!g||muted)&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   document.querySelectorAll('#chatActs button').forEach(b=>b.classList.toggle('hidden',!g));
+  const inv=$('#chatActs [data-act=g-invite]');if(inv&&g)inv.classList.toggle('hidden',!M.canInvite(id));
+  const mg=$('#gManage');if(mg){const n=g&&g.apps?g.apps.length:0,h='MANAGE'+(n?'<span class="badge-n">'+n+'</span>':'');if(mg.innerHTML!==h)mg.innerHTML=h}
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);M.pinged.delete(id);this.renderRail();this.renderCol()}
   const atBottom=this.following(th);
   const others=g?g.members.length-1:0;
@@ -2736,9 +3371,9 @@ const UI={
    const state=m.dir==='out'?(m.state==='failed'
      ?' · failed — <button data-retry="'+esc(m.id)+'">retry</button> · <button data-discard="'+esc(m.id)+'">discard</button>'
      :m.state==='sending'?' · sending':got?' · delivered to '+(others&&got>=others?'everyone':got):' · sent'):'';
-   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,av:this.runEnd(id,shown,i),
-    who:m.dir==='in'?'<div class="who">'+esc(M.displayName(m.from))+this.staffTag(m.from)+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
-  this.patch(th,html);
+   html+=this.bubble(id,m,{fresh:fresh(m),state,reply:!!g,av:this.runEnd(id,shown,i),run:this.runCls(id,shown,i),
+    who:m.dir==='in'?'<div class="who"><span class="pf" data-pf="'+esc(m.from)+'">'+esc(M.displayName(m.from))+'</span>'+this.groupTag(id,m.from)+this.staffTag(m.from)+(M.isFriend(m.from)?'':' <i>· not a friend</i>')+'</div>':''})});
+  this.patch(th,html+this.heldBar());
   this.settle(th,atBottom,opened)},
 
  /** A checklist of friends for starting or growing a group; `skip` are ids already in it. */
@@ -2765,7 +3400,6 @@ const UI={
   this.modal('<h3>New conversation</h3>'+seg+
    '<div class="field"><div class="lbl">GROUP NAME</div><input class="inp" id="gName" maxlength="'+MAXNAME+'" spellcheck="false" autocomplete="off" placeholder="optional · members can change it later"></div>'+
    '<div class="field"><div class="lbl">INVITE FRIENDS · OPTIONAL</div>'+this.friendPicker()+'</div>'+
-   '<div class="note" style="margin:0">Leave everyone unticked to make an empty group and invite friends from inside it later. Any member can invite their own friends, so you may end up in a group with people you have not friended.</div>'+
    '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo">'+label(0)+'</button></div>',
    async(act,btn)=>{
     if(act==='mode-direct')return this.newChat('direct');
@@ -2780,7 +3414,7 @@ const UI={
  groupInvite(id){
   const g=M.group(id);if(!g)return;
   const label=n=>n?'INVITE '+n:'INVITE';
-  this.modal('<h3>Invite to '+esc(M.displayName(id))+'</h3><div class="note">You can invite your own friends. They see messages sent from now on, not the history before they joined.</div>'+
+  this.modal('<h3>Invite to '+esc(M.displayName(id))+'</h3><div class="note">They see messages from now on, not earlier history.</div>'+
    this.friendPicker(g.members.map(m=>m.userId))+
    '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo" disabled>'+label(0)+'</button></div>',
    async(act,btn)=>{
@@ -2792,20 +3426,6 @@ const UI={
     catch(e){err.textContent=e.message;btn.disabled=false}});
   this.wirePicker(n=>{const b=$('#gGo');b.textContent=label(n);b.disabled=!n})},
 
- groupRename(id){
-  if(!M.group(id))return;
-  this.modal('<h3>Rename group</h3><div class="note">The new name is sent end-to-end encrypted to every member. Leave it blank to go back to listing the members.</div>'+
-   '<div class="field"><div class="lbl">GROUP NAME</div><input class="inp" id="gName" maxlength="'+MAXNAME+'" spellcheck="false" autocomplete="off" value="'+esc(M.groupName(id))+'"></div>'+
-   '<div class="err" id="gErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo">RENAME</button></div>',
-   async(act,btn)=>{
-    if(act==='cancel')return this.close();
-    if(act!=='go')return;
-    const name=$('#gName').value.trim();
-    if(name===M.groupName(id))return this.close();
-    const err=$('#gErr');err.textContent='';btn.disabled=true;
-    try{await M.renameGroup(id,name);this.close()}catch(e){err.textContent=e.message;btn.disabled=false}});
-  const i=$('#gName');i.select();i.addEventListener('keydown',e=>{if(e.key==='Enter')$('#gGo').click()})},
-
  /** Settings → profile picture: choose an image, shrink it here, upload it. */
  async pickAvatar(){
   const f=await pickImage();if(!f)return;
@@ -2813,40 +3433,192 @@ const UI={
   say('');
   try{await M.setAvatar(await shrinkImage(f))}catch(e){say(e.message)}},
  async clearAvatar(){try{await M.setAvatar(null)}catch(e){toast(e.message)}},
- /** The group icon dialog: choose an image for everyone in the group, or remove the current one. */
- groupIcon(id){
-  if(!M.group(id))return;
-  this.modal('<h3>Group icon</h3><div class="note">Every member sees it. Like the group name, it is end-to-end encrypted, and it is resized to '+AVSIZE+'×'+AVSIZE+' first.</div>'+
-   '<div class="btnrow" style="align-items:center">'+this.av(id,'av-64')+'</div><div class="err" id="gIconErr"></div>'+
-   '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button>'+
-   (M.groupIcon(id)?'<button class="tbtn danger" data-m="clear">REMOVE</button>':'')+'<button class="send" data-m="pick">CHOOSE IMAGE</button></div>',
-   async(act,btn)=>{
-    if(act==='cancel')return this.close();
-    if(act!=='pick'&&act!=='clear')return;
-    const err=$('#gIconErr');err.textContent='';
-    try{
-     let icon='';
-     if(act==='pick'){const f=await pickImage();if(!f)return;icon=await shrinkImage(f)}
-     btn.disabled=true;
-     await M.setGroupIcon(id,icon);this.close()}
-    catch(e){err.textContent=e.message;btn.disabled=false}})},
-
- groupMembers(id){
+ /* ---------- the group control panel ----------
+    MEMBERS: everyone, with their rank in the group; the owner makes and unmakes group moderators,
+    and moderators mute (in this group only) and remove members below them.
+    SETTINGS: who can invite, and the group tag: its text, who can use it from a member's profile
+    (off / friends of that member / everyone), and whether it lets people straight in or has them apply.
+    REQUESTS: applications through the tag, for moderators to let in or turn down. */
+ GMUTES:[[10,'10 MIN'],[60,'1 HOUR'],[1440,'1 DAY'],[10080,'1 WEEK'],[0,'UNTIL UNMUTED']],
+ /** The OWNER / MOD chip beside someone's name in a group, and MUTED HERE if they are muted in it. */
+ groupTag(conv,id){
+  const r=M.groupRole(conv,id);
+  return (r==='owner'?' <span class="chip own" title="Started or runs this group">OWNER</span>':r==='mod'?' <span class="chip ok" title="Group moderator">MOD</span>':'')+
+   (M.groupMuted(conv,id)?' <span class="chip bad" title="Muted in this group by its moderators">MUTED HERE</span>':'')},
+ /** The clickable group tag on a profile card. */
+ tagChip(id,tag){
+  if(!tag)return '';
+  const how=tag.vis==='friends'?'friends of this person can ':'anyone can ';
+  return '<div><button class="gtag" data-act="gtag" data-id="'+esc(id)+'" title="Group tag · '+how+(tag.mode==='apply'?'apply to join':'join')+'">'+
+   esc(tagLabel(tag))+' · '+tag.n+' MEMBER'+(tag.n===1?'':'S')+'</button></div>'},
+ groupMembers(id,tab){
   const g=M.group(id);if(!g)return;
-  const name=u=>u===M.me.userId?'you':M.displayName(u);
-  const rows=g.members.slice().sort((a,b)=>(b.userId===M.me.userId)-(a.userId===M.me.userId)||a.username.localeCompare(b.username)).map(m=>{
-   const st=m.userId===M.me.userId?'':M.relation(m.userId);
-   return '<div class="pick" style="cursor:default">'+this.av(m.userId,'av-26',m.username,' style="background:var(--avatar);color:var(--avatar-fg)"')+''+
-    '<div class="row-main"><div>'+esc(m.username)+this.staffTag(m.userId)+(m.userId===M.me.userId?' <span class="chip">YOU</span>':'')+'</div>'+
-    '<div class="meta">'+(m.invitedBy?'added by '+esc(name(m.invitedBy)):'started the group')+'</div></div>'+
-    (st?'<button class="tbtn" data-m="peer:'+esc(m.userId)+'" style="margin-left:auto">'+(st==='friend'?'PROFILE':'VIEW')+'</button>':'')+'</div>'}).join('');
-  this.modal('<h3>'+esc(M.displayName(id))+'</h3><div class="note">'+this.memberCount(id)+'. Members who are not your friends can message you here, but not directly.</div>'+
-   '<div class="picks">'+rows+'</div>'+
-   '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="close">CLOSE</button><button class="send" data-m="invite">INVITE</button></div>',
-   act=>{
-    if(act==='close')return this.close();
-    if(act==='invite')return this.groupInvite(id);
-    if(act.startsWith('peer:')){this.close();this.showPeer(act.slice(5))}})},
+  const scrim=this.modal('<h3 id="gpTitle"></h3><div class="note" id="gpSub"></div><div id="gpBody"></div>'+
+   '<div class="err" id="gpErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="close">CLOSE</button>'+
+   '<button class="send" data-m="invite" id="gpInvite">INVITE</button></div>',(act,btn)=>this.gpAct(act,btn));
+  scrim.querySelector('.modal').classList.add('wide');
+  this._gp={id,tab:tab||'members',html:'',draft:Object.assign({emoji:''},g.tag||{text:'',vis:'off',mode:'join'}),name:M.groupName(id),picking:false,eq:'',muting:null,kicking:null,busy:false};
+  scrim.addEventListener('input',e=>{const P=this._gp,t=e.target;if(!P)return;
+   if(t.id==='gpTagText')P.draft.text=t.value;
+   else if(t.id==='gpName')P.name=t.value;
+   else if(t.id==='gpEmoQ')P.eq=t.value;
+   else return;
+   this.renderGroupPanel()});
+  scrim.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target.id;
+   if(t==='gpTagText')this.gpAct('tag-save');
+   else if(t==='gpName')this.gpAct('name-save');
+   else if(t==='gpEmoQ'){e.preventDefault();const b=$('#gpBody .egrid [data-m^="emoji:"]');if(b)this.gpAct(b.dataset.m)}});
+  this.renderGroupPanel()},
+ renderGroupPanel(){
+  const P=this._gp,body=$('#gpBody');if(!P||!body)return;
+  const id=P.id,g=M.group(id),me=M.me.userId;
+  if(!g){body.innerHTML='<div class="note">You are no longer in this group.</div>';$('#gpInvite').classList.add('hidden');return}
+  const rank=M.groupRank(id),apps=g.apps||[];
+  const tabs=[['members','MEMBERS · '+g.members.length],['settings','SETTINGS']].concat(rank>=1?[['requests','REQUESTS'+(apps.length?' · '+apps.length:'')]]:[]);
+  if(!tabs.some(t=>t[0]===P.tab))P.tab='members';
+  let html='<div class="auth-seg gp-tabs">'+tabs.map(([k,l])=>'<button data-m="tab:'+k+'" aria-pressed="'+(P.tab===k)+'">'+l+'</button>').join('')+'</div>';
+  const av=(uid,name)=>this.av(uid,'av-26',name,' style="background:var(--avatar);color:var(--avatar-fg)"');
+  const name=u=>!u?'someone':u===me?'you':M.displayName(u);
+  if(P.tab==='members'){
+   const order=m=>m.gr==='owner'?0:m.gr==='mod'?1:2;
+   const rows=g.members.slice().sort((a,b)=>order(a)-order(b)||(b.userId===me)-(a.userId===me)||M.displayName(a.userId).localeCompare(M.displayName(b.userId))).map(m=>{
+    const self=m.userId===me,tr=M.groupRank(id,m.userId),over=!self&&rank>tr,mute=M.groupMuteEnd(id,m.userId);
+    const how=m.invitedBy?(m.via?'let in by ':'added by ')+name(m.invitedBy):m.via?'joined through '+name(m.via)+'’s tag':m.gr==='owner'&&m.userId===g.createdBy?'started the group':'joined';
+    let acts=self?'':'<button class="tbtn" data-m="peer:'+esc(m.userId)+'">PROFILE</button>';
+    if(!self&&rank===2)acts+=m.gr==='mod'?'<button class="tbtn" data-m="unmod:'+esc(m.userId)+'">REMOVE MOD</button>':'<button class="tbtn" data-m="mod:'+esc(m.userId)+'">MAKE MOD</button>';
+    if(over){
+     acts+=mute!==undefined?'<button class="tbtn" data-m="unmute:'+esc(m.userId)+'">UNMUTE</button>'
+      :'<button class="tbtn" data-m="muting:'+esc(m.userId)+'" aria-pressed="'+(P.muting===m.userId)+'">MUTE</button>';
+     acts+=P.kicking===m.userId?'<button class="tbtn danger" data-m="kick:'+esc(m.userId)+'">CONFIRM KICK</button><button class="tbtn" data-m="kicking:">KEEP</button>'
+      :'<button class="tbtn danger" data-m="kicking:'+esc(m.userId)+'">KICK</button>'}
+    return '<div class="gp-row">'+av(m.userId,m.username)+
+     '<div class="row-main"><div>'+esc(M.displayName(m.userId))+this.groupTag(id,m.userId)+this.staffTag(m.userId)+(self?' <span class="chip">YOU</span>':'')+'</div>'+
+     '<div class="meta">'+esc(how)+(mute!==undefined?' · muted here '+esc(mute?'until '+new Date(mute).toLocaleString():'until unmuted'):'')+'</div></div>'+
+     '<div class="acts">'+acts+'</div>'+
+     (over&&P.muting===m.userId&&mute===undefined?'<div class="gp-durs"><span class="meta" style="align-self:center">MUTE IN THIS GROUP FOR</span>'+
+      this.GMUTES.map(([v,l])=>'<button class="tbtn danger" data-m="mute:'+esc(m.userId)+':'+v+'">'+l+'</button>').join('')+'</div>':'')+'</div>'}).join('');
+   html+='<div class="picks" style="max-height:340px">'+rows+'</div>'+
+    '<div class="note">'+(rank===2?'You own this group: you choose its moderators. Moderators can mute and kick members, change the settings and answer requests.'
+     :rank===1?'You are a moderator here: you can mute and kick members, change the settings and answer requests.'
+     :'Group moderators can mute and kick members. A mute here only applies in this group.')+'</div>'}
+  else if(P.tab==='settings'){
+   const ed=rank>=1,dis=ed?'':' disabled',d=P.draft,t=g.tag||{text:'',vis:'off',mode:'join'};
+   const seg=(key,cur,opts)=>'<div class="auth-seg">'+opts.map(([v,l])=>'<button data-m="'+key+':'+v+'" aria-pressed="'+(cur===v)+'"'+dis+'>'+l+'</button>').join('')+'</div>';
+   const nameDirty=(P.name||'').trim()!==M.groupName(id);
+   html+='<div class="gp-sec"><div class="lbl">NAME AND ICON</div>'+
+    '<div class="btnrow" style="align-items:center;margin-top:0">'+this.av(id,'av-64')+'<button class="tbtn" data-m="icon-pick">CHANGE ICON</button>'+
+    (M.groupIcon(id)?'<button class="tbtn danger" data-m="icon-clear">REMOVE ICON</button>':'')+'</div>'+
+    '<div class="btnrow"><input class="inp" id="gpName" maxlength="'+MAXNAME+'" spellcheck="false" autocomplete="off" placeholder="no name: members are listed instead" value="'+esc(P.name||'')+'" style="flex:1;max-width:320px">'+
+    '<button class="send" data-m="name-save"'+(nameDirty?'':' disabled')+'>SAVE NAME</button></div>'+
+    '<div class="note">Any member can change these. Everyone in the group sees the change.</div></div>';
+   html+='<div class="gp-sec"><div class="lbl">WHO CAN INVITE</div>'+seg('inv',g.invite||'all',[['all','EVERY MEMBER'],['mods','MODERATORS ONLY']])+
+    '<div class="note">'+(g.invite==='mods'?'Only the owner and moderators can invite their friends.':'Any member can invite their own friends.')+'</div></div>';
+   const dirty=ed&&((d.text||'')!==(t.text||'')||(d.emoji||'')!==(t.emoji||'')||d.vis!==t.vis||d.mode!==t.mode);
+   let emo='';
+   if(ed&&P.picking){
+    const q=(P.eq||'').trim().toLowerCase(),eb=x=>'<button data-m="emoji:'+x.e+'" title="'+esc(x.k.split(' ')[0])+'">'+x.e+'</button>';
+    const hits=[];for(const c of EMOJI)for(const x of c.list)if(!q||x.k.includes(q))hits.push(x);
+    emo='<div class="gp-emo"><input class="search inp" id="gpEmoQ" placeholder="search emoji…" spellcheck="false" autocomplete="off" value="'+esc(P.eq||'')+'">'+
+     '<div class="egrid">'+(hits.length?hits.map(eb).join(''):'<div class="grouplbl">NO EMOJI MATCH</div>')+'</div></div>'}
+   html+='<div class="gp-sec"><div class="lbl">GROUP TAG</div>'+
+    '<div class="gp-tagrow"><button class="gp-emobtn" data-m="emo" title="'+(d.emoji?'Change the emoji':'Add an emoji')+'" aria-pressed="'+!!P.picking+'"'+dis+'>'+(d.emoji?esc(d.emoji):'+')+'</button>'+
+    '<input class="inp" id="gpTagText" maxlength="4" spellcheck="false" autocomplete="off" placeholder="RATS" value="'+esc(d.text||'')+'"'+dis+'>'+
+    (ed&&d.emoji?'<button class="tbtn" data-m="emoji-clear">NO EMOJI</button>':'')+
+    (d.text?'<span class="gtag" style="margin-top:0;cursor:default">'+esc(tagLabel(d))+'</span>':'')+'</div>'+emo+
+    '<div class="note" style="margin:0 0 8px">Up to 4 characters, one word, with an emoji if you like.</div>'+
+    '<div class="lbl">WHO CAN USE IT</div>'+seg('vis',d.vis,[['off','OFF'],['friends','FRIENDS'],['all','EVERYONE']])+
+    '<div class="lbl">WHEN THEY CLICK IT</div>'+seg('tmode',d.mode,[['join','JOIN'],['apply','APPLY']])+
+    '<div class="note">'+(d.vis==='off'?'The tag is off: nobody can join through it, and no profile shows it.'
+     :(d.vis==='friends'?'Members can show the tag on their profile. Their friends can click it to ':'Members can show the tag on their profile. Anyone who sees it can click it to ')+
+      (d.mode==='apply'?'ask to join, saying why. A moderator lets them in from REQUESTS.':'join straight away.'))+'</div>'+
+    (ed?'<div class="btnrow"><button class="send" data-m="tag-save"'+(dirty?'':' disabled')+'>SAVE TAG</button>'+(dirty?'<button class="tbtn" data-m="tag-reset">DISCARD</button><span class="hint dirty">unsaved changes</span>':'')+'</div>'
+     :'<div class="note">Only the owner and moderators can change these.</div>')+'</div>';
+   const on=t.vis!=='off'&&!!t.text,mine=M.myProfile.gtag,shown=mine===g.groupId,other=mine&&!shown&&M.group(mine);
+   html+='<div class="gp-sec"><div class="lbl">YOUR PROFILE</div>'+
+    (on?(shown?'<div class="note">Your profile shows <b>'+esc(tagLabel(t))+'</b>.</div><div class="btnrow"><button class="tbtn" data-m="hidetag">REMOVE FROM MY PROFILE</button></div>'
+      :'<div class="note">Show <b>'+esc(tagLabel(t))+'</b> on your profile'+(other?', in place of '+esc(M.displayName('g:'+mine))+'’s tag':'')+'.</div><div class="btnrow"><button class="send" data-m="showtag">SHOW ON MY PROFILE</button></div>')
+     :'<div class="note">This group has no tag turned on, so there is nothing to show.</div>')+'<div class="note">You can also choose your tag in Settings → Profile.</div></div>'}
+  else{
+   html+=apps.length?'<div class="picks" style="max-height:360px">'+apps.slice().sort((a,b)=>a.ts-b.ts).map(a=>
+    '<div class="gp-row">'+av(a.userId,a.username)+'<div class="row-main"><div>'+esc(a.dn||a.username)+this.staffTag(a.userId)+'</div>'+
+    '<div class="meta">@'+esc(a.username)+' · through '+esc(name(a.via))+'’s tag · '+esc(new Date(a.ts).toLocaleString())+'</div></div>'+
+    '<div class="acts"><button class="tbtn" data-m="peer:'+esc(a.userId)+'">PROFILE</button><button class="tbtn danger" data-m="deny:'+esc(a.userId)+'">DECLINE</button>'+
+    '<button class="send" data-m="accept:'+esc(a.userId)+'">LET IN</button></div>'+
+    '<div class="gp-reason">“'+esc(a.reason)+'”</div></div>').join('')+'</div>'
+    :'<div class="note">No requests waiting. They arrive here when the group tag is set to APPLY.</div>'}
+  $('#gpTitle').textContent=M.displayName(id);
+  $('#gpSub').textContent=this.memberCount(id)+' · you are '+(rank===2?'the owner':rank===1?'a moderator':'a member');
+  $('#gpInvite').classList.toggle('hidden',!M.canInvite(id));
+  if(html===P.html)return;
+  const f=document.activeElement,keep=f&&f.tagName==='INPUT'&&/^gp/.test(f.id)?[f.id,f.selectionStart,f.selectionEnd]:null;
+  P.html=html;body.innerHTML=html;
+  if(keep){const i=document.getElementById(keep[0]);if(i){i.focus();try{i.setSelectionRange(keep[1],keep[2])}catch(e){}}}},
+ async gpAct(act,btn){
+  const P=this._gp;if(!P)return;
+  const id=P.id,gid=id.replace(/^g:/,''),[k,u,x]=act.split(':'),err=$('#gpErr');
+  const redraw=()=>{P.html='';this.renderGroupPanel()};
+  if(k==='close')return this.close();
+  if(k==='invite')return this.groupInvite(id);
+  if(k==='tab'){P.tab=u;P.muting=P.kicking=null;return redraw()}
+  if(k==='peer'){this.close();return this.showPeer(u)}
+  if(k==='muting'){P.muting=P.muting===u?null:u;P.kicking=null;return redraw()}
+  if(k==='kicking'){P.kicking=u||null;P.muting=null;return redraw()}
+  if(k==='vis'||k==='tmode'){P.draft[k==='vis'?'vis':'mode']=u;return redraw()}
+  if(k==='tag-reset'){const g=M.group(id);P.draft=Object.assign({emoji:''},g&&g.tag);P.picking=false;return redraw()}
+  if(k==='emo'){P.picking=!P.picking;P.eq='';redraw();const q=$('#gpEmoQ');if(q&&matchMedia('(hover:hover)').matches)q.focus();return}
+  if(k==='emoji'){P.draft.emoji=act.slice(6);P.picking=false;return redraw()}
+  if(k==='emoji-clear'){P.draft.emoji='';P.picking=false;return redraw()}
+  if(P.busy)return;
+  if(err)err.textContent='';
+  P.busy=true;if(btn)btn.disabled=true;
+  try{
+   if(k==='mod'||k==='unmod'){await M.setGroupMod(gid,u,k==='mod');toast(M.displayName(u)+(k==='mod'?' is now a group moderator':' is no longer a group moderator'))}
+   else if(k==='mute'){await M.muteInGroup(gid,u,Number(x));P.muting=null;toast(M.displayName(u)+' is muted in this group')}
+   else if(k==='unmute'){await M.muteInGroup(gid,u,null);toast(M.displayName(u)+' can talk in this group again')}
+   else if(k==='kick'){const n=M.displayName(u);await M.kickFromGroup(gid,u);P.kicking=null;toast(n+' was removed from the group')}
+   else if(k==='inv')await M.groupSettings(gid,{invite:u});
+   else if(k==='tag-save'){
+    const d=P.draft,text=String(d.text||'').trim().replace(/^#/,'');
+    if(/\s/.test(text))throw new Error('a group tag is one word');
+    if([...text].length>4)throw new Error('a group tag can be at most 4 characters');
+    await M.groupSettings(gid,{tag:{text,emoji:d.emoji||'',vis:d.vis,mode:d.mode}});
+    const g=M.group(id);P.draft=Object.assign({emoji:''},g&&g.tag);P.picking=false;toast('group tag saved')}
+   else if(k==='name-save'){const n=(P.name||'').trim();if(n!==M.groupName(id)){await M.renameGroup(id,n);toast(n?'group renamed':'group name removed')}P.name=M.groupName(id)}
+   else if(k==='icon-pick'){const f=await pickImage();if(f){await M.setGroupIcon(id,await shrinkImage(f));toast('group icon changed')}}
+   else if(k==='icon-clear'){await M.setGroupIcon(id,'');toast('group icon removed')}
+   else if(k==='showtag'){await M.showTag(gid);toast('your profile shows the group tag')}
+   else if(k==='hidetag'){await M.showTag('');toast('the group tag is off your profile')}
+   else if(k==='accept'||k==='deny'){const n=M.displayName(u);await M.answerApp(gid,u,k==='accept');toast(k==='accept'?n+' is in the group':'request from '+n+' declined')}}
+  catch(e){const el=$('#gpErr');if(el)el.textContent=e.message;else toast(e.message)}
+  finally{if(this._gp===P){P.busy=false;redraw()}}},
+
+ /** Someone's group tag was clicked: join, apply, or say why not. */
+ async tagClick(via){
+  const me=via===M.me.userId;let pf=null;
+  if(!me)try{pf=await M.fetchProfile(via)}catch(e){return toast(e.message)}
+  const tag=me?M.myTag():pf&&pf.tag;
+  if(!tag)return toast('that group tag is gone');
+  const gid=tag.groupId,label=tagLabel(tag);
+  if(M.group(gid)){this.closeSide();return this.open('g:'+gid)}
+  const who=M.displayName(via),foot=b=>'<div class="err" id="tjErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CLOSE</button>'+(b||'')+'</div>';
+  const head='<h3>'+esc(label)+'</h3><div class="note">A group chat with '+tag.n+' member'+(tag.n===1?'':'s')+', shown on '+esc(who)+'’s profile. '+
+   'Its messages are end-to-end encrypted; you see them from when you join, not before. Other members can message you there.</div>';
+  const run=async(fn,btn)=>{const err=$('#tjErr');err.textContent='';btn.disabled=true;
+   try{await fn()}catch(e){err.textContent=e.message;btn.disabled=false}};
+  if(tag.vis==='friends'&&!M.isFriend(via))
+   return this.modal(head+'<div class="note">Only friends of '+esc(who)+' can join through this tag.</div>'+foot(),()=>this.close());
+  if(M.applied.has(gid))
+   return this.modal(head+'<div class="note">Your request to join is waiting for a group moderator.</div>'+foot('<button class="tbtn danger" data-m="withdraw">WITHDRAW REQUEST</button>'),
+    (act,btn)=>{if(act==='cancel')return this.close();if(act==='withdraw')run(async()=>{await M.withdrawApp(gid);this.close();toast('request withdrawn')},btn)});
+  if(tag.mode==='apply')
+   return this.modal(head+'<div class="field"><div class="lbl">WHY DO YOU WANT TO JOIN?</div><textarea class="inp" id="tjWhy" rows="3" maxlength="200" placeholder="the moderators see this"></textarea></div>'+
+    foot('<button class="send" data-m="go">SEND REQUEST</button>'),
+    (act,btn)=>{if(act==='cancel')return this.close();if(act!=='go')return;
+     const why=$('#tjWhy').value.trim();if(!why){$('#tjErr').textContent='say why you want to join';return}
+     run(async()=>{await M.joinByTag(gid,via,why);this.close();toast('request sent to the moderators of '+label)},btn)});
+  this.modal(head+foot('<button class="send" data-m="go">JOIN GROUP</button>'),
+   (act,btn)=>{if(act==='cancel')return this.close();if(act!=='go')return;
+    run(async()=>{await M.joinByTag(gid,via);this.close();this.closeSide();this.open('g:'+gid);toast('you joined '+label)},btn)})},
 
  async groupLeave(id){
   const ok=await this.confirm('Leave '+M.displayName(id)+'?','You stop receiving its messages. Your copy of the history stays on this account. A member who is your friend can invite you back.','LEAVE');
@@ -2867,26 +3639,22 @@ const UI={
  settingsHTML(){
   return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Account &amp; security</div><div class="meta">everything below is stored encrypted on the server</div></div></div>'+
    '<div class="sheet">'+
-   '<div class="sec"><h3>Profile picture</h3><div class="note">Pick a profile picture that fits your account. These are not encrypted.</div>'+
-   '<div class="btnrow" style="align-items:center"><div class="av av-64" id="setAv"></div><button class="tbtn" data-act="av-pick">CHANGE PICTURE</button>'+
-   '<button class="tbtn danger" data-act="av-clear" id="avClear">REMOVE</button></div><div class="err" id="avErr"></div></div>'+
-   '<div class="sec"><h3>Identity</h3><div class="note">Information about your account and keys.</div><div id="setIdent"></div></div>'+
-   '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">Lets every Marmot user find and friend you, instead of having to ask people for their usernames.</div>'+
+   '<div class="sec"><h3>Identity</h3><div id="setIdent"></div></div>'+
+   '<div class="sec" id="secDiscovery"><h3>Global discovery</h3><div class="note">Lets anyone find you in Peers → Global.</div>'+
    '<div class="btnrow"><button class="tbtn" data-act="disc-off" id="discOff">HIDDEN</button><button class="tbtn" data-act="disc-on" id="discOn">LISTED</button></div><div class="err" id="discErr"></div></div>'+
-   '<div class="sec" id="secFilter"><h3>Chat filter</h3><div class="note">Checks what other people send you in chats, groups and Discord channels and filters out inappropriate content.</div>'+
+   '<div class="sec" id="secFilter"><h3>Chat filter</h3>'+
    '<div class="lbl">FILTER</div><div class="btnrow" style="margin-top:0">'+
    [['none','NONE'],['slurs','SLURS'],['swears','SWEARS &amp; SLURS'],['strict','STRICT']].map(([v,l])=>'<button class="tbtn" data-act="filter-level" data-v="'+v+'">'+l+'</button>').join('')+'</div>'+
    '<div class="note" id="filterLevelNote" style="margin:8px 0 14px"></div>'+
    '<div class="lbl">FILTERED MESSAGES</div><div class="btnrow" style="margin-top:0">'+
    '<button class="tbtn" data-act="filter-action" data-v="hide">HIDE</button><button class="tbtn" data-act="filter-action" data-v="delete">DELETE</button></div>'+
    '<div class="note" id="filterActionNote" style="margin:8px 0 0"></div><div class="err" id="filterErr"></div></div>'+
-   '<div class="sec"><h3>Updates</h3><div class="note">With auto-update on, an outdated copy of Marmot loads the latest version from the server each time it starts. '+
-   'Downloading the latest file skips that and starts faster.</div>'+
+   '<div class="sec"><h3>Updates</h3>'+
    '<div class="lbl">AUTO-UPDATE</div><div class="btnrow" style="margin-top:0"><button class="tbtn" data-act="upd-on" id="updOn">ON</button><button class="tbtn" data-act="upd-off" id="updOff">OFF</button></div>'+
    '<div class="btnrow"><button class="tbtn" data-act="upd-notes">PATCH NOTES</button><button class="tbtn" data-act="upd-get">DOWNLOAD LATEST</button></div>'+
    '<div class="err" id="updErr"></div></div>'+
    '<div class="sec"><h3>Connection</h3><div id="setConn"></div></div>'+
-   '<div class="sec"><h3>Session</h3><div class="note"></div>'+
+   '<div class="sec"><h3>Session</h3>'+
    '<div class="btnrow"><button class="tbtn" data-act="logout">LOG OUT</button></div></div>'+
    '<div class="sec"><h3>Delete account</h3><div class="note">Removes your account, keys, friendships, stored chats and any undelivered mail from the server. This cannot be undone.</div>'+
    '<div class="field" style="max-width:360px"><div class="lbl">PASSWORD</div><input class="inp" type="password" id="delPass" autocomplete="current-password"></div>'+
@@ -2896,8 +3664,7 @@ const UI={
   if(!M.me)return;
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
   const msgs=[...M.recs.keys()].filter(k=>k.startsWith('msg:')).length;
-  const a=$('#setIdent'),b=$('#setConn'),pic=$('#setAv');
-  if(pic){this.setAv(pic,M.me.userId,M.me.username);$('#avClear').classList.toggle('hidden',!M.avatar(M.me.userId))}
+  const a=$('#setIdent'),b=$('#setConn');
   if(a)a.innerHTML=kv('username',M.me.username)+kv('user id',M.me.userId)+kv('identity key',M.me.ik.pub)+
    kv('signing key',M.me.sk.pub)+kv('created',M.me.created?new Date(M.me.created).toLocaleString():'—');
   if(b)b.innerHTML=kv('server',M.server)+kv('live socket',M.wsState)+
@@ -2924,19 +3691,19 @@ const UI={
  RANK:{admin:2,mod:1},
  MUTES:[[10,'10 minutes'],[60,'1 hour'],[360,'6 hours'],[1440,'1 day'],[4320,'3 days'],[10080,'1 week'],
   [20160,'2 weeks'],[43200,'30 days'],[129600,'90 days'],[525600,'1 year'],['perm','permanently']],
- /** The ADMIN / MOD tag shown beside a staff member's name in chats. */
+ /** The DEVELOPER / STAFF tag (server admins and moderators) shown beside a staff member's name in chats. */
  staffTag(id){const r=M.role(id);
-  return (r==='admin'?' <span class="chip warn" title="Server admin">ADMIN</span>':r==='mod'?' <span class="chip ok" title="Moderator">MOD</span>':'')+
-   (M.isMuted(id)?' <span class="chip bad" title="Muted by a moderator: cannot send messages">MUTED</span>':'')},
- roleChip(u){return (u.role==='admin'?'<span class="chip warn">ADMIN</span>':u.role==='mod'?'<span class="chip ok">MOD</span>':'')+
+  return (r==='admin'?' <span class="chip warn" title="Marmot developer">DEVELOPER</span>':r==='mod'?' <span class="chip ok" title="Marmot staff">STAFF</span>':'')+
+   (M.isMuted(id)?' <span class="chip bad" title="Muted by Marmot staff: cannot send messages">MUTED</span>':'')},
+ roleChip(u){return (u.role==='admin'?'<span class="chip warn">DEVELOPER</span>':u.role==='mod'?'<span class="chip ok">STAFF</span>':'')+
   (u.mute?'<span class="chip bad">MUTED</span>':'')+(u.ipBanned?'<span class="chip bad">IP BANNED</span>':'')},
  renderAdminCol(rows){
   if(!M.staff){rows.innerHTML='';return}
   const A=this.adm(),admin=M.staff.role==='admin';
   const sec=(sel,name,sub)=>'<button class="row" data-adm-sel="'+sel+'"'+(A.sel===sel?' aria-current="true"':'')+'><div class="row-main">'+
    '<div class="row-name">'+name+'</div><div class="row-sub">'+sub+'</div></div></button>';
-  let html='<div class="grouplbl">'+(admin?'ADMIN':'MODERATOR')+' · '+M.staff.perms.length+' PERMISSION'+(M.staff.perms.length===1?'':'S')+'</div>';
-  if(admin)html+=sec('staff','Staff','admins and moderators');
+  let html='<div class="grouplbl">'+(admin?'DEVELOPER':'STAFF')+' · '+M.staff.perms.length+' PERMISSION'+(M.staff.perms.length===1?'':'S')+'</div>';
+  if(admin)html+=sec('staff','Staff','developers and staff');
   if(M.can('ip_ban'))html+=sec('bans','IP bans','addresses this server refuses');
   if(admin)html+=sec('log','Activity log','every staff action');
   html+='<div class="grouplbl">ACCOUNTS'+(A.users.length?' · '+A.users.length+(A.more?'+':''):'')+'</div>';
@@ -2947,7 +3714,7 @@ const UI={
    this.av(u.userId,'av-34',u.username)+'<div class="row-main"><div class="row-top"><span class="row-name">'+esc(u.username)+'</span>'+this.roleChip(u)+'</div>'+
    '<div class="row-sub">'+esc(u.mute?'muted '+this.muteText(u.mute):'last seen '+(u.lastSeen?new Date(u.lastSeen).toLocaleString():'never'))+'</div></div></button>').join('');
   if(A.more)html+='<button class="tbtn more" data-act="adm-more">LOAD MORE</button>';
-  rows.innerHTML=html},
+  this.fill(rows,html)},
  /** Accounts matching the search box; stale responses are ignored. */
  async loadAdminUsers(more){
   const A=this.adm(),q=this.S.filter.trim();
@@ -2982,17 +3749,17 @@ const UI={
    '<div style="min-width:0"><div class="pane-title">'+title+'</div><div class="meta">'+meta+'</div></div></div>';
   if(!A.sel)return '<div class="empty">SELECT AN ACCOUNT TO MODERATE<br>OR A SECTION ABOVE THEM</div>';
   if(!d)return head('Loading…','')+'<div class="sheet"><div class="note">loading…</div></div>';
-  if(d.err)return head('Admin','')+'<div class="sheet"><div class="err">'+esc(d.err)+'</div></div>';
+  if(d.err)return head('Staff','')+'<div class="sheet"><div class="err">'+esc(d.err)+'</div></div>';
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
   const when=t=>t?new Date(t).toLocaleString():'—';
   if(A.sel==='staff'){
    const who=u=>u.userId?'<button class="tbtn" data-adm-sel="u:'+esc(u.userId)+'">'+esc(u.username)+'</button>':'<span class="chip">'+esc(u.username)+' · NO ACCOUNT</span>';
-   return head('Staff',d.admins.length+' admin'+(d.admins.length===1?'':'s')+' · '+d.mods.length+' moderator'+(d.mods.length===1?'':'s'))+'<div class="sheet">'+
-    '<div class="sec"><h3>Admins</h3><div class="note">Admins hold every permission. They are listed in admin.json in the server\'s data directory and can only be added or removed there, by whoever runs the server.</div>'+
+   return head('Staff',d.admins.length+' developer'+(d.admins.length===1?'':'s')+' · '+d.mods.length+' staff')+'<div class="sheet">'+
+    '<div class="sec"><h3>Developers</h3><div class="note">Developers hold every permission. They are listed in admin.json in the server\'s data directory and can only be added or removed there, by whoever runs the server.</div>'+
     '<div class="btnrow">'+d.admins.map(who).join('')+'</div></div>'+
-    '<div class="sec"><h3>Moderators</h3><div class="note">To appoint one, search for their account in the column and tick the permissions they should have. Untick everything to remove them.</div>'+
+    '<div class="sec"><h3>Staff</h3><div class="note">To appoint staff, search for their account in the column and tick the permissions they should have. Untick everything to remove them.</div>'+
     (d.mods.length?d.mods.map(m=>'<div class="kv" style="align-items:center"><b>'+(m.userId?'<button class="tbtn" data-adm-sel="u:'+esc(m.userId)+'">'+esc(m.username)+'</button>':esc(m.username))+'</b>'+
-     '<span>'+esc(m.perms.map(p=>(d.all[p]||p)).join(' · '))+'</span></div>').join(''):'<div class="note">No moderators yet.</div>')+'</div></div>'}
+     '<span>'+esc(m.perms.map(p=>(d.all[p]||p)).join(' · '))+'</span></div>').join(''):'<div class="note">No staff yet.</div>')+'</div></div>'}
   if(A.sel==='bans'){
    return head('IP bans',d.bans.length+' address'+(d.bans.length===1?'':'es'))+'<div class="sheet"><div class="sec">'+
     '<div class="note">Requests from these addresses are refused outright, whoever is signed in. Lift one to let that address back in.</div>'+
@@ -3001,18 +3768,18 @@ const UI={
      '<button class="tbtn" data-adm="unban:'+esc(b.id)+'">LIFT</button></div>').join(''):'<div class="note">Nobody is IP banned.</div>')+
     '<div class="err" id="admErr"></div></div></div>'}
   if(A.sel==='log'){
-   const verb={mute:'muted',unmute:'unmuted',ban:'banned',ipban:'IP banned',unipban:'lifted the IP ban on',delete:'removed a message from',purge:'purged messages from',mod:'set moderator permissions for',unmod:'removed moderator'};
+   const verb={mute:'muted',unmute:'unmuted',ban:'banned',ipban:'IP banned',unipban:'lifted the IP ban on',delete:'removed a message from',purge:'purged messages from',mod:'set staff permissions for',unmod:'removed staff member',rename:'renamed from'};
    return head('Activity log','the latest '+d.log.length+' staff actions')+'<div class="sheet"><div class="sec">'+
     (d.log.length?d.log.map(e=>'<div class="logrow"><b>'+esc(when(e.ts))+'</b><span>'+esc(e.by+' '+(verb[e.action]||e.action)+(e.target?' '+e.target:'')+(e.detail?' · '+e.detail:''))+'</span></div>').join('')
      :'<div class="note">Nothing yet.</div>')+'</div></div>'}
   const u=d.user,self=u.userId===M.me.userId,name=esc(u.username);
   const can=!self&&(this.RANK[u.role]||0)<this.RANK[M.staff.role];
-  let html=head(name+' '+this.roleChip(u),u.role?(u.role==='admin'?'admin':'moderator'):'member',this.av(u.userId,'av-34',u.username))+'<div class="sheet">'+
+  let html=head(name+' '+this.roleChip(u),u.role?(u.role==='admin'?'developer':'staff'):'member',this.av(u.userId,'av-34',u.username))+'<div class="sheet">'+
    '<div class="sec"><h3>Account</h3>'+kv('username',u.username)+kv('user id',u.userId)+kv('joined',when(u.created))+kv('last seen',when(u.lastSeen))+
    (u.ip!==undefined?kv('last address',u.ip||'none on record'):'')+kv('IP ban',u.ipBanned?'their last address is banned':u.hasIp?'no':'no address on record yet')+
    (u.role==='mod'?kv('permissions',u.perms.map(p=>A.all[p]||p).join(' · ')):'')+'</div>';
   if(!can){
-   html+='<div class="sec"><div class="note">'+(self?'This is you.':u.role==='admin'?'Admins cannot be moderated from here. Only whoever runs the server can change them, in admin.json.':'Only an admin can moderate a moderator.')+'</div></div>'}
+   html+='<div class="sec"><div class="note">'+(self?'This is you.':u.role==='admin'?'Developers cannot be moderated from here. Only whoever runs the server can change them, in admin.json.':'Only a developer can moderate staff.')+'</div></div>'}
   if(can&&(M.can('mute_short')||M.can('mute_long'))){
    const m=u.mute;
    html+='<div class="sec"><h3>Mute</h3><div class="note">A muted account can still read and receive, but cannot send messages, images or calls, or rename a group. '+
@@ -3030,7 +3797,7 @@ const UI={
    html+='<div class="sec"><h3>IP ban</h3><div class="note">Refuses every request from the address this account last used, and signs them out. Anyone else on that address (a household, a school) is shut out too. Lift it from IP bans.</div>'+
     '<div class="btnrow"><input class="inp" id="admIpWhy" maxlength="300" placeholder="reason (for the log)" style="flex:1;min-width:180px"><button class="tbtn danger" data-adm="ipban"'+(u.hasIp&&!u.ipBanned?'':' disabled')+'>'+(u.ipBanned?'ALREADY BANNED':'IP BAN')+'</button></div></div>';
   if(!self&&M.staff.role==='admin'&&u.role!=='admin'){
-   html+='<div class="sec"><h3>Moderator</h3><div class="note">'+(u.role==='mod'?name+' is a moderator. Change what they can do, or untick everything to remove them.':'Make '+name+' a moderator by giving them at least one permission.')+' Admins can only be appointed in the server config.</div>'+
+   html+='<div class="sec"><h3>Staff</h3><div class="note">'+(u.role==='mod'?name+' is staff. Change what they can do, or untick everything to remove them.':'Make '+name+' staff by giving them at least one permission.')+' Developers can only be appointed in the server config.</div>'+
     '<div id="admPerms">'+Object.entries(A.all||{}).map(([p,l])=>'<label class="perm"><input type="checkbox" value="'+p+'"'+(u.perms.includes(p)?' checked':'')+'>'+esc(l)+'<span class="chip">'+p.toUpperCase()+'</span></label>').join('')+'</div>'+
     '<div class="btnrow"><button class="send" data-adm="perms">SAVE PERMISSIONS</button></div></div>'}
   return html+'<div class="err" id="admErr"></div></div>'},
@@ -3058,7 +3825,7 @@ const UI={
    else if(act==='perms'){
     const perms=[...document.querySelectorAll('#admPerms input:checked')].map(i=>i.value);
     await M.admin('POST','/staff',{userId:u.userId,perms});
-    msg=perms.length?u.username+'\'s permissions are saved':u.username+' is no longer a moderator'}
+    msg=perms.length?u.username+'\'s permissions are saved':u.username+' is no longer staff'}
    else if(act.startsWith('unban:')){await M.admin('POST','/ipbans/remove',{id:act.slice(6)});msg='IP ban lifted'}
    else return;
    if(msg)toast(msg);
@@ -3072,7 +3839,7 @@ const UI={
   const list=M.thread(conv).filter(m=>m.dir!=='sys'&&!m.deleted&&m.state!=='sending'&&m.state!=='failed');
   const authors=[...new Set(list.map(m=>this.sender(conv,m)))];
   const nm=id=>id===M.me.userId?'you':M.displayName(id);
-  this.modal('<h3>Purge messages</h3><div class="note">Removes the most recent messages in '+esc(M.displayName(conv))+' for everyone in it; each becomes “removed by a moderator”. '+
+  this.modal('<h3>Purge messages</h3><div class="note">Removes the most recent messages in '+esc(M.displayName(conv))+' for everyone in it; each becomes “removed by staff”. '+
    'Messages from staff you cannot moderate are left alone. '+list.length+' message'+(list.length===1?' is':'s are')+' here to purge.</div>'+
    '<div class="field"><div class="lbl">HOW MANY · LATEST FIRST</div><input class="inp" id="purgeN" type="number" min="1" max="500" value="'+Math.min(20,Math.max(1,list.length))+'"></div>'+
    '<div class="field"><div class="lbl">FROM</div><select class="inp" id="purgeWho"><option value="">everyone</option>'+
@@ -3093,7 +3860,7 @@ const UI={
  /* ---------- overlays ---------- */
  modal(html,onClick){
   const o=$('#overlay');
-  this._onClose=null;
+  this._onClose=null;this._gp=null;
   o.innerHTML='<div class="scrim"><div class="modal" role="dialog" aria-modal="true">'+html+'</div></div>';
   const scrim=o.firstChild;
   scrim.addEventListener('mousedown',e=>{if(e.target===scrim)this.close()});
@@ -3101,6 +3868,7 @@ const UI={
   const first=scrim.querySelector('input');if(first)first.focus();
   return scrim},
  close(){
+  this._gp=null;
   const s=$('#overlay .scrim:not(.out)');
   if(s){s.classList.add('out');setTimeout(()=>s.remove(),180)}
   const f=this._onClose;this._onClose=null;if(f)f()},
@@ -3110,7 +3878,6 @@ const UI={
   const saved=SERVER||(/^https?:$/.test(location.protocol)?location.origin:'')||store.get('server')||'http://localhost:8080';
   const o=$('#overlay');
   o.innerHTML='<div class="scrim solid"><div class="modal"><div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+VERSION+'</div></div>'+
-   '<div class="note" style="margin:8px 0 0">Create a password. Create a secure and memorable password. It cannot be recovered.</div>'+
    '<div class="auth-seg"><button data-mode="login" aria-pressed="'+(mode==='login')+'">LOG IN</button><button data-mode="signup" aria-pressed="'+(mode==='signup')+'">SIGN UP</button></div>'+
    '<form id="authForm" autocomplete="on">'+
    '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="aUser" name="username" autocomplete="username" spellcheck="false" placeholder="3-24 letters, digits, . _ -"></div>'+
@@ -3134,16 +3901,14 @@ const UI={
     $('#aNote').textContent='deriving keys…';
     if(mode==='signup')await M.signup(user,pass);else await M.login(user,pass);
     store.set('server',M.server);store.sset(M.session());
-    this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.peer=null;this.S.paneKey='';this.render();
+    this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.side=null;this.S.paneKey='';this.render();
    }catch(e){err.textContent=e.message;go.disabled=false;$('#aNote').textContent=''}}},
 
  /** + ADD, and the direct side of + NEW (`seg` switches back to a group): a friend
      opens their chat; anyone else gets a friend request. */
  addPeer(seg){
   const chat=this.S.screen==='messages';
-  this.modal('<h3>'+(chat?'New conversation':'Add a friend')+'</h3>'+(seg||'')+'<div class="note">Enter their exact username. '+
-   (chat?'If you are already friends the chat opens; otherwise they get a friend request, and you can message once they accept.'
-    :'They get a friend request, and you can message each other once they accept.')+'</div>'+
+  this.modal('<h3>'+(chat?'New conversation':'Add a friend')+'</h3>'+(seg||'')+
    '<div class="field"><div class="lbl">USERNAME</div><input class="inp" id="ncUser" spellcheck="false" autocomplete="off"></div>'+
    '<div class="err" id="ncErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">'+(chat?'START':'SEND REQUEST')+'</button></div>',
    async act=>{
@@ -3194,9 +3959,12 @@ const UI={
   if(s==='admin'){this.adm().q=null;this.loadAdminUsers()}
   this.render()},
  open(id){
-  if(isDiscord(id)){this.S.screen='discord';this.S.dc=id}else{this.S.screen='messages';this.S.chat=id}
-  M.unread.delete(id);M.pinged.delete(id);this._stick=true;this._winFor=null;this.render()},
- showPeer(id){if(this.S.screen!=='peers')this.screen('peers');this.S.peer=id;this.render()},
+  if(isDiscord(id)){this.S.screen='discord';this.S.dc=id;this.S.last='dc'}else{this.S.screen='messages';this.S.chat=id;this.S.last='chat'}
+  if(this.narrow())this.S.side=null;   // it would cover the chat
+  M.unread.delete(id);M.pinged.delete(id);this._snap.delete(id);this._stick=true;this._winFor=null;this._released=true;this.render()},
+ /** Opens someone's profile on the right, beside whatever is open. */
+ showPeer(id){if(!id)return;if(this.S.side!==id){this.S.sideErr='';if(M.me&&id!==M.me.userId&&!isGroup(id)&&!isDiscord(id))M.fetchProfile(id).catch(()=>{})}
+  this.S.side=id;this.hoverHide();this.render()},
 
  async send(){
   const ta=$('#composer');if(!ta)return;
@@ -3204,10 +3972,11 @@ const UI={
   const r=this.S.reply,re=r&&r.conv===id?r.id:undefined;
   const a=this.S.att&&this.S.att.conv===id?this.S.att:null;
   if(!text.trim()&&!a)return;
+  if(this._hold)this.showHeld();
   if(a&&text.length>IMGTEXT)return toast('captions are limited to '+IMGTEXT+' characters');
   if(!a&&parseCommand(text))return this.command(id,text);
-  let out=text,poll;
-  if(!a)try{const f=funCommand(text,M.me.username);if(f){out=f.text;this.acClose();
+  let out=emojify(text),poll;
+  if(!a)try{const f=funCommand(out,M.me.username);if(f){out=f.text;this.acClose();
     if(f.poll){if(isDiscord(id))return toast('polls are not available in Discord channels');poll=Object.assign(f.poll,{ends:M.serverNow()+f.min*60000})}}}
    catch(e){return toast(text.trim().split(/\s/)[0]+': '+e.message,6000)}
   const mu=M.muted();if(mu)return toast('you are muted '+this.muteText(mu)+(mu.reason?' — '+mu.reason:''),6000);
@@ -3254,16 +4023,16 @@ const UI={
     cmds.filter(c=>c[0]!=='help').map(c=>'<div><b>/'+c[0]+'</b> '+esc(c[1])+' — '+esc(c[2])+'</div>').join(''):'')+
    '</div><div class="modal-foot"><span class="grow"></span><button class="send" data-m="close">CLOSE</button></div>',()=>this.close())},
 
- /* ---- autocomplete: @people and /commands ---- */
+ /* ---- autocomplete: @people, /commands and :emoji: ---- */
  acOpen(){return !!$('#acPop')},
  acClose(){const p=$('#acPop');if(p)p.remove();this._ac=null},
  /** Who can be pinged from conv: its members first, then friends (and accounts staff have looked up). */
  acPeople(conv){
   const seen=new Map(),add=(id,name)=>{if(id&&name&&id!==M.me.userId&&!seen.has(name.toLowerCase()))seen.set(name.toLowerCase(),{id,name})};
   const g=isGroup(conv)&&M.group(conv);
-  if(g)for(const m of g.members)add(m.userId,m.username);
-  if(conv&&!isGroup(conv)&&!isDiscord(conv))add(conv,M.displayName(conv));
-  for(const p of M.peers.values())if(p.state==='friend')add(p.userId,p.username);
+  if(g)for(const m of g.members)add(m.userId,M.username(m.userId)||m.username);
+  if(conv&&!isGroup(conv)&&!isDiscord(conv))add(conv,M.username(conv));
+  for(const p of M.peers.values())if(p.state==='friend')add(p.userId,M.username(p.userId)||p.username);
   if(M.staff&&this.S.adm)for(const u of this.S.adm.users)add(u.userId,u.username);
   return [...seen.values()]},
  /** Opens, updates or closes the suggestion list for the word being typed. */
@@ -3273,11 +4042,19 @@ const UI={
   let items=[],start=0;
   const at=/(^|[^\w@])@([A-Za-z0-9._-]{0,24})$/.exec(before);
   const cmd=/^\/(\w*)$/.exec(before);
-  if(at){
+  const ec=/(^|[\s(])(:([a-z0-9_+-]{2,32}))$/i.exec(before);
+  if(ec){
+   const q=ec[3].toLowerCase(),seen=new Set(),hit=[];start=before.length-ec[2].length;
+   const exact=ECODE.get(q);if(exact){seen.add(exact);hit.push([q,exact])}
+   for(const [n,e] of ECODE)if(hit.length<8&&!seen.has(e)&&n.startsWith(q)){seen.add(e);hit.push([n,e])}
+   for(const [n,e] of ECODE)if(hit.length<8&&!seen.has(e)&&n.includes(q)){seen.add(e);hit.push([n,e])}
+   items=hit.map(([n,e])=>({value:e+' ',html:'<span class="emo">'+e+'</span><b>:'+esc(n)+':</b>'}))}
+  else if(at){
    const q=at[2].toLowerCase();start=before.length-at[2].length-1;
    items=this.acPeople(this.cur()).filter(p=>p.name.toLowerCase().startsWith(q)).concat(
     this.acPeople(this.cur()).filter(p=>!p.name.toLowerCase().startsWith(q)&&p.name.toLowerCase().includes(q)))
-    .slice(0,8).map(p=>({value:'@'+p.name+' ',html:this.av(p.id,'av-26',p.name,' style="background:var(--avatar);color:var(--avatar-fg)"')+'<span>'+esc(p.name)+'</span>'+this.staffTag(p.id)}))}
+    .slice(0,8).map(p=>{const dn=M.displayName(p.id);
+     return {value:'@'+p.name+' ',html:this.av(p.id,'av-26',p.name,' style="background:var(--avatar);color:var(--avatar-fg)"')+'<span>'+esc(dn)+'</span>'+this.staffTag(p.id)+(dn!==p.name?'<span class="d">@'+esc(p.name)+'</span>':'')}})}
   else if(cmd){
    const q=cmd[1].toLowerCase();
    items=FUN.concat(M.staff?this.cmdList():[['help','','show all commands']]).filter(c=>c[0].startsWith(q)).map(c=>({value:'/'+c[0]+' ',html:'<b>/'+c[0]+'</b><span class="d">'+esc(c[1]||c[2])+'</span>'}))}
@@ -3301,14 +4078,14 @@ const UI={
  notify(peer,text){
   const ping=M.pings(text);
   if(document.hidden){const a=this._away||(this._away={n:0,peers:new Set(),pings:0});a.n++;a.peers.add(peer);if(ping)a.pings++;return}
-  if(this.cur()===peer)return;
+  if(this.cur()===peer||M.presenceMode==='dnd')return;
   const f=M.filter(),caught=f.level!=='none'&&chatFilter.test(f.level,text);
   if(caught&&f.action==='delete')return;
   toast((ping?'@ you were mentioned · ':'')+M.displayName(peer)+': '+(caught?'message hidden by your chat filter':text.slice(0,ping?140:80)),ping?9000:4000)},
  /** The messages that came in while the tab was hidden, as one toast. */
  back(){
   const a=this._away;this._away=null;
-  if(!a)return;
+  if(!a||M.presenceMode==='dnd')return;
   if(a.n===1&&this.cur()===[...a.peers][0])return;
   summary(a.n,a.peers.size);
   if(a.pings)toast('@ you were mentioned '+(a.pings===1?'once':a.pings+' times')+' while you were away',8000)},
@@ -3326,7 +4103,7 @@ const UI={
   const box=$('#callbar'),c=M.voice.call,au=$('#callAudio');
   const remote=(c&&c.remote)||null;
   if(au.srcObject!==remote){au.srcObject=remote;if(remote)au.play().catch(()=>{})}
-  Ring.set(!!c&&c.dir==='in'&&c.state==='ringing');
+  Ring.set(!!c&&c.dir==='in'&&c.state==='ringing'&&M.presenceMode!=='dnd');
   $('#app').classList.toggle('with-call',!!c);
   if(!c){
    clearInterval(this._callTick);this._callTick=0;
@@ -3411,6 +4188,9 @@ const Ring={ctx:null,timer:0,on:false,
 
 /* ---------- wiring ---------- */
 document.addEventListener('click',async e=>{
+ // a picture or name standing for someone (or their hover card) opens their profile on the right
+ const pf=e.target.closest('[data-pf]');
+ if(pf&&pf.dataset.pf&&!e.target.closest('#overlay')){UI.showPeer(pf.dataset.pf);return}
  // a click on a filtered message that was clicked open hides it again (its image still opens)
  const rv=e.target.closest('[data-reveil]');
  if(rv&&!e.target.closest('button')){UI.S.unveiled.delete(UI.cur()+'|'+rv.dataset.reveil);UI.render();return}
@@ -3420,11 +4200,14 @@ document.addEventListener('click',async e=>{
  if(t.dataset.chat){UI.open(t.dataset.chat);return}
  if(t.dataset.dc){UI.open(t.dataset.dc);return}
  if(t.dataset.dcpub){UI.joinPublic(t.dataset.dcpub);return}
- if(t.dataset.peer){UI.S.peer=t.dataset.peer;UI.render();return}
- if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,UI.S.screen==='peers'?UI.S.peer:UI.S.chat);return}
+ if(t.dataset.peer){UI.showPeer(t.dataset.peer);return}
+ if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,t.dataset.id||UI.S.chat);return}
+ if(t.dataset.showHeld!=null){UI.showHeld();return}
  if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
  if(t.dataset.discard){M.discard(t.dataset.discard);return}
  if(t.dataset.reply){UI.startReply(t.dataset.reply);return}
+ if(t.dataset.react){UI.emojiToggle(t.dataset.react);return}
+ if(t.dataset.rx){UI.react(t.dataset.rx,t.dataset.e);return}
  if(t.dataset.del){UI.askDelete(t.dataset.del);return}
  if(t.dataset.jump){UI.jump(t.dataset.jump);return}
  if(t.dataset.view){UI.viewImage(t.dataset.view);return}
@@ -3443,7 +4226,7 @@ document.addEventListener('click',async e=>{
   case 'attach':UI.attach();break;
   case 'emoji':UI.emojiToggle();break;
   case 'back':
-   if(UI.S.screen==='peers')UI.S.peer=null;else if(UI.S.screen==='settings')UI.S.set=false;
+   if(UI.S.screen==='peers')UI.S.side=null;else if(UI.S.screen==='settings')UI.S.set=false;
    else if(UI.S.screen==='admin')UI.adm().sel=null;
    else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
    UI.render();break;
@@ -3459,19 +4242,31 @@ document.addEventListener('click',async e=>{
   case 'stage-pin':UI._pin=t.dataset.tile;UI.renderStage(M.voice.call);break;
   case 'stage-size':$('#stage').classList.toggle('big');UI.renderStage(M.voice.call);break;
   case 'stage-full':{const st=$('#stage');document.fullscreenElement===st?document.exitFullscreen().catch(()=>{}):st.requestFullscreen().catch(()=>{})}break;
-  case 'profile':UI.showPeer(UI.S.chat);break;
+  case 'profile':UI.S.side===UI.S.chat?UI.closeSide():UI.showPeer(UI.S.chat);break;
+  case 'side-close':UI.closeSide();break;
+  case 'me-open':if(M.me){UI.screen('settings');UI.S.set='profile';UI.render()}break;
+  case 'pf-accent':if(UI.S.pf){UI.S.pf.accent=t.dataset.v;UI.fillProfile()}break;
+  case 'pf-gtag':{const e=$('#pfTagErr');if(e)e.textContent='';t.disabled=true;
+   M.showTag(t.dataset.v).then(()=>toast(t.dataset.v?'your profile shows the group tag':'no group tag on your profile'))
+    .catch(x=>{const e=$('#pfTagErr');if(e)e.textContent=x.message;else toast(x.message)}).finally(()=>{t.disabled=false;UI.fillProfile()});break}
+  case 'pf-reset':UI.initProfileForm();break;
+  case 'pf-save':UI.saveProfile(t);break;
+  case 'pf-rename':UI.renameMe(t);break;
+  case 'pf-presence':{
+   const err=$('#pfPresErr');err.textContent='';
+   try{await M.setPresence(t.dataset.v)}catch(x){err.textContent=x.message}
+   break}
   case 'leave':UI.leaveDiscord(UI.S.dc);break;
   case 'g-invite':UI.groupInvite(UI.S.chat);break;
   case 'g-members':UI.groupMembers(UI.S.chat);break;
-  case 'g-rename':UI.groupRename(UI.S.chat);break;
-  case 'g-icon':UI.groupIcon(UI.S.chat);break;
+  case 'gtag':UI.tagClick(t.dataset.id);break;
   case 'av-pick':UI.pickAvatar();break;
   case 'av-clear':UI.clearAvatar();break;
   case 'g-leave':UI.groupLeave(UI.S.chat);break;
   case 'purge':UI.purge(UI.S.chat);break;
   case 'adm-more':UI.loadAdminUsers(true);break;
-  case 'open-settings':UI.S.set=true;UI.render();break;
-  case 'goto-discovery':UI.screen('settings');UI.S.set=true;UI.renderNow();
+  case 'open-settings':UI.S.set=t.dataset.v||'account';UI.render();break;
+  case 'goto-discovery':UI.screen('settings');UI.S.set='account';UI.renderNow();
    {const s=$('#secDiscovery');if(s)s.scrollIntoView({block:'start'})}break;
   case 'global-more':UI.loadGlobal(true);break;
   case 'filter-level':case 'filter-action':{
@@ -3503,8 +4298,28 @@ document.addEventListener('keydown',e=>{
  if(e.target.id==='composer'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();UI.send()}
  if(e.key==='Escape'&&UI.emojiOpen()){UI.emojiClose();const ta=$('#composer');if(ta)ta.focus()}
  else if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
- else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply()});
+ else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply();
+ else if(e.key==='Escape'&&UI.S.side&&!$('#overlay .scrim'))UI.closeSide()});
 document.addEventListener('input',e=>{if(e.target.id==='composer')UI.acUpdate()});
+// the profile form edits a draft; the preview follows it, and SAVE sends it
+document.addEventListener('input',e=>{
+ const k={pfDisplay:'display',pfStatus:'status',pfBio:'bio'}[e.target.id];
+ if(!UI.S.pf)return;
+ if(k){UI.S.pf[k]=e.target.value;UI.fillProfile()}
+ else if(e.target.id==='pfAccentPick'){UI.S.pf.accent=e.target.value.toLowerCase();UI.fillProfile()}});
+// hovering a picture or name brings up a mini profile
+document.addEventListener('mouseover',e=>{
+ if(e.target.closest('#hovercard')){clearTimeout(UI._hcHide);return}
+ const t=e.target.closest('[data-pf]');
+ if(t&&!t.closest('#overlay'))UI.hoverWant(t);else UI.hoverLeave()});
+document.addEventListener('scroll',e=>{if(!(e.target.closest&&e.target.closest('#hovercard')))UI.hoverHide()},true);
+window.addEventListener('blur',()=>UI.hoverHide());
+/* ---------- presence: idle after a while away ---------- */
+const Activity={IDLE:5*60000,last:Date.now(),
+ poke(){this.last=Date.now();if(M.idle)M.setIdle(false)},
+ tick(){if(M.token)M.setIdle(Date.now()-this.last>this.IDLE)}};
+for(const ev of ['pointerdown','pointermove','keydown','wheel','touchstart'])document.addEventListener(ev,()=>Activity.poke(),{capture:true,passive:true});
+setInterval(()=>Activity.tick(),15000);
 document.addEventListener('mousedown',e=>{if(UI.acOpen()&&!e.target.closest('#acPop,#composer'))UI.acClose()});
 let searchTimer=0;
 $('#search').addEventListener('input',e=>{
@@ -3512,7 +4327,10 @@ $('#search').addEventListener('input',e=>{
  if(UI.S.screen==='peers'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadGlobal(),250)}
  if(UI.S.screen==='admin'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>UI.loadAdminUsers(),250)}});
 // the emoji browser closes on a click anywhere else
-document.addEventListener('mousedown',e=>{if(UI.emojiOpen()&&!e.target.closest('#emojiPop,[data-act=emoji]'))UI.emojiClose()});
+document.addEventListener('mousedown',e=>{if(UI.emojiOpen()&&!e.target.closest('#emojiPop,[data-act=emoji],[data-react]'))UI.emojiClose()});
+// the reaction picker follows its message as the thread scrolls or the window resizes
+document.addEventListener('scroll',e=>{if(!e.target.closest||!e.target.closest('#emojiPop'))UI.emojiPlace()},true);
+addEventListener('resize',()=>UI.emojiPlace());
 // images can be pasted into the composer, or dropped anywhere on an open chat
 const imageIn=list=>[...(list||[])].find(f=>/^image\//.test(f.type));
 document.addEventListener('paste',e=>{
@@ -3526,9 +4344,9 @@ document.addEventListener('drop',e=>{
  e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
 document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target)},true);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){UI.back();UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)UI.hoverHide();else{Activity.poke();UI.back();UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
 
-M.on('change',()=>UI.render());
+M.on('change',()=>UI.renderSoon());
 M.on('status',()=>UI.render());
 M.on('message',(peer,text)=>UI.notify(peer,text));
 M.on('backlog',(n,chats)=>summary(n,chats));
@@ -3540,7 +4358,7 @@ M.on('peer',(kind,p)=>{
  else if(kind==='accepted')toast(p.username+' accepted your friend request',6000);
  else if(kind==='changed')toast('warning: '+p.username+' now belongs to a different identity than before',9000)});
 M.on('signedout',reason=>{
- store.sset(null);Object.assign(UI.S,{chat:null,dc:null,peer:null,set:false,paneKey:'',filter:'',reply:null,adm:null,
+ store.sset(null);UI.hoverHide();Object.assign(UI.S,{chat:null,dc:null,last:'chat',side:null,sideErr:'',set:false,pf:null,paneKey:'',filter:'',reply:null,adm:null,
   global:{q:null,users:[],more:false,loading:false,err:'',seq:UI.S.global.seq+1}});
  $('#search').value='';UI.render();
  UI.auth('login',reason||'')});
