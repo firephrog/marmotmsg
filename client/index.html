@@ -416,6 +416,7 @@ button.quote:hover{background:var(--row)}
 .pc-name{font-size:17px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
 .pc-user{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);overflow-wrap:anywhere}
 .pc-user .chip{font-size:8.5px}
+.chip.stag{color:var(--stag);border-color:var(--stag);background:color-mix(in srgb,var(--stag) 12%,transparent)}
 .pc-pres{display:flex;align-items:center;gap:7px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
 .pc-status{margin-top:6px;font-size:13px;line-height:1.45;color:var(--text);overflow-wrap:anywhere}
 .pc-sec{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
@@ -542,6 +543,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
 
 <script type="application/json" id="patchNotes">
 [
+ {"v": "0.6.1", "features": ["Staff profile tags: staff with the new create tag permission can make short colored tags (up to 10 characters), and those with the assign tag permission can put them on people. Tags show beside the username on a profile"], "fixes": ["Calls that cannot connect directly now go through a relay server, or as a last resort carry their audio over the existing connection, encrypted end to end", "Chats open faster: only the latest messages are drawn at first, and older ones load as you scroll up"]},
  {"v": "0.6.0", "features": ["Added profiles: a display name, a bio, a custom status and an accent color, edited in Settings → Profile with a live preview", "You can now change your username (it takes your password)", "Online status: see when friends are online, idle or on do not disturb, and choose to show as online, do not disturb or invisible", "Hover over someone's picture in a chat for a mini profile; click it to open their full profile on the right", "Peers keeps your conversation open: picking someone there opens their profile beside it", "Do not disturb silences message toasts and the call ringtone"], "fixes": []},
  {"v": "0.5.0", "features": ["Added auto updating (longer start times, can download latest html for faster start times).", "Added Video and Screenshare to calls", "Added admin panel, moderators, and muting", "Added customizable chat filter (completely client side, disableable)", "Added patch notes display"], "fixes": ["Fixed Burst loading, where messages would load in a burst after inactivity"]}
 ]
@@ -568,7 +570,7 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.6.0';
+const VERSION='0.6.1';
 /** What each release changed, newest first; the top entry is VERSION. The list itself is
     the #patchNotes data block above this script, where an older copy can read it too. */
 const PATCH_NOTES=JSON.parse(document.getElementById('patchNotes').textContent);
@@ -604,7 +606,8 @@ function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart
 const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
 const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
-const PAGE=40;   // messages drawn per page of a thread; older pages load as you scroll up
+const FIRST=10;  // messages drawn when a thread opens (or snaps back to the bottom)
+const PAGE=40;   // older messages drawn each time the reader scrolls up to the top
 const BURST=3;   // more arrivals than this at once is catching up: drawn as is, summed up in one toast
 const AVSIZE=128,AVCHARS=48000;   // pictures are shrunk to AVSIZE² and at most AVCHARS of data: URL
 /** A picture as it may come off the wire: a small base64 JPEG, PNG or WebP data: URL. */
@@ -634,6 +637,10 @@ function cleanTag(t){
  if(!t||typeof t!=='object'||typeof t.groupId!=='string'||!/^[0-9a-f]{24}$/.test(t.groupId)||typeof t.text!=='string'||!t.text)return null;
  return {groupId:t.groupId,text:[...t.text].slice(0,4).join(''),emoji:typeof t.emoji==='string'&&t.emoji.length<=16?t.emoji:'',
   vis:t.vis==='friends'?'friends':'all',mode:t.mode==='apply'?'apply':'join',n:Number.isFinite(t.n)?t.n:0}}
+/** The staff-given tags on a profile, as the server describes them: [{text, color}]. */
+function cleanStags(a){
+ return (Array.isArray(a)?a:[]).filter(t=>t&&typeof t.text==='string'&&t.text&&typeof t.color==='string'&&ACCENTRE.test(t.color))
+  .slice(0,6).map(t=>({text:t.text.slice(0,10),color:t.color.toLowerCase()}))}
 /** How a group tag reads: its emoji and text, or #text without an emoji. */
 const tagLabel=t=>(t.emoji?t.emoji+' ':'#')+t.text;
 /** A message in one line: its text, or that it is a photo. */
@@ -1064,6 +1071,103 @@ class Tx{
   this.c.emit('change');return r}
 }
 
+/* ---------------------------------------------------------- relay audio */
+/* Call audio for the socket fallback, in the browser: the microphone as 20 ms
+   packets, and packets back to the speakers through a small jitter buffer
+   (60 ms to start, never more than 300 ms behind). Opus through WebCodecs when
+   both ends have it, otherwise 16 kHz G.711 mu-law, which needs nothing but Web
+   Audio (128 kbit/s against Opus's 32). Voice picks the codec and does the
+   encryption and numbering; this only turns sound into bytes and back. */
+function mulawEnc(x){
+ let s=Math.round(Math.max(-1,Math.min(1,x))*32635);
+ const sign=s<0?0x80:0;if(s<0)s=-s;s+=0x84;
+ let e=7;for(let m=0x4000;!(s&m)&&e>0;m>>=1)e--;
+ return ~(sign|(e<<4)|((s>>(e+3))&0x0f))&0xff}
+function mulawDec(u){
+ u=~u&0xff;const e=(u>>4)&7,s=(((u&0x0f)<<3)+0x84<<e)-0x84;
+ return (u&0x80?-s:s)/32768}
+const RelayAudio={
+ available(){return !!(globalThis.AudioContext||globalThis.webkitAudioContext)},
+ async codecs(){
+  const G=globalThis,out=[];
+  if(G.AudioEncoder&&G.AudioDecoder&&G.AudioData&&G.EncodedAudioChunk)try{
+   const cfg={codec:'opus',sampleRate:48000,numberOfChannels:1};
+   const [e,d]=await Promise.all([G.AudioEncoder.isConfigSupported(Object.assign({bitrate:32000},cfg)),G.AudioDecoder.isConfigSupported(cfg)]);
+   if(e.supported&&d.supported)out.push('opus')}catch(e){}
+  out.push('pcmu');
+  return out},
+ context(){
+  const AC=globalThis.AudioContext||globalThis.webkitAudioContext;
+  const ctx=new AC({sampleRate:48000,latencyHint:'interactive'});
+  ctx.suspend().catch(()=>{});
+  return ctx},
+ async open({codec,stream,ctx,send}){
+  if(!ctx)ctx=this.context();
+  await ctx.resume().catch(()=>{});
+  const G=globalThis,sr=ctx.sampleRate,closers=[];
+  // speakers: a ring buffer drained by an output processor
+  const ring=new Float32Array(sr*2);let w=0,r=0,primed=false;
+  const push=f=>{
+   for(let i=0;i<f.length;i++)ring[(w+i)%ring.length]=f[i];
+   w+=f.length;if(w-r>ring.length)r=w-ring.length};
+  const out=ctx.createScriptProcessor(1024,1,1);
+  out.onaudioprocess=ev=>{
+   const o=ev.outputBuffer.getChannelData(0);
+   let avail=w-r;
+   if(avail>sr*0.3){r=w-Math.floor(sr*0.1);avail=w-r}   // fallen too far behind: skip ahead
+   if(!primed&&avail>=sr*0.06)primed=true;
+   if(!primed){o.fill(0);return}
+   const n=Math.min(o.length,avail);
+   for(let i=0;i<n;i++)o[i]=ring[(r+i)%ring.length];
+   r+=n;
+   if(n<o.length){o.fill(0,n);primed=false}};
+  out.connect(ctx.destination);
+  // microphone: a processor that has to reach the destination to run, through a silent gain
+  const src=ctx.createMediaStreamSource(stream),cap=ctx.createScriptProcessor(1024,1,1),sink=ctx.createGain();
+  sink.gain.value=0;src.connect(cap);cap.connect(sink);sink.connect(ctx.destination);
+  let play;
+  if(codec==='opus'){
+   let ts=0,dts=0;
+   const enc=new G.AudioEncoder({output:ch=>{const b=new Uint8Array(ch.byteLength);ch.copyTo(b);send(b)},error:()=>{}});
+   enc.configure({codec:'opus',sampleRate:sr,numberOfChannels:1,bitrate:32000});
+   const dec=new G.AudioDecoder({output:ad=>{
+    try{const f=new Float32Array(ad.numberOfFrames);ad.copyTo(f,{planeIndex:0,format:'f32-planar'});push(f)}finally{ad.close()}},error:()=>{}});
+   dec.configure({codec:'opus',sampleRate:sr,numberOfChannels:1});
+   cap.onaudioprocess=ev=>{
+    if(enc.state!=='configured')return;
+    const f=new Float32Array(ev.inputBuffer.getChannelData(0));
+    const ad=new G.AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:f.length,numberOfChannels:1,timestamp:ts,data:f});
+    ts+=Math.round(f.length*1e6/sr);
+    try{enc.encode(ad)}finally{ad.close()}};
+   play=p=>{if(dec.state!=='configured')return;dec.decode(new G.EncodedAudioChunk({type:'key',timestamp:dts,data:p}));dts+=20000};
+   closers.push(()=>enc.close(),()=>dec.close())}
+  else{
+   const step=sr/16000,frame=new Uint8Array(320);
+   let ph=0,acc=0,cnt=0,fill=0,prev=0;
+   cap.onaudioprocess=ev=>{
+    // down to 16 kHz by averaging each window of input samples
+    const x=ev.inputBuffer.getChannelData(0);
+    for(let i=0;i<x.length;i++){
+     acc+=x[i];cnt++;
+     if(++ph>=step){
+      ph-=step;frame[fill++]=mulawEnc(acc/cnt);acc=cnt=0;
+      if(fill===frame.length){send(frame.slice());fill=0}}}};
+   play=p=>{
+    // back up to the context rate by linear interpolation, carrying the last sample over
+    const n=p.length;if(!n)return;
+    const u=new Float32Array(n);for(let i=0;i<n;i++)u[i]=mulawDec(p[i]);
+    const m=Math.round(n*step),f=new Float32Array(m);
+    for(let j=0;j<m;j++){
+     const x=(j+1)/step-1,i=Math.floor(x),t=x-i,a=i<0?prev:u[i],b=u[Math.min(i+1,n-1)];
+     f[j]=a+(b-a)*t}
+    prev=u[n-1];push(f)}}
+  return {codec,play(p){try{play(p)}catch(e){}},
+   close(){
+    cap.onaudioprocess=out.onaudioprocess=null;
+    for(const n of [src,cap,sink,out])try{n.disconnect()}catch(e){}
+    for(const f of closers)try{f()}catch(e){}}}}
+};
+
 /* ---------------------------------------------------------------- voice */
 /* Voice calls are WebRTC, so the audio is SRTP keyed by a DTLS handshake
    between the two browsers. What makes that end-to-end is the signalling: the
@@ -1080,7 +1184,14 @@ class Tx{
    on. Turning either on swaps a track into its sender, so there is never a
    second round of offer and answer; a 'media' signal {cam, screen} tells the
    other side which of its incoming videos to show. A call from an older,
-   audio-only client simply has no video sections, and video stays off. */
+   audio-only client simply has no video sections, and video stays off.
+   Getting through: ICE tries a direct path first and the server's TURN relay
+   second, both inside one peer connection. If that still fails, the call falls
+   back to the WebSocket: the offer and answer also carry relay:{k, c}, a fresh
+   AES-GCM key for frames that side sends and the codecs it can play. When ICE
+   gives up, either side switches and sends a 'relay' signal so the other does
+   too; audio then goes as encrypted 20 ms frames through the server, which
+   cannot read them (see RelayAudio). Relayed calls are voice only. */
 class Voice{
  constructor(c,opts){
   this.c=c;this.call=null;
@@ -1091,8 +1202,25 @@ class Voice{
   this.ring=opts.ring||45000;        // how long an unanswered call rings
   this.connect=opts.connectWait||20000;
   this.grace=opts.grace||10000;      // how long a dropped connection may take to recover
-  this.gather=opts.gather||4000}
+  this.gather=opts.gather||4000;
+  this.relayMedia=opts.relayMedia||(RelayAudio.available()?RelayAudio:null);
+  this._codecs=null}
  supported(){return !!(this.RTC&&this.getMedia)}
+ /** Codecs this browser can send and play over the socket relay; [] when it cannot relay. */
+ relayCodecs(){
+  if(!this._codecs)this._codecs=(this.relayMedia&&this.c.WS?Promise.resolve(this.relayMedia.codecs()).catch(()=>[]):Promise.resolve([]));
+  return this._codecs}
+ /** What this side puts in its offer or answer for the socket fallback, or undefined. */
+ async _relayOffer(call){
+  const c=await this.relayCodecs();
+  if(!c.length)return undefined;
+  call.rk=rand(32);call.codecs=c;
+  return {k:b64(call.rk),c}}
+ /** The audio context is made inside the click that starts or answers the call, where a
+     browser lets audio start; it is only resumed if the call ends up relayed. */
+ _ctx(call){
+  if(call.actx||!this.relayMedia||!this.relayMedia.context)return;
+  try{call.actx=this.relayMedia.context()}catch(e){call.actx=null}}
  why(){return this.RTC?'voice calls need microphone access: open Marmot over https or from localhost':'this browser does not support voice calls'}
  /** Whether this call can carry video at all (both ends negotiated the video sections). */
  canVideo(){const c=this.call;return !!(c&&c.tx&&c.tx.cam)}
@@ -1107,14 +1235,16 @@ class Voice{
   if(!this.supported())throw new Error(this.why());
   if(!this.c.isFriend(peerId))throw new Error('you can only call friends');
   const call=this.call={id:uid(),peer:peerId,dir:'out',state:'calling',created:Date.now(),muted:false,...Voice.fresh()};
+  this._ctx(call);
   this.emit();
   try{
    await this._open(call);
    await call.pc.setLocalDescription(await call.pc.createOffer());
    await this._gathered(call.pc);
+   const relay=await this._relayOffer(call);
    if(this.call!==call)return null;
    call.timer=setTimeout(()=>{if(this.call===call&&call.state==='calling')this.hangup('timeout')},this.ring);
-   await this.send(call,'offer',{sdp:call.pc.localDescription.sdp});
+   await this.send(call,'offer',{sdp:call.pc.localDescription.sdp,relay});
   }catch(e){
    if(this.call!==call)return null;        // hung up while starting
    this._finish(call,'failed',e.message);this.send(call,'end').catch(()=>{});throw e}
@@ -1124,14 +1254,17 @@ class Voice{
   const call=this.call;
   if(!call||call.dir!=='in'||call.state!=='ringing')return null;
   if(!this.supported()){const e=new Error(this.why());this.decline();throw e}
-  call.state='connecting';clearTimeout(call.timer);this.emit();
+  call.state='connecting';clearTimeout(call.timer);this._ctx(call);this.emit();
   try{
    await this._open(call);
    await call.pc.setLocalDescription(await call.pc.createAnswer());
    await this._gathered(call.pc);
+   const relay=call.peerRelay?await this._relayOffer(call):undefined;
+   // the codec is the first one in the caller's list that this side can also play
+   if(relay)call.codec=call.peerRelay.c.find(x=>relay.c.includes(x))||null;
    if(this.call!==call)return null;
-   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
-   await this.send(call,'answer',{sdp:call.pc.localDescription.sdp});
+   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this._lost(call)},this.connect);
+   await this.send(call,'answer',{sdp:call.pc.localDescription.sdp,relay});
   }catch(e){
    if(this.call!==call)return null;
    this.hangup('failed',e.message);throw e}
@@ -1154,7 +1287,8 @@ class Voice{
   if(call.stream)call.stream.getTracks().forEach(t=>{t.enabled=!on});
   this.emit()}
 
- static fresh(){return {cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,switching:new Set()}}
+ static fresh(){return {cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,switching:new Set(),
+  relay:false,rk:null,codecs:null,codec:null,peerRelay:null,actx:null,media:null}}
 
  /** Camera on or off. Resolves once the track is in (or out of) its sender. */
  setCamera(on){return this._video('cam',on,()=>this.getMedia({audio:false,
@@ -1170,9 +1304,9 @@ class Voice{
 
  async _video(kind,on,open){
   const call=this.call;on=!!on;
-  if(!call||!call.pc)throw new Error('not in a call');
+  if(!call||(!call.pc&&!call.relay))throw new Error('not in a call');
   if(!(kind==='cam'?this.canVideo():this.canScreen()))
-   throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':'this call is voice only');
+   throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':call.relay?'a relayed call is voice only':'this call is voice only');
   if(call[kind]===on||call.switching.has(kind))return;
   const key=kind+'Stream',sender=call.tx[kind].sender;
   call.switching.add(kind);
@@ -1222,7 +1356,7 @@ class Voice{
     call.tx={cam:v[0],screen:v[1]};
     call.remoteCam=of(v[0]);call.remoteScreen=of(v[1])}}
   const watch=()=>{
-   if(this.call!==call)return;
+   if(this.call!==call||call.pc!==pc)return;
    const s=pc.connectionState||pc.iceConnectionState;
    if(s==='connected'||s==='completed'){
     clearTimeout(call.lost);call.unstable=false;
@@ -1230,9 +1364,69 @@ class Voice{
     this.emit()}
    else if(s==='disconnected'&&call.state==='active'&&!call.unstable){
     call.unstable=true;this.emit();
-    call.lost=setTimeout(()=>{if(this.call===call&&call.unstable)this.hangup('lost')},this.grace)}
-   else if(s==='failed')this.hangup('lost')};
+    call.lost=setTimeout(()=>{if(this.call===call&&call.unstable)this._lost(call)},this.grace)}
+   else if(s==='failed')this._lost(call)};
   pc.onconnectionstatechange=watch;pc.oniceconnectionstatechange=watch}
+
+ /* ---- socket relay: the fallback when ICE (direct, then TURN) cannot connect ---- */
+ _canRelay(call){return !!(call.rk&&call.codec&&call.peerRelay&&this.relayMedia)}
+
+ /** WebRTC gave up: carry on over the socket if both sides can, otherwise the call is lost. */
+ _lost(call){
+  if(this.call!==call||call.relay)return;
+  if(this._canRelay(call))this._toRelay(call,true).catch(e=>{if(this.call===call)this.hangup('failed',e.message)});
+  else this.hangup('lost')}
+
+ async _toRelay(call,tell){
+  if(call.relay)return;
+  call.relay=true;call.unstable=false;
+  clearTimeout(call.timer);clearTimeout(call.lost);
+  // video does not survive the switch: release the camera and the screen
+  for(const s of [call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
+  Object.assign(call,{cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,remote:null,remoteCam:null,remoteScreen:null});
+  const pc=call.pc;call.pc=null;
+  if(pc){pc.onconnectionstatechange=pc.oniceconnectionstatechange=pc.ontrack=null;try{pc.close()}catch(e){}}
+  this.emit();
+  if(tell)this.send(call,'relay').catch(()=>{});
+  const S=crypto.subtle,key=k=>S.importKey('raw',k,'AES-GCM',false,['encrypt','decrypt']);
+  const [tx,rx]=await Promise.all([key(call.rk),key(ub64(call.peerRelay.k))]);
+  if(this.call!==call)return;
+  Object.assign(call,{txKey:tx,rxKey:rx,sendN:0,recvN:-1,sq:Promise.resolve(),rq:Promise.resolve(),lastRx:0,
+   ad:te.encode('marmot-relay:'+call.id)});
+  call.media=await this.relayMedia.open({codec:call.codec,stream:call.stream,ctx:call.actx,send:p=>this._relayOut(call,p)});
+  if(this.call!==call){call.media.close();return}
+  // audio has to arrive from the other side within the usual connect window
+  call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
+  call.rxWatch=setInterval(()=>{
+   if(this.call!==call||call.state!=='active')return;
+   const gap=Date.now()-call.lastRx;
+   if(gap>this.grace)this.hangup('lost');
+   else if((gap>2000)!==call.unstable){call.unstable=gap>2000;this.emit()}},500)}
+
+ /** One encoded audio frame out: sealed under this side's key, numbered for the nonce. */
+ _relayOut(call,pkt){
+  if(this.call!==call||!call.txKey)return;
+  const n=call.sendN++;
+  // frames are sealed one after another so they leave in order
+  call.sq=call.sq.then(async()=>{
+   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:Voice.nonce(n),additionalData:call.ad},call.txKey,pkt);
+   if(this.call===call)this.c._relaySend({t:'vr',to:call.peer,call:call.id,n,d:b64(ct)})}).catch(()=>{})}
+
+ /** One frame in from the socket. Anything that does not open under the peer's key,
+     or comes after a later frame already did, is dropped. */
+ _relayIn(m){
+  const call=this.call;
+  if(!call||!call.rxKey||m.from!==call.peer||m.call!==call.id||!Number.isSafeInteger(m.n)||typeof m.d!=='string')return;
+  call.rq=call.rq.then(async()=>{
+   if(m.n<=call.recvN)return;
+   let pt;try{pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:Voice.nonce(m.n),additionalData:call.ad},call.rxKey,ub64(m.d)))}catch(e){return}
+   if(this.call!==call||m.n<=call.recvN)return;
+   call.recvN=m.n;call.lastRx=Date.now();
+   if(call.state!=='active'){call.state='active';call.started=Date.now();clearTimeout(call.timer);this.emit()}
+   if(call.media)call.media.play(pt)}).catch(()=>{})}
+
+ /** 96-bit GCM nonce from a frame number. Each side seals under its own key, so numbers never repeat under one key. */
+ static nonce(n){const iv=new Uint8Array(12),v=new DataView(iv.buffer);v.setUint32(4,Math.floor(n/4294967296));v.setUint32(8,n>>>0);return iv}
 
  /** Waits for ICE gathering so the offer/answer carries every candidate:
      one signal each way instead of a stream of trickled candidates. */
@@ -1257,30 +1451,46 @@ class Voice{
     this.send({peer,id:s.call},'busy').catch(()=>{});return}
    const glare=!!call;
    const c=this.call={id:s.call,peer,dir:'in',state:'ringing',created:ts,offer:s.sdp,muted:false,...Voice.fresh()};
+   c.peerRelay=Voice.relayOf(s);
    c.timer=setTimeout(()=>{if(this.call===c&&c.state==='ringing')this._finish(c,'timeout')},Math.max(1000,this.ring-(this.c.serverNow()-ts)));
    this.emit();
    if(glare)this.accept().catch(()=>{});
    return}
   if(!mine)return;
   if(s.t==='answer'&&call.dir==='out'&&call.state==='calling'&&typeof s.sdp==='string'){
-   call.state='connecting';clearTimeout(call.timer);this.emit();
-   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
+   call.state='connecting';clearTimeout(call.timer);
+   call.peerRelay=Voice.relayOf(s);
+   if(call.peerRelay&&call.codecs)call.codec=call.codecs.find(x=>call.peerRelay.c.includes(x))||null;
+   this.emit();
+   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this._lost(call)},this.connect);
    call.pc.setRemoteDescription({type:'answer',sdp:s.sdp}).then(()=>{
     // an older client answers voice only: it would neither send video nor show ours
     const t=call.tx&&call.tx.cam;
     if(this.call===call&&t&&'currentDirection' in t&&t.currentDirection!=='sendrecv'){call.tx=null;this.emit()}
    }).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
-  else if(s.t==='media'){call.peerCam=!!s.cam;call.peerScreen=!!s.screen;this.emit()}
+  else if(s.t==='media'){if(!call.relay){call.peerCam=!!s.cam;call.peerScreen=!!s.screen;this.emit()}}
+  else if(s.t==='relay'){
+   // the other side's ICE gave up first; it only sends this once it has our answer or offer
+   if(this._canRelay(call))this._toRelay(call,false).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
   else if((s.t==='decline'||s.t==='busy')&&call.dir==='out')this._finish(call,s.t==='busy'?'busy':'declined');
   else if(s.t==='end')this._finish(call,'ended')}
+
+ /** A peer's relay:{k, c} from its offer or answer, if well formed. */
+ static relayOf(s){
+  const r=s&&s.relay;
+  if(!r||typeof r.k!=='string'||r.k.length!==44||!Array.isArray(r.c))return null;
+  const c=r.c.filter(x=>typeof x==='string'&&x.length<=16).slice(0,8);
+  return c.length?{k:r.k,c}:null}
 
  /** Ends a call without a trace: sign-out, or yielding to a crossing call. */
  _drop(call){
   call=call||this.call;if(!call||this.call!==call)return;
   this.call=null;
-  clearTimeout(call.timer);clearTimeout(call.lost);
+  clearTimeout(call.timer);clearTimeout(call.lost);clearInterval(call.rxWatch);
   for(const s of [call.stream,call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
   if(call.pc)try{call.pc.close()}catch(e){}
+  if(call.media)try{call.media.close()}catch(e){}
+  if(call.actx&&call.actx.close)call.actx.close().catch(()=>{});
   this.emit()}
 
  _finish(call,how,detail){
@@ -1458,7 +1668,8 @@ class MarmotClient{
  _standing(r){
   const s=r&&r.staff;
   this.staff=s&&(s.role==='admin'||s.role==='mod')&&Array.isArray(s.perms)?{role:s.role,perms:s.perms.slice()}:null;
-  this.mute=r&&r.mute&&Number.isFinite(r.mute.until)?{until:r.mute.until,reason:String(r.mute.reason||'')}:null}
+  this.mute=r&&r.mute&&Number.isFinite(r.mute.until)?{until:r.mute.until,reason:String(r.mute.reason||'')}:null;
+  this.myStags=cleanStags(r&&r.stags)}
  async refreshStanding(){const r=await this.api('GET','/api/me');this._standing(r);this.emit('change')}
  /** The mute in force on this account, or null. until 0 = permanent. */
  muted(){const m=this.mute;return m&&(m.until===0||m.until>this.serverNow())?m:null}
@@ -1480,6 +1691,7 @@ class MarmotClient{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
    if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{});this.loadLinks().catch(()=>{})}
    else if(m.t==='env'&&m.env)this._enqueue(m.env);
+   else if(m.t==='vr')this.voice._relayIn(m);
    else if(m.t==='peers')this.loadPeers().catch(()=>{});
    else if(m.t==='groups')this.loadGroups().catch(()=>{});
    else if(m.t==='links')this.loadLinks().catch(()=>{});
@@ -1499,6 +1711,11 @@ class MarmotClient{
    if(this.closing||!this.token)return;
    this._backoff=Math.min(30000,(this._backoff||500)*2);
    this._wsTimer=setTimeout(()=>this.connect(),this._backoff)}}
+
+ /** A relayed call audio frame. Real-time: dropped, not queued, when the socket is down or backed up. */
+ _relaySend(m){
+  const ws=this.ws;
+  if(ws&&this.wsState==='live'&&ws.readyState===1&&!(ws.bufferedAmount>65536))ws.send(JSON.stringify(m))}
 
  /** Pulls everything waiting in the mailbox. Envelopes the socket already
      delivered are skipped, so the two paths never double-process a frame.
@@ -1594,7 +1811,7 @@ class MarmotClient{
       const key='msg:'+peerId+':'+id,m=this.get(key);
       if(m&&m.dir==='out'&&m.state!=='delivered')await tx.put(key,Object.assign({},m,{state:'delivered'}))}}
     else if(inner.k==='call'&&typeof inner.call==='string'&&inner.call.length<=64&&
-     ['offer','answer','decline','busy','end','media'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
+     ['offer','answer','decline','busy','end','media','relay'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
      const key='msg:'+peerId+':call-'+inner.call;
      // an offer that waited in the mailbox past its ring time is a missed call, not a ringing phone
      if(inner.t==='offer'&&this.serverNow()-e.ts>this.voice.ring){
@@ -2069,7 +2286,7 @@ class MarmotClient{
      'change' fires once it is in. */
  profile(id){
   if(!id||isDiscord(id)||isGroup(id))return null;
-  if(this.me&&id===this.me.userId)return Object.assign({username:this.me.username,created:this.me.created||0},this.myProfile,{tag:this.myTag()});
+  if(this.me&&id===this.me.userId)return Object.assign({username:this.me.username,created:this.me.created||0},this.myProfile,{tag:this.myTag(),stags:this.myStags||[]});
   const f=this.prof.get(id),c=this.profc.get(id);
   if(c&&(!f||!Number.isFinite(f.pv)||c.v===f.pv))return c.data;
   const failed=this._pfFail.get(id);
@@ -2086,7 +2303,7 @@ class MarmotClient{
    if(!this.token)return null;
    const u=r.user;if(!u||u.userId!==id)throw new Error('wrong profile');
    this._learnProf(u);this._learnAv(id,u.av);this._learnRole(id,u.role,u.muted);
-   const data=Object.assign({username:String(u.username||''),created:Number.isFinite(u.created)?u.created:0},cleanProfile(u.profile),{tag:cleanTag(u.gtag)});
+   const data=Object.assign({username:String(u.username||''),created:Number.isFinite(u.created)?u.created:0},cleanProfile(u.profile),{tag:cleanTag(u.gtag),stags:cleanStags(u.stags)});
    this.profc.set(id,{v:u.pv,data});
    this._pfFail.delete(id);this.emit('change');return data}
   catch(e){this._pfFail.set(id,Date.now());throw e}
@@ -2703,7 +2920,7 @@ const UI={
   let h='<div class="pcard'+(o.mini?' mini':'')+'"'+(pf.accent?' style="--pacc:'+esc(pf.accent)+'"':'')+'><div class="banner"></div>'+
    '<div class="pc-top">'+this.av(id,o.mini?'av-64':'av-80',user)+'</div><div class="pc-body">'+
    '<div class="pc-name">'+esc(name)+'</div>'+
-   '<div class="pc-user"><span>@'+esc(user)+'</span>'+this.staffTag(id)+(M.peer(id).verified?' <span class="chip ok">VERIFIED</span>':'')+(me?' <span class="chip">YOU</span>':'')+'</div>'+
+   '<div class="pc-user"><span>@'+esc(user)+'</span>'+this.staffTag(id)+(M.peer(id).verified?' <span class="chip ok">VERIFIED</span>':'')+(me?' <span class="chip">YOU</span>':'')+this.stagChips(me?M.myStags:pf.stags)+'</div>'+
    this.tagChip(id,o.draft?(me?M.myTag():null):pf.tag)+
    (pr?'<div class="pc-pres"><i class="pi '+pr+'"></i>'+this.PRES[pr]+'</div>':'')+
    (sx?'<div class="pc-status">'+esc(sx)+'</div>':'')+
@@ -2966,7 +3183,7 @@ const UI={
   const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
   if(!list.length)html='<div class="sys" data-k="intro">messages are end-to-end encrypted with the Signal protocol.<br>verify the safety number to be sure you are talking to '+esc(M.displayName(id))+'.</div>';
   if(p.replaced)html+='<div class="sys" data-k="replaced">this username used to belong to a different identity. verify before trusting it.</div>';
-  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>'+html;
+  if(this._more)html='<div class="sys" data-k="earlier"><button data-earlier>scroll up for earlier messages</button></div>'+html;
   shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
@@ -3004,8 +3221,8 @@ const UI={
    else if(x)o.replaceChild(c,x);else o.appendChild(c)});
   while(oc.length>nc.length)o.lastChild.remove()},
 
- /** The part of a thread that is drawn: the newest PAGE messages at first, a page more
-     each time the reader nears the top (more), and back to one page once they are at the
+ /** The part of a thread that is drawn: the newest FIRST messages at first, PAGE more
+     each time the reader nears the top (more), and back to FIRST once they are at the
      bottom again. The window starts at a timestamp, so new arrivals only add to it. */
  win(id,list,atBottom){
   if(this._winFor!==id){this._winFor=id;this._from=null;this._hold=false}
@@ -3013,7 +3230,7 @@ const UI={
   // a pile arriving in the open thread is held back (see heldBar) instead of drawn one by one
   if(this._seenFor===id&&!this._hold&&!this._released&&M.catchingUp())this._hold=true;
   let i=this._from==null?-1:list.findIndex(m=>m.ts>=this._from);
-  if(i<0||!this._hold&&atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-PAGE);this._from=list.length?list[i].ts:null}
+  if(i<0||!this._hold&&atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-FIRST);this._from=list.length?list[i].ts:null}
   this._more=i>0;
   let shown=list.slice(i);this._heldN=0;
   if(this._hold){
@@ -3025,6 +3242,10 @@ const UI={
  heldBar(){
   const n=this._heldN;if(!n)return '';
   return '<div class="sys held" data-k="held"><button data-show-held>'+n+' new message'+(n>1?'s':'')+' · show</button></div>'},
+ /** The reader tried to scroll up while already at the top (wheel or swipe). With only the
+     newest few messages drawn, the thread may be too short to scroll at all, so this is how
+     older ones are reached then. */
+ pulled(th){if(th.scrollTop<=0){this._follow=false;this.more(true)}},
  /** Lets go of what the open thread held back, drawing the newest page of it at once. */
  showHeld(){
   this._hold=false;this._released=true;this._from=null;this._stick=true;this._follow=true;
@@ -3058,9 +3279,9 @@ const UI={
   if(seen)for(const m of M.thread(this.cur()))if(m.ts>=ts&&m.ts<this._from)seen.add(m.id);
   this._from=ts},
  /** Draws the next page of older messages when the reader is near the top, keeping their place. */
- more(){
+ more(force){
   const th=$('#thread'),id=this.cur();
-  if(!th||!id||id!==this._winFor||!this._more||th.scrollTop>200)return;
+  if(!th||!id||id!==this._winFor||!this._more||!force&&th.scrollTop>200)return;
   const list=this.thread(id),i=list.findIndex(m=>m.ts>=this._from);
   if(i<=0)return;
   this.reveal(list[Math.max(0,i-PAGE)].ts);
@@ -3330,7 +3551,7 @@ const UI={
   const atBottom=this.following(th);
   let html='<div class="plain" data-k="plain">this chat is bridged to Discord and is not end-to-end encrypted.<br>the Marmot server and Discord can read it.</div>',lastDay='';
   const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
-  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
+  if(this._more)html='<div class="sys" data-k="earlier"><button data-earlier>scroll up for earlier messages</button></div>';
   shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
@@ -3362,7 +3583,7 @@ const UI={
   const others=g?g.members.length-1:0;
   let html='<div class="sys" data-k="intro">messages in this group are end-to-end encrypted with the Signal protocol,<br>sent separately to each member. new members do not see earlier messages.</div>',lastDay='';
   const list=this.thread(id),opened=this._seenFor!==id,shown=this.win(id,list,atBottom),fresh=this.fresh(id,shown);
-  if(this._more)html='<div class="sys" data-k="earlier">scroll up for earlier messages</div>';
+  if(this._more)html='<div class="sys" data-k="earlier"><button data-earlier>scroll up for earlier messages</button></div>';
   shown.forEach((m,i)=>{
    const day=dayLabel(m.ts);
    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
@@ -3697,6 +3918,9 @@ const UI={
    (M.isMuted(id)?' <span class="chip bad" title="Muted by Marmot staff: cannot send messages">MUTED</span>':'')},
  roleChip(u){return (u.role==='admin'?'<span class="chip warn">DEVELOPER</span>':u.role==='mod'?'<span class="chip ok">STAFF</span>':'')+
   (u.mute?'<span class="chip bad">MUTED</span>':'')+(u.ipBanned?'<span class="chip bad">IP BANNED</span>':'')},
+ /** Staff-given profile tags as colored chips; only profile cards show them. */
+ stagChips(list){return (list||[]).map(t=>' <span class="chip stag" style="--stag:'+esc(t.color)+'">'+esc(t.text)+'</span>').join('')},
+ canTags(){return M.can('tag_create')||M.can('tag_assign')},
  renderAdminCol(rows){
   if(!M.staff){rows.innerHTML='';return}
   const A=this.adm(),admin=M.staff.role==='admin';
@@ -3705,6 +3929,7 @@ const UI={
   let html='<div class="grouplbl">'+(admin?'DEVELOPER':'STAFF')+' · '+M.staff.perms.length+' PERMISSION'+(M.staff.perms.length===1?'':'S')+'</div>';
   if(admin)html+=sec('staff','Staff','developers and staff');
   if(M.can('ip_ban'))html+=sec('bans','IP bans','addresses this server refuses');
+  if(this.canTags())html+=sec('tags','Profile tags','labels shown on profiles');
   if(admin)html+=sec('log','Activity log','every staff action');
   html+='<div class="grouplbl">ACCOUNTS'+(A.users.length?' · '+A.users.length+(A.more?'+':''):'')+'</div>';
   if(A.err)html+='<div class="grouplbl note2">'+esc(A.err.toUpperCase())+'</div>';
@@ -3732,11 +3957,12 @@ const UI={
   const A=this.adm();
   if(A.sel!==sel){A.sel=sel;A.data=null}
   A.v++;this.render();
-  const path=sel==='staff'?'/staff':sel==='bans'?'/ipbans':sel==='log'?'/log':'/users/'+encodeURIComponent(sel.slice(2));
+  const path=sel==='staff'?'/staff':sel==='bans'?'/ipbans':sel==='log'?'/log':sel==='tags'?'/tags':'/users/'+encodeURIComponent(sel.slice(2));
   let data;
   try{
    if(!A.all)A.all=(await M.admin('GET','/me')).all;
-   data=await M.admin('GET',path)}
+   data=await M.admin('GET',path);
+   if(sel.startsWith('u:')&&M.can('tag_assign'))data.tags=(await M.admin('GET','/tags')).tags}
   catch(e){data={err:e.message}}
   if(A.sel!==sel)return;
   A.data=data;A.v++;
@@ -3767,8 +3993,20 @@ const UI={
      esc((b.ip?b.ip+' · ':'')+'by '+(b.by||'?')+' · '+when(b.created)+(b.reason?' · '+b.reason:''))+'</span>'+
      '<button class="tbtn" data-adm="unban:'+esc(b.id)+'">LIFT</button></div>').join(''):'<div class="note">Nobody is IP banned.</div>')+
     '<div class="err" id="admErr"></div></div></div>'}
+  if(A.sel==='tags'){
+   const mk=M.can('tag_create');
+   return head('Profile tags',d.tags.length+' tag'+(d.tags.length===1?'':'s'))+'<div class="sheet">'+
+    (mk?'<div class="sec"><h3>New tag</h3><div class="note">Up to 10 characters, in a color of your choosing. Tags show beside the username on a profile, and nowhere else.</div>'+
+     '<div class="btnrow"><input class="inp" id="admTagText" maxlength="10" placeholder="tag text" style="flex:1;min-width:120px">'+
+     '<input type="color" id="admTagColor" value="#f0a92a" title="Tag color" style="width:42px;height:32px;padding:0;border:1px solid var(--line2);background:none;cursor:pointer">'+
+     '<button class="send" data-adm="tagnew">CREATE TAG</button></div></div>':'')+
+    '<div class="sec"><h3>Tags</h3>'+(M.can('tag_assign')?'<div class="note">To give someone a tag, search for their account in the column.</div>':'')+
+    (d.tags.length?d.tags.map(t=>'<div class="kv" style="align-items:center"><b>'+this.stagChips([t])+'</b><span style="flex:1">'+
+     esc(t.n+' '+(t.n===1?'person':'people')+' · made by '+(t.by||'?')+' · '+when(t.created))+'</span>'+
+     (mk?'<button class="tbtn danger" data-adm="tagdel:'+esc(t.id)+'">DELETE</button>':'')+'</div>').join(''):'<div class="note">No tags yet.</div>')+
+    '<div class="err" id="admErr"></div></div></div>'}
   if(A.sel==='log'){
-   const verb={mute:'muted',unmute:'unmuted',ban:'banned',ipban:'IP banned',unipban:'lifted the IP ban on',delete:'removed a message from',purge:'purged messages from',mod:'set staff permissions for',unmod:'removed staff member',rename:'renamed from'};
+   const verb={mute:'muted',unmute:'unmuted',ban:'banned',ipban:'IP banned',unipban:'lifted the IP ban on',delete:'removed a message from',purge:'purged messages from',mod:'set staff permissions for',unmod:'removed staff member',rename:'renamed from',tag_create:'created the tag',tag_delete:'deleted the tag',tag_add:'tagged',tag_remove:'untagged'};
    return head('Activity log','the latest '+d.log.length+' staff actions')+'<div class="sheet"><div class="sec">'+
     (d.log.length?d.log.map(e=>'<div class="logrow"><b>'+esc(when(e.ts))+'</b><span>'+esc(e.by+' '+(verb[e.action]||e.action)+(e.target?' '+e.target:'')+(e.detail?' · '+e.detail:''))+'</span></div>').join('')
      :'<div class="note">Nothing yet.</div>')+'</div></div>'}
@@ -3796,6 +4034,11 @@ const UI={
   if(can&&M.can('ip_ban'))
    html+='<div class="sec"><h3>IP ban</h3><div class="note">Refuses every request from the address this account last used, and signs them out. Anyone else on that address (a household, a school) is shut out too. Lift it from IP bans.</div>'+
     '<div class="btnrow"><input class="inp" id="admIpWhy" maxlength="300" placeholder="reason (for the log)" style="flex:1;min-width:180px"><button class="tbtn danger" data-adm="ipban"'+(u.hasIp&&!u.ipBanned?'':' disabled')+'>'+(u.ipBanned?'ALREADY BANNED':'IP BAN')+'</button></div></div>';
+  if((self||can)&&M.can('tag_assign')&&d.tags){
+   const has=new Set((u.tags||[]).map(t=>t.id));
+   html+='<div class="sec"><h3>Profile tags</h3><div class="note">Shown beside '+(self?'your':name+'’s')+' username on '+(self?'your':'their')+' profile. Up to 6.'+(M.can('tag_create')?'':' New tags need the create tag permission.')+'</div>'+
+    (d.tags.length?'<div class="btnrow">'+d.tags.map(t=>'<button class="tbtn" data-adm="tag:'+esc(t.id)+'" aria-pressed="'+has.has(t.id)+'">'+this.stagChips([t])+'</button>').join('')+'</div>'
+     :'<div class="note">There are no tags yet.</div>')+'</div>'}
   if(!self&&M.staff.role==='admin'&&u.role!=='admin'){
    html+='<div class="sec"><h3>Staff</h3><div class="note">'+(u.role==='mod'?name+' is staff. Change what they can do, or untick everything to remove them.':'Make '+name+' staff by giving them at least one permission.')+' Developers can only be appointed in the server config.</div>'+
     '<div id="admPerms">'+Object.entries(A.all||{}).map(([p,l])=>'<label class="perm"><input type="checkbox" value="'+p+'"'+(u.perms.includes(p)?' checked':'')+'>'+esc(l)+'<span class="chip">'+p.toUpperCase()+'</span></label>').join('')+'</div>'+
@@ -3826,6 +4069,17 @@ const UI={
     const perms=[...document.querySelectorAll('#admPerms input:checked')].map(i=>i.value);
     await M.admin('POST','/staff',{userId:u.userId,perms});
     msg=perms.length?u.username+'\'s permissions are saved':u.username+' is no longer staff'}
+   else if(act==='tagnew'){
+    const text=val('admTagText');
+    if(!text)throw new Error('give the tag some text');
+    await M.admin('POST','/tags',{text,color:val('admTagColor')});msg='tag '+text+' created'}
+   else if(act.startsWith('tagdel:')){
+    const t=d.tags.find(x=>x.id===act.slice(7));if(!t)return;
+    if(t.n&&!await this.confirm('Delete the tag '+t.text+'?','It comes off the '+t.n+' '+(t.n===1?'person':'people')+' who have it.','DELETE'))return;
+    await M.admin('POST','/tags/remove',{id:t.id});msg='tag '+t.text+' deleted'}
+   else if(act.startsWith('tag:')){
+    const id=act.slice(4),on=btn.getAttribute('aria-pressed')!=='true';
+    await M.admin('POST','/tags/assign',{userId:u.userId,tagId:id,on})}
    else if(act.startsWith('unban:')){await M.admin('POST','/ipbans/remove',{id:act.slice(6)});msg='IP ban lifted'}
    else return;
    if(msg)toast(msg);
@@ -4118,7 +4372,7 @@ const UI={
   const html=this.av(c.peer,'av-34')+
    '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(M.displayName(c.peer))+
    (M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
-   '<div class="meta'+(c.unstable?' warn':'')+'">'+esc(st)+' · end-to-end encrypted</div></div>'+
+   '<div class="meta'+(c.unstable?' warn':'')+'"'+(c.relay?' title="no direct or TURN connection: audio goes through the server, still end-to-end encrypted"':'')+'>'+esc(st)+(c.relay?' · relayed':'')+' · end-to-end encrypted</div></div>'+
    (ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">ACCEPT</button>'
     :(M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+c.cam+'">CAMERA</button>':'')+
      (M.voice.canScreen()?'<button class="tbtn" data-act="call-screen" aria-pressed="'+c.screen+'">SCREEN</button>':'')+
@@ -4203,6 +4457,7 @@ document.addEventListener('click',async e=>{
  if(t.dataset.peer){UI.showPeer(t.dataset.peer);return}
  if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,t.dataset.id||UI.S.chat);return}
  if(t.dataset.showHeld!=null){UI.showHeld();return}
+ if(t.dataset.earlier!=null){UI._follow=false;UI.more(true);return}
  if(t.dataset.retry){M.retry(t.dataset.retry).catch(err=>toast('not sent: '+err.message));return}
  if(t.dataset.discard){M.discard(t.dataset.discard);return}
  if(t.dataset.reply){UI.startReply(t.dataset.reply);return}
@@ -4344,6 +4599,10 @@ document.addEventListener('drop',e=>{
  e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
 document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target)},true);
+document.addEventListener('wheel',e=>{const th=e.target.closest&&e.target.closest('#thread');if(th&&e.deltaY<0)UI.pulled(th)},{passive:true});
+{let y0=null;
+ document.addEventListener('touchstart',e=>{y0=e.target.closest&&e.target.closest('#thread')?e.touches[0].clientY:null},{passive:true});
+ document.addEventListener('touchmove',e=>{const th=e.target.closest&&e.target.closest('#thread');if(th&&y0!=null&&e.touches[0].clientY-y0>30){y0=null;UI.pulled(th)}},{passive:true})}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)UI.hoverHide();else{Activity.poke();UI.back();UI.render();if(M.token&&M.wsState!=='live')M.connect()}});
 
 M.on('change',()=>UI.renderSoon());

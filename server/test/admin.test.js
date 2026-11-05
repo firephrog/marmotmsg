@@ -227,6 +227,44 @@ test('a moderator who deletes their account loses the appointment', async () => 
   assert.equal(JSON.parse(fs.readFileSync(adminFile, 'utf8')).mods.tempmod, undefined);
 });
 
+test('profile tags: create needs tag_create, assigning needs tag_assign, and they show on the profile', async () => {
+  const maker = client(), tagger = client();
+  await maker.signup('tagmaker', PASS);
+  await tagger.signup('tagger', PASS);
+  await rejects(maker.admin('POST', '/tags', { text: 'x', color: '#ff0000' }), 403);
+  await boss.admin('POST', '/staff', { userId: maker.me.userId, perms: ['tag_create'] });
+  await boss.admin('POST', '/staff', { userId: tagger.me.userId, perms: ['tag_assign'] });
+
+  await rejects(maker.admin('POST', '/tags', { text: 'elevenchars', color: '#ff0000' }), 400, /at most 10/);
+  await rejects(maker.admin('POST', '/tags', { text: 'ok', color: 'red' }), 400, /color/);
+  const { tag } = await maker.admin('POST', '/tags', { text: 'Tester', color: '#FF00AA' });
+  assert.equal(tag.color, '#ff00aa');
+  await rejects(maker.admin('POST', '/tags', { text: 'tester', color: '#000000' }), 409, /already/);
+  await rejects(maker.admin('POST', '/tags/assign', { userId: alice.me.userId, tagId: tag.id, on: true }), 403);
+  await rejects(tagger.admin('POST', '/tags', { text: 'nope', color: '#000000' }), 403);
+  assert.equal((await tagger.admin('GET', '/tags')).tags.length, 1);
+
+  // on someone below them, and on themselves, but not on fellow staff
+  const r = await tagger.admin('POST', '/tags/assign', { userId: alice.me.userId, tagId: tag.id, on: true });
+  assert.deepEqual(r.user.tags.map(t => t.text), ['Tester']);
+  await tagger.admin('POST', '/tags/assign', { userId: tagger.me.userId, tagId: tag.id, on: true });
+  await rejects(tagger.admin('POST', '/tags/assign', { userId: maker.me.userId, tagId: tag.id, on: true }), 403);
+
+  const p = await bob.fetchProfile(alice.me.userId);
+  assert.deepEqual(p.stags, [{ text: 'Tester', color: '#ff00aa' }]);
+  await waitFor(() => (alice.myStags || []).length === 1, 'alice to see her own tag');
+  assert.equal((await tagger.admin('GET', '/tags')).tags[0].n, 2);
+
+  await tagger.admin('POST', '/tags/assign', { userId: alice.me.userId, tagId: tag.id, on: false });
+  assert.deepEqual((await bob.fetchProfile(alice.me.userId)).stags, []);
+
+  // deleting a tag takes it off everyone
+  await maker.admin('POST', '/tags/remove', { id: tag.id });
+  assert.deepEqual((await bob.fetchProfile(tagger.me.userId)).stags, []);
+  assert.equal((await tagger.admin('GET', '/tags')).tags.length, 0);
+  assert.ok(srv.db.logs(20).some(e => e.action === 'tag_add' && e.target === 'alice'));
+});
+
 test('an IP ban signs the user out and refuses their address', async () => {
   // every test client shares 127.0.0.1, so this goes last
   const r = await boss.admin('POST', '/ipban', { userId: bob.me.userId, reason: 'evading' });

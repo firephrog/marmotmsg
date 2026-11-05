@@ -32,8 +32,15 @@ const PERMS = {
   ban: 'Ban: delete the account',
   ip_ban: 'IP ban: refuse connections from their address',
   delete: 'Delete a message for everyone',
-  purge: 'Purge many messages at once'
+  purge: 'Purge many messages at once',
+  tag_create: 'Create and delete profile tags',
+  tag_assign: 'Assign profile tags to people'
 };
+const TAG_MAX = 10;          // characters in a tag
+const TAGS_MAX = 100;        // tags on the server
+const TAGS_PER_USER = 6;
+const TAGID = /^[0-9a-f]{16}$/;
+const COLOR = /^#[0-9a-f]{6}$/i;
 const WEEK = 7 * 24 * 3600 * 1000;
 const MAX_MUTE = 10 * 365 * 24 * 3600 * 1000;
 const MAX_PURGE = 500;
@@ -114,7 +121,7 @@ const normIp = ip => String(ip || '').replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/,
  * The /api/admin routes. ctx: {db, hub, staff, wrap, auth, HttpError}.
  */
 function mount(app, ctx) {
-  const { db, hub, staff, wrap, auth, HttpError } = ctx;
+  const { db, hub, staff, wrap, auth, HttpError, text, profileChanged } = ctx;
   const bad = msg => new HttpError(400, msg);
   const forbid = msg => new HttpError(403, msg || 'you do not have permission to do that');
 
@@ -144,7 +151,7 @@ function mount(app, ctx) {
   const userView = (me, row) => {
     const s = staff.of(row.username);
     const v = { userId: row.id, username: row.username, created: row.created, lastSeen: row.last_seen,
-      role: s ? s.role : null, perms: s ? s.perms : [], mute: muteView(db.mute(row.id)) };
+      role: s ? s.role : null, perms: s ? s.perms : [], mute: muteView(db.mute(row.id)), tags: db.userStaffTags(row.id) };
     const ip = db.lastIp(row);
     v.ipBanned = !!ip && db.ipBanned(ip);
     v.hasIp = !!ip;
@@ -315,6 +322,62 @@ function mount(app, ctx) {
   }
   app.post('/api/admin/delete', wrap(req => removeMessages(req, false)));
   app.post('/api/admin/purge', wrap(req => removeMessages(req, true)));
+
+  /* ---- profile tags ---- */
+  /**
+   * Short colored labels shown on profiles, beside the username. tag_create makes
+   * and deletes them; tag_assign puts them on people: on themselves, or on anyone
+   * ranked below them.
+   */
+  app.get('/api/admin/tags', wrap(req => {
+    const me = actor(req);
+    if (!me.staff.perms.includes('tag_create') && !me.staff.perms.includes('tag_assign')) throw forbid();
+    return { tags: db.staffTags() };
+  }));
+
+  /** body: {text, color}. text is 1–10 characters, color is #rrggbb. */
+  app.post('/api/admin/tags', wrap(req => {
+    const me = actor(req, 'tag_create');
+    const b = req.body || {};
+    const t = text(b.text, TAG_MAX, 'a tag');
+    if (!t) throw bad('give the tag some text');
+    if (typeof b.color !== 'string' || !COLOR.test(b.color)) throw bad('the tag color must look like #f0a92a');
+    const all = db.staffTags();
+    if (all.length >= TAGS_MAX) throw new HttpError(409, 'there are already ' + TAGS_MAX + ' tags — delete one first');
+    if (all.some(x => x.text.toLowerCase() === t.toLowerCase())) throw new HttpError(409, 'there is already a tag called ' + t);
+    const id = db.addStaffTag({ text: t, color: b.color.toLowerCase(), by: me.username });
+    log(me, 'tag_create', null, t);
+    return { tag: db.staffTag(id) };
+  }));
+
+  /** body: {id}. Takes the tag off everyone who has it. */
+  app.post('/api/admin/tags/remove', wrap(req => {
+    const me = actor(req, 'tag_create');
+    const tag = db.staffTag(String((req.body || {}).id || ''));
+    if (!tag) throw new HttpError(404, 'no such tag');
+    for (const u of db.delStaffTag(tag.id)) profileChanged(u);
+    log(me, 'tag_delete', null, tag.text);
+    return {};
+  }));
+
+  /** body: {userId, tagId, on}: puts the tag on them (on: true) or takes it off. */
+  app.post('/api/admin/tags/assign', wrap(req => {
+    const me = actor(req, 'tag_assign');
+    const b = req.body || {};
+    const tagId = String(b.tagId || '');
+    const tag = TAGID.test(tagId) && db.staffTag(tagId);
+    if (!tag) throw new HttpError(404, 'no such tag');
+    const row = String(b.userId || '') === me.id ? db.userRow(me.id) : target(me, b.userId);
+    const on = b.on === true;
+    if (on && db.userStaffTags(row.id).length >= TAGS_PER_USER && !db.userStaffTags(row.id).some(x => x.id === tag.id)) {
+      throw new HttpError(409, 'someone can have at most ' + TAGS_PER_USER + ' tags');
+    }
+    if (db.setUserStaffTag(row.id, tag.id, on)) {
+      profileChanged(row.id);
+      log(me, on ? 'tag_add' : 'tag_remove', row.username, tag.text);
+    }
+    return { user: userView(me, db.userRow(row.id)) };
+  }));
 
   /* ---- admins only ---- */
   app.get('/api/admin/staff', wrap(req => {

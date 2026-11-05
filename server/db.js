@@ -141,6 +141,20 @@ CREATE TABLE IF NOT EXISTS mod_log (
   ts         INTEGER NOT NULL,
   body       TEXT NOT NULL               -- sealed {by, action, target, detail}
 );
+-- Staff tags: short colored labels staff make and put on profiles. They are
+-- shown publicly, so which user has which tag is plaintext; the label is sealed.
+CREATE TABLE IF NOT EXISTS staff_tags (
+  id         TEXT PRIMARY KEY,
+  created    INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {text, color, by}
+);
+CREATE TABLE IF NOT EXISTS user_tags (
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tag_id     TEXT NOT NULL REFERENCES staff_tags(id) ON DELETE CASCADE,
+  ts         INTEGER NOT NULL,
+  PRIMARY KEY (user_id, tag_id)
+);
+CREATE INDEX IF NOT EXISTS user_tags_tag ON user_tags(tag_id);
 `;
 
 /** Columns added after a table first shipped; applied to older databases on open. */
@@ -260,8 +274,18 @@ function open(opts) {
     delIpBan: db.prepare('DELETE FROM ip_bans WHERE tag = ?'),
     ipBans: db.prepare('SELECT * FROM ip_bans ORDER BY created DESC'),
     insertLog: db.prepare('INSERT INTO mod_log (ts, body) VALUES (?, ?)'),
-    log: db.prepare('SELECT * FROM mod_log ORDER BY id DESC LIMIT ?')
+    log: db.prepare('SELECT * FROM mod_log ORDER BY id DESC LIMIT ?'),
+    stags: db.prepare('SELECT * FROM staff_tags ORDER BY created'),
+    stag: db.prepare('SELECT * FROM staff_tags WHERE id = ?'),
+    putStag: db.prepare('INSERT INTO staff_tags (id, created, body) VALUES (?, ?, ?)'),
+    delStag: db.prepare('DELETE FROM staff_tags WHERE id = ?'),
+    stagHolders: db.prepare('SELECT user_id FROM user_tags WHERE tag_id = ?'),
+    stagCounts: db.prepare('SELECT tag_id, COUNT(*) n FROM user_tags GROUP BY tag_id'),
+    userStags: db.prepare('SELECT s.* FROM user_tags u JOIN staff_tags s ON s.id = u.tag_id WHERE u.user_id = ? ORDER BY u.ts'),
+    addUserStag: db.prepare('INSERT OR IGNORE INTO user_tags (user_id, tag_id, ts) VALUES (?, ?, ?)'),
+    delUserStag: db.prepare('DELETE FROM user_tags WHERE user_id = ? AND tag_id = ?')
   };
+  const openStag = r => r && Object.assign({ id: r.id, created: r.created }, S.open(r.body, 'staff_tags:' + r.id));
 
   const memberTag = userId => S.tag('discord-member|' + userId);
   const openLink = row => row && Object.assign({ id: row.id, created: row.created, public: !!row.public }, S.open(row.body, 'discord_links:' + row.id));
@@ -560,6 +584,30 @@ function open(opts) {
       return Number(info.lastInsertRowid);
     },
     logs: limit => q.log.all(limit).map(r => Object.assign({ id: r.id, ts: r.ts }, S.open(r.body, 'mod_log:' + r.ts))),
+
+    /* ---- staff tags ---- */
+    /** Every tag as {id, created, text, color, by, n}, n being how many people have it. */
+    staffTags() {
+      const n = new Map(q.stagCounts.all().map(r => [r.tag_id, r.n]));
+      return q.stags.all().map(r => Object.assign(openStag(r), { n: n.get(r.id) || 0 }));
+    },
+    staffTag: id => openStag(q.stag.get(String(id))),
+    /** Makes a tag from {text, color, by}; returns its id. */
+    addStaffTag(info) {
+      const id = crypto.randomBytes(8).toString('hex');
+      q.putStag.run(id, Date.now(), S.seal(info, 'staff_tags:' + id));
+      return id;
+    },
+    /** Deletes a tag, taking it off everyone; returns the ids of the users who had it. */
+    delStaffTag: db.transaction(id => {
+      const had = q.stagHolders.all(id).map(r => r.user_id);
+      q.delStag.run(id);
+      return had;
+    }),
+    /** The tags on a user, oldest first, as {id, text, color}. */
+    userStaffTags: userId => q.userStags.all(userId).map(r => { const t = openStag(r); return { id: t.id, text: t.text, color: t.color }; }),
+    /** Puts a tag on a user or takes it off; true if that changed anything. */
+    setUserStaffTag: (userId, tagId, on) => (on ? q.addUserStag.run(userId, tagId, Date.now()) : q.delUserStag.run(userId, tagId)).changes > 0,
 
     sweep(now, envelopeTtl) {
       q.expireSessions.run(now);

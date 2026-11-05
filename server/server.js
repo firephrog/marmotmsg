@@ -22,7 +22,7 @@ const store = require('./db');
 const { Discord, Bridge } = require('./discord');
 const admin = require('./admin');
 
-const VERSION = '0.6.0';
+const VERSION = '0.6.1';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;
@@ -233,6 +233,8 @@ function createServer(opts) {
     lastIp.set(row.id, ip);
     if (db.lastIp(row) !== ip) db.setLastIp(row.id, ip);
   }
+  /** The staff-given tags on a profile, as {text, color}. */
+  const stagsOf = row => db.userStaffTags(row.id).map(t => ({ text: t.text, color: t.color }));
   /** 'admin' or 'mod' for staff, so clients can tag them in chats; undefined for everyone else. */
   const roleOf = row => { const s = staff.of(row.username); return s ? s.role : undefined; };
   /** When a user's mute ends (0 = permanent), so clients can tag them; undefined if they are not muted. */
@@ -240,7 +242,7 @@ function createServer(opts) {
   /** What the signed-in user should know about their standing: staff role and any mute. */
   function standing(row) {
     const m = db.mute(row.id);
-    return { staff: staff.of(row.username), mute: m && { until: m.until, reason: m.reason } };
+    return { staff: staff.of(row.username), mute: m && { until: m.until, reason: m.reason }, stags: stagsOf(row) };
   }
   /** Muted users cannot send anything that says something; see 'say' in /api/commit. */
   function checkMute(row) {
@@ -317,11 +319,23 @@ function createServer(opts) {
   // request from a shared secret (coturn's use-auth-secret) and expire, so the
   // secret never reaches a browser.
   const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
-  const ice = opts.ice || {
+  const envIce = opts.ice || {
     stun: process.env.STUN_URLS != null ? list(process.env.STUN_URLS) : ['stun:stun.l.google.com:19302'],
     turn: list(process.env.TURN_URLS),
     secret: process.env.TURN_SECRET || ''
   };
+  // The relay set up on the instance itself (.platform/hooks/postdeploy/20-turn.sh) writes its
+  // address and secret to TURN_CONFIG, a JSON file {urls, secret}. It appears after the app has
+  // started, so it is read per request; TURN_URLS and TURN_SECRET, when set, take precedence.
+  const turnFile = opts.ice ? null : process.env.TURN_CONFIG;
+  function iceConfig() {
+    if (!turnFile || (envIce.turn.length && envIce.secret)) return envIce;
+    try {
+      const j = JSON.parse(fs.readFileSync(turnFile, 'utf8'));
+      const turn = list(Array.isArray(j.urls) ? j.urls.join(',') : j.urls), secret = String(j.secret || '');
+      return turn.length && secret ? { stun: envIce.stun, turn, secret } : envIce;
+    } catch (e) { return envIce; }
+  }
 
   app.get('/api/health', wrap(() => ({ service: 'marmot', v: VERSION, ts: Date.now() })));
 
@@ -425,7 +439,7 @@ function createServer(opts) {
     const row = db.userRow(String(req.params.id));
     if (!row) throw new HttpError(404, 'no such user');
     return { user: Object.assign({ userId: row.id, username: row.username, created: row.created, av: row.avatar_v,
-      profile: db.profile(row), role: roleOf(row), muted: mutedOf(row), gtag: tagOf(row) }, profView(row, me.id)) };
+      profile: db.profile(row), role: roleOf(row), muted: mutedOf(row), gtag: tagOf(row), stags: stagsOf(row) }, profView(row, me.id)) };
   }));
 
   app.post('/api/me/profile', limiter(30), wrap(req => {
@@ -536,6 +550,7 @@ function createServer(opts) {
    */
   app.get('/api/ice', limiter(60), wrap(req => {
     auth(req);
+    const ice = iceConfig();
     const iceServers = [];
     if (ice.stun.length) iceServers.push({ urls: ice.stun });
     const relay = ice.turn.length > 0 && !!ice.secret;
@@ -1040,7 +1055,10 @@ function createServer(opts) {
     return {};
   }));
 
-  admin.mount(app, { db, hub: { push: (u, m) => hub.push(u, m), pushAll: m => hub.pushAll(m), revoke: (u, why) => hub.revoke(u, why) }, staff, wrap, auth, HttpError });
+  admin.mount(app, { db, hub: { push: (u, m) => hub.push(u, m), pushAll: m => hub.pushAll(m), revoke: (u, why) => hub.revoke(u, why) }, staff, wrap, auth, HttpError,
+    text: profileText,
+    // a staff tag went on or came off: clients showing the profile refetch it, and its owner their standing
+    profileChanged: id => { if (!db.userRow(id)) return; db.bumpProfile(id); pushProfile(db.userRow(id)); hub.push(id, { t: 'me' }); } });
 
   // Serving the client is a convenience; the same file works opened from disk.
   // ../client in the repo; ./client in a deployment bundle, where the server directory is the root.
@@ -1097,6 +1115,34 @@ function createServer(opts) {
     }
   };
 
+  /**
+   * Call audio over the socket, the last resort when neither a direct connection nor TURN
+   * works. Each frame is AES-GCM ciphertext under a key the two callers swapped over the
+   * ratchet, so this only forwards bytes it cannot read. It is real-time traffic: frames past
+   * the rate limit, to someone the sender cannot reach, or to a socket that is backed up are
+   * dropped, never queued.
+   */
+  const RELAY_FPS = 100, RELAY_MAX = 4096, RELAY_BACKLOG = 256 * 1024;
+  const reachCache = new Map();   // 'from to' -> {ok, until}: canReach is a few queries, frames come 50 a second
+  function relayFrame(ws, m) {
+    if (typeof m.to !== 'string' || m.to.length > 128 || m.to === ws.userId || typeof m.call !== 'string' || m.call.length > 64 ||
+      !Number.isSafeInteger(m.n) || m.n < 0 || typeof m.d !== 'string' || m.d.length > RELAY_MAX) return;
+    const now = Date.now();
+    if (!ws.vr || now - ws.vr.at >= 1000) ws.vr = { at: now, n: 0 };
+    if (++ws.vr.n > RELAY_FPS) return;
+    const k = ws.userId + ' ' + m.to;
+    let r = reachCache.get(k);
+    if (!r || r.until < now) {
+      if (reachCache.size > 10000) reachCache.clear();
+      reachCache.set(k, r = { ok: !!db.userRow(m.to) && canReach(ws.userId, m.to), until: now + 15000 });
+    }
+    if (!r.ok) return;
+    const set = hub.sockets.get(m.to);
+    if (!set) return;
+    const data = JSON.stringify({ t: 'vr', from: ws.userId, call: m.call, n: m.n, d: m.d });
+    for (const s of set) if (s.readyState === 1 && s.bufferedAmount < RELAY_BACKLOG) s.send(data);
+  }
+
   wss.on('connection', ws => {
     ws.alive = true;
     ws.on('pong', () => { ws.alive = true; });
@@ -1105,8 +1151,10 @@ function createServer(opts) {
       let m;
       try { m = JSON.parse(data); } catch (e) { return ws.close(4000, 'bad frame'); }
       if (ws.userId) {
-        // the one thing a signed-in socket says: whether its user has gone idle. All writes go through /api/commit.
+        // A signed-in socket says two things: whether its user has gone idle, and call audio
+        // relayed when WebRTC cannot connect at all. All writes go through /api/commit.
         if (m.t === 'idle' && typeof m.idle === 'boolean' && ws.idle !== m.idle) { ws.idle = m.idle; presenceChanged(ws.userId, true); }
+        else if (m.t === 'vr') relayFrame(ws, m);
         return;
       }
       if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4000, 'auth first');

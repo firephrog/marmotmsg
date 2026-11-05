@@ -344,3 +344,132 @@ test('ICE config without a relay', async () => {
   s.db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+/* ------------------------------------------------- socket relay fallback */
+/** ICE never gets anywhere: no direct path, no TURN. */
+class DeadPC extends FakePC {
+  _connect() {
+    if (!this.localDescription || !this.remoteDescription) return;
+    setTimeout(() => { if (this.connectionState !== 'closed') this.drop(); }, 10);
+  }
+}
+/** Stands in for RelayAudio: what the microphone "says" is whatever the test sends. */
+function fakeRelay(codecs) {
+  const opened = [];
+  return {
+    opened,
+    codecs: async () => codecs,
+    context: () => ({ closed: false, async close() { this.closed = true; } }),
+    async open({ codec, stream, ctx, send }) {
+      const m = { codec, stream, ctx, send, heard: [], closed: false, play(p) { m.heard.push(Buffer.from(p).toString()); }, close() { m.closed = true; } };
+      opened.push(m);
+      return m;
+    }
+  };
+}
+const relayed = [];   // every relay frame the server forwarded
+function tapRelay(c) {
+  const ws = c.ws, on = ws.onmessage;
+  ws.onmessage = ev => { const m = JSON.parse(ev.data); if (m.t === 'vr') relayed.push(m); on(ev); };
+}
+
+test('when ICE fails, the call carries on over the socket, encrypted end to end', async () => {
+  const ra = fakeRelay(['opus', 'pcmu']), rb = fakeRelay(['pcmu']);
+  const [quin, rex] = await pair('quin', 'rex', { RTCPeerConnection: DeadPC, connectWait: 3000 });
+  quin.voice.relayMedia = ra; rex.voice.relayMedia = rb;
+  tapRelay(quin); tapRelay(rex);
+  await quin.voice.start(rex.me.userId);
+  await waitFor(() => state(rex) === 'ringing', 'ringing');
+  await rex.voice.accept();
+  await waitFor(() => ra.opened.length && rb.opened.length, 'both switched to the relay');
+  const qa = ra.opened[0], rb0 = rb.opened[0];
+  assert.equal(qa.codec, 'pcmu', 'the first of the caller\'s codecs the callee can play');
+  assert.equal(rb0.codec, 'pcmu');
+  assert.ok(quin.voice.call.relay && rex.voice.call.relay);
+  assert.equal(quin.voice.call.pc, null, 'the dead peer connection is closed');
+  assert.ok(qa.ctx && qa.stream, 'the relay gets the microphone and the call\'s audio context');
+  assert.equal(quin.voice.canVideo(), false);
+  await assert.rejects(quin.voice.setCamera(true), /voice only/);
+  assert.equal(state(quin), 'connecting', 'not active until audio arrives');
+
+  for (let i = 0; i < 3; i++) qa.send(new TextEncoder().encode('hello ' + i));
+  rb0.send(new TextEncoder().encode('hi back'));
+  await waitFor(() => rb0.heard.length === 3 && qa.heard.length === 1, 'audio both ways');
+  assert.deepEqual(rb0.heard, ['hello 0', 'hello 1', 'hello 2']);
+  assert.deepEqual(qa.heard, ['hi back']);
+  await waitFor(() => state(quin) === 'active' && state(rex) === 'active', 'both active');
+  // the server forwarded ciphertext only
+  assert.ok(relayed.length >= 4);
+  for (const m of relayed) assert.ok(!Buffer.from(m.d, 'base64').toString().includes('hello') && !Buffer.from(m.d, 'base64').toString().includes('hi back'));
+  assert.equal(relayed.find(m => m.to), undefined, 'the recipient sees who it is from, not a forwarding address');
+
+  // a replayed frame, and one that does not open, are dropped
+  const old = relayed.find(m => m.from === quin.me.userId);
+  rex.voice._relayIn(old);
+  rex.voice._relayIn(Object.assign({}, old, { n: 99, d: old.d.slice(0, -4) + 'AAAA' }));
+  await new Promise(r => setTimeout(r, 100));
+  assert.equal(rb0.heard.length, 3);
+
+  quin.voice.setMuted(true);
+  assert.equal(qa.stream.getTracks()[0].enabled, false, 'mute still silences the microphone');
+
+  await quin.voice.hangup();
+  await waitFor(() => !rex.voice.call, 'ended');
+  assert.ok(qa.closed && rb0.closed && qa.ctx.closed, 'relay audio and contexts closed');
+  await waitFor(() => sys(quin, rex.me.userId).length, 'history');
+  assert.match(sys(quin, rex.me.userId)[0], /^voice call · 0:0\d$/);
+});
+
+test('relay frames only reach someone the sender can reach, and are rate limited', async () => {
+  const [sal, tam] = await pair('sal', 'tam');
+  const uma = client();
+  await uma.signup('uma', PASS);
+  await live(uma);
+  const got = [];
+  const on = sal.ws.onmessage;
+  sal.ws.onmessage = ev => { const m = JSON.parse(ev.data); if (m.t === 'vr') got.push(m); on(ev); };
+  const frame = (n) => ({ t: 'vr', to: sal.me.userId, call: 'c1', n, d: 'AAAA' });
+  uma.ws.send(JSON.stringify(frame(0)));               // a stranger
+  for (let i = 0; i < 150; i++) tam.ws.send(JSON.stringify(frame(i)));   // a friend, past the limit
+  await new Promise(r => setTimeout(r, 300));
+  assert.ok(got.every(m => m.from === tam.me.userId), 'nothing from the stranger');
+  assert.ok(got.length > 0 && got.length <= 100, 'at most 100 frames a second: ' + got.length);
+});
+
+test('without a relay on both sides, a failed connection is still a lost call', async () => {
+  const [vic, wes] = await pair('vic', 'wes', { RTCPeerConnection: DeadPC, connectWait: 3000 });
+  vic.voice.relayMedia = fakeRelay(['opus']);   // wes cannot relay
+  await vic.voice.start(wes.me.userId);
+  await waitFor(() => state(wes) === 'ringing', 'ringing');
+  await wes.voice.accept();
+  await waitFor(() => !vic.voice.call && !wes.voice.call, 'both ended');
+  await waitFor(() => sys(vic, wes.me.userId).length, 'history');
+  assert.equal(sys(vic, wes.me.userId)[0], 'voice call failed: could not connect');
+});
+
+test('the instance relay config file feeds /api/ice', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'marmot-turnfile-'));
+  const file = path.join(dir, 'turn.json');
+  const saved = { TURN_CONFIG: process.env.TURN_CONFIG, TURN_URLS: process.env.TURN_URLS, TURN_SECRET: process.env.TURN_SECRET, STUN_URLS: process.env.STUN_URLS };
+  process.env.TURN_CONFIG = file; delete process.env.TURN_URLS; delete process.env.TURN_SECRET; process.env.STUN_URLS = '';
+  const s = createServer({ dataDir: dir, key: Buffer.alloc(32, 4) });
+  try {
+    await new Promise(r => s.server.listen(0, '127.0.0.1', r));
+    const c = new MarmotClient({ iter: 300000 });
+    c.setServer('http://127.0.0.1:' + s.server.address().port);
+    await c.signup('filey', PASS);
+    assert.equal((await c.api('GET', '/api/ice')).relay, false, 'no file yet');
+    fs.writeFileSync(file, JSON.stringify({ urls: ['turn:t.example:3478?transport=udp', 'turns:t.example:5349?transport=tcp'], secret: 's3cret' }));
+    const r = await c.api('GET', '/api/ice');
+    assert.equal(r.relay, true, 'picked up without a restart');
+    const t = r.iceServers.find(x => x.username);
+    assert.deepEqual(t.urls, ['turn:t.example:3478?transport=udp', 'turns:t.example:5349?transport=tcp']);
+    assert.equal(t.credential, crypto.createHmac('sha1', 's3cret').update(t.username).digest('base64'));
+    c._reset();
+  } finally {
+    for (const [k, v] of Object.entries(saved)) if (v == null) delete process.env[k]; else process.env[k] = v;
+    await new Promise(r2 => s.server.close(r2));
+    s.db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
