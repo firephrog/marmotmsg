@@ -12,6 +12,13 @@
 [data-theme=light]{--bg:#f8f6f3;--rail:#efebe6;--list:#f3f0ec;--row:#e7e2dc;--bubble:#e9e4de;--panel:#ebe6e0;--input:#efebe6;--line:rgba(40,32,24,0.1);--line2:rgba(40,32,24,0.18);--text:#221d18;--muted:#5f5850;--dim:#736b62;--faint:#8b837a;--avatar:#d9d2ca;--avatar-fg:#3b352f;--accent:#a8620a;--accent-soft:#8a4e04;--accent-ink:#fff7ec;--accent-wash:rgba(168,98,10,0.1);--ok:#1f8a63;--ok-line:rgba(31,138,99,0.4);--warn:#8a6410;--bad:#c2381f}
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;width:100%}
+@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--avatar) transparent}}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--avatar);border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:var(--faint)}
+::-webkit-scrollbar-thumb:active{background-color:var(--accent)}
+::-webkit-scrollbar-button{display:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,'Segoe UI',sans-serif;overflow:hidden}
 .mono,.lbl,.note,.chip,.time,.badge,.grouplbl,.status,.meta,.tbtn,.pill,.send,.stamp,.sys,.kv,.fp,.live,.seg button,.toast,.sn,.search,.inp,.empty{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
 .app{position:fixed;inset:0;display:flex;background:var(--bg);overflow:hidden;transition:top .22s ease}
@@ -543,6 +550,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
 
 <script type="application/json" id="patchNotes">
 [
+ {"v": "0.6.2", "features": ["Restyled scrollbars to match the theme"], "fixes": ["Coming back to many unread messages no longer floods the app: they are saved in batches, chats show only the first new message until opened, and opening a chat shows the newest 10 without replaying animations", "Unread counters cap at 99+"]},
  {"v": "0.6.1", "features": ["Staff profile tags: staff with the new create tag permission can make short colored tags (up to 10 characters), and those with the assign tag permission can put them on people. Tags show beside the username on a profile"], "fixes": ["Calls that cannot connect directly now go through a relay server, or as a last resort carry their audio over the existing connection, encrypted end to end", "Chats open faster: only the latest messages are drawn at first, and older ones load as you scroll up"]},
  {"v": "0.6.0", "features": ["Added profiles: a display name, a bio, a custom status and an accent color, edited in Settings → Profile with a live preview", "You can now change your username (it takes your password)", "Online status: see when friends are online, idle or on do not disturb, and choose to show as online, do not disturb or invisible", "Hover over someone's picture in a chat for a mini profile; click it to open their full profile on the right", "Peers keeps your conversation open: picking someone there opens their profile beside it", "Do not disturb silences message toasts and the call ringtone"], "fixes": []},
  {"v": "0.5.0", "features": ["Added auto updating (longer start times, can download latest html for faster start times).", "Added Video and Screenshare to calls", "Added admin panel, moderators, and muting", "Added customizable chat filter (completely client side, disableable)", "Added patch notes display"], "fixes": ["Fixed Burst loading, where messages would load in a burst after inactivity"]}
@@ -570,7 +578,7 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.6.1';
+const VERSION='0.6.2';
 /** What each release changed, newest first; the top entry is VERSION. The list itself is
     the #patchNotes data block above this script, where an older copy can read it too. */
 const PATCH_NOTES=JSON.parse(document.getElementById('patchNotes').textContent);
@@ -608,6 +616,7 @@ const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
 const FIRST=10;  // messages drawn when a thread opens (or snaps back to the bottom)
 const PAGE=40;   // older messages drawn each time the reader scrolls up to the top
+const LIMIT_ACKS=290;  // envelopes acked in one catch-up commit (the server takes 300)
 const BURST=3;   // more arrivals than this at once is catching up: drawn as is, summed up in one toast
 const AVSIZE=128,AVCHARS=48000;   // pictures are shrunk to AVSIZE² and at most AVCHARS of data: URL
 /** A picture as it may come off the wire: a small base64 JPEG, PNG or WebP data: URL. */
@@ -1065,6 +1074,8 @@ class Tx{
  body(){return {puts:this.puts,dels:this.dels,ack:this.ack,send:this.send,opks:this.opks}}
  apply(){for(const [l,[d,k]] of this.mem)d===null?this.c._del(l):this.c._set(l,d,k)}
  async commit(){
+  // what a catch-up staged is older than this: it has to reach the server first
+  if(this.c._batch||this.c._flushing)await this.c._flush();
   const r=await this.c.api('POST','/api/commit',this.body());
   this.apply();
   if(r.opkCount!=null)this.c.opkCount=r.opkCount;
@@ -1523,7 +1534,7 @@ class MarmotClient{
   clearTimeout(this._wsTimer);clearTimeout(this._retryTimer);
   Object.assign(this,{token:null,vk:null,me:null,vault:null,key:null,mac:null,ws:null,wsState:'closed',
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
-   locks:new Map(),inq:Promise.resolve(),unread:new Map(),opkCount:null,_backoff:0,
+   locks:new Map(),inq:Promise.resolve(),_batch:null,_flushing:null,unread:new Map(),opkCount:null,_backoff:0,
    peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
    groups:new Map(),applied:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set(),staff:null,mute:null,roles:new Map(),mutes:new Map(),pinged:new Set(),
    prof:new Map(),profc:new Map(),_pfReq:new Set(),_pfFail:new Map(),myProfile:cleanProfile(),presenceMode:'auto',idle:false})}
@@ -1730,10 +1741,11 @@ class MarmotClient{
      const r=await this.api('GET','/api/inbox');
      r.envelopes.forEach(e=>this._enqueue(e,true));
      await this.inq;
+     await this._flush().catch(e=>{this._retrySoon();throw e});
      if(r.envelopes.length<300)break}
    }finally{
     // what piled up while we were away is one summary, not a toast per message
-    const b=this.backlog;this.backlog=null;this._draining=null;
+    const b=this.backlog;this.backlog=null;this._draining=null;this.emit('change');
     if(b.n)this.emit('backlog',b.n,b.peers.size)}})();
   return this._draining}
 
@@ -1744,14 +1756,56 @@ class MarmotClient{
    console.warn('envelope '+e.id+' not processed yet:',err.message);
    this._retrySoon()}).finally(()=>{
     this.queued.delete(e.id);
+    if(!this.queued.size&&this._batch)return this._flush().catch(err=>{console.warn('catch-up not saved yet:',err.message);this._retrySoon()}).finally(()=>this._burstDone());
+    this._burstDone()})}
+ _burstDone(){
+    if(this.queued.size)return;
     // a burst the socket handed over (see catchingUp) is summed up once it is all through
-    if(!this.queued.size&&this.burst){const b=this.burst;this.burst=null;if(this.token)this.emit('backlog',b.n,b.peers.size)}})}
+    if(this.burst){const b=this.burst;this.burst=null;if(this.token)this.emit('backlog',b.n,b.peers.size)}}
+
+ /* ---- catch-up batches ----
+    Every inbound envelope is one atomic change (see _handle): normally its own commit, one
+    round trip each. While catching up that is what made hundreds of messages trickle in for
+    a minute. Then each change is instead applied here at once and staged, and the staged
+    changes go to the server together (_flush), as many as one commit may hold. If that
+    commit fails, all of them are taken back here and their envelopes, never acked, are
+    simply handled again later; the server never holds part of a batch. */
+ /** Saves an inbound envelope's changes: committed now, or staged while catching up. */
+ async _save(tx,id){
+  if(!this._draining&&this.queued.size<=1)return tx.commit();
+  const fits=b=>b.send.length+tx.send.length<=30&&b.ack.length+tx.ack.length<=LIMIT_ACKS&&
+   b.ops.size+tx.puts.length+tx.dels.length<=500&&b.opks.length+tx.opks.length<=150&&b.bytes<3e6;
+  if(this._batch&&!fits(this._batch))await this._flush();
+  const b=this._batch||(this._batch={ops:new Map(),ack:[],send:[],opks:[],undo:new Map(),ids:[],notes:[],bytes:0,recs:this.recs});
+  // what each record was before the batch touched it, to take the batch back if it fails
+  for(const [l] of tx.mem)if(!b.undo.has(l))b.undo.set(l,[this.recs.has(l)?this.recs.get(l):undefined,this.names.get(l)]);
+  for(const p of tx.puts){b.ops.set(p.k,p.v);b.bytes+=p.v.length}
+  for(const k of tx.dels)b.ops.set(k,null);
+  b.ack.push(...tx.ack);b.send.push(...tx.send);b.opks.push(...tx.opks);b.ids.push(id);
+  tx.apply();this.emit('change')}
+ /** Sends what is staged as one commit; one at a time, in order. */
+ _flush(){
+  const run=async()=>{
+   const b=this._batch;if(!b)return;this._batch=null;
+   const puts=[],dels=[];for(const [k,v] of b.ops)v===null?dels.push(k):puts.push({k,v});
+   try{const r=await this.api('POST','/api/commit',{puts,dels,ack:b.ack,send:b.send,opks:b.opks});if(r.opkCount!=null)this.opkCount=r.opkCount;this.emit('change')}
+   catch(e){
+    // anything staged on top of this batch was built on it: it goes too, newest first
+    const later=this._batch;this._batch=null;
+    for(const x of [later,b])if(x&&x.recs===this.recs){
+     for(const [l,[d,k]] of x.undo)d===undefined?this._del(l):this._set(l,d,k);
+     x.ids.forEach(id=>this.done.delete(id));
+     x.notes.forEach(p=>{const n=(this.unread.get(p)||0)-1;n>0?this.unread.set(p,n):this.unread.delete(p)})}
+    this.emit('change');throw e}};
+  const f=(this._flushing||Promise.resolve()).catch(()=>{}).then(run);
+  this._flushing=f;f.finally(()=>{if(this._flushing===f)this._flushing=null}).catch(()=>{});
+  return f}
 
  /** True while a pile of envelopes is being worked through rather than news trickling in:
      draining the mailbox, or a burst the socket delivered at once. A tab the browser froze
      or throttled while it sat in the background gets everything that came in meanwhile as
      one flood of socket frames when it wakes, not through drain(). */
- catchingUp(){return !!this._draining||this.queued.size>BURST}
+ catchingUp(){return !!this._draining||!!this._flushing||this.queued.size>BURST}
 
  _retrySoon(){clearTimeout(this._retryTimer);this._retryTimer=setTimeout(()=>{if(this.token)this.drain().catch(()=>{})},4000)}
 
@@ -1820,7 +1874,7 @@ class MarmotClient{
        note={peer:peerId,text:'missed voice call'}}}
      else sig=inner}
     await tx.put('sess:'+peerId,sess)}
-   await tx.commit();
+   await this._save(tx,e.id);
    this.done.add(e.id);
    if(this.done.size>5000)this.done=new Set([...this.done].slice(-2500))});
   if(sig)this.voice._signal(peerId,sig,e.ts);
@@ -1900,7 +1954,7 @@ class MarmotClient{
     for(const r of p.msgs.slice(0,500)){
      if(!r||typeof r.id!=='string'||typeof r.from!=='string')continue;
      await this._tombstone(tx,'msg:'+conv+':'+r.id,m=>(m.dir==='out'?this.me.userId:m.from||conv)===r.from,{mod:by})}}
-   await tx.commit();
+   await this._save(tx,e.id);
    this.done.add(e.id)});
   this.emit('change')}
 
@@ -2378,7 +2432,7 @@ class MarmotClient{
      note={peer,text:p.text}}}
    else if(p&&p.k==='dc'&&p.t==='sys'&&typeof p.text==='string'){
     const id='s'+e.id;await tx.put('msg:'+peer+':'+id,{id,peer,dir:'sys',ts:e.ts,text:p.text.slice(0,500)})}
-   await tx.commit();
+   await this._save(tx,e.id);
    this.done.add(e.id)});
   if(p&&p.gone)this.loadLinks().catch(()=>{});
   if(note)this._note(peer,note.text,quiet)}
@@ -2453,6 +2507,7 @@ class MarmotClient{
      catching up on the mailbox, adds it to the backlog summary instead. */
  _note(peer,text,quiet){
   this.unread.set(peer,(this.unread.get(peer)||0)+1);
+  if(this._batch)this._batch.notes.push(peer);
   if(this.pings(text))this.pinged.add(peer);
   const pile=quiet&&this.backlog?this.backlog
    :this.queued.size>BURST?(this.burst=this.burst||{n:0,peers:new Set()}):null;
@@ -3229,6 +3284,8 @@ const UI={
   if(!M.catchingUp())this._released=false;
   // a pile arriving in the open thread is held back (see heldBar) instead of drawn one by one
   if(this._seenFor===id&&!this._hold&&!this._released&&M.catchingUp())this._hold=true;
+  // the catch-up is over and the reader is still at the bottom: straight to the newest few
+  if(this._hold&&!M.catchingUp()&&atBottom){this._hold=false;this._from=null;this._stick=true}
   let i=this._from==null?-1:list.findIndex(m=>m.ts>=this._from);
   if(i<0||!this._hold&&atBottom&&list.length-i>2*PAGE){i=Math.max(0,list.length-FIRST);this._from=list.length?list[i].ts:null}
   this._more=i>0;
@@ -3241,7 +3298,7 @@ const UI={
  /** While a thread holds back a pile of arrivals: the line at its foot that draws them. */
  heldBar(){
   const n=this._heldN;if(!n)return '';
-  return '<div class="sys held" data-k="held"><button data-show-held>'+n+' new message'+(n>1?'s':'')+' · show</button></div>'},
+  return '<div class="sys held" data-k="held"><button data-show-held>'+(M.catchingUp()?'loading new messages…':count(n)+' new message'+(n>1?'s':'')+' · show')+'</button></div>'},
  /** The reader tried to scroll up while already at the top (wheel or swipe). With only the
      newest few messages drawn, the thread may be too short to scroll at all, so this is how
      older ones are reached then. */
@@ -4215,7 +4272,7 @@ const UI={
  open(id){
   if(isDiscord(id)){this.S.screen='discord';this.S.dc=id;this.S.last='dc'}else{this.S.screen='messages';this.S.chat=id;this.S.last='chat'}
   if(this.narrow())this.S.side=null;   // it would cover the chat
-  M.unread.delete(id);M.pinged.delete(id);this._snap.delete(id);this._stick=true;this._winFor=null;this._released=true;this.render()},
+  M.unread.delete(id);M.pinged.delete(id);this._snap.delete(id);this._stick=true;this._winFor=null;this.render()},
  /** Opens someone's profile on the right, beside whatever is open. */
  showPeer(id){if(!id)return;if(this.S.side!==id){this.S.sideErr='';if(M.me&&id!==M.me.userId&&!isGroup(id)&&!isDiscord(id))M.fetchProfile(id).catch(()=>{})}
   this.S.side=id;this.hoverHide();this.render()},

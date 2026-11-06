@@ -136,6 +136,73 @@ test('offline delivery, and history + ratchet survive signing in on a new device
   assert.deepEqual(texts(dave4, carol.me.userId), ['one', 'two (while you were away)', 'three', 'back']);
 });
 
+/** Counts the commits c makes. */
+function countCommits(c) {
+  const n = { commits: 0 }, api = c.api.bind(c);
+  c.api = (m, p, b) => { if (p === '/api/commit') n.commits++; return api(m, p, b); };
+  return n;
+}
+const seq = (p, n) => Array.from({ length: n }, (_, i) => p + (i + 1));
+
+test('a big catch-up is saved in a few batches, and all of it reaches the server', async () => {
+  const erin = client(), fay = client(), gus = client();
+  await erin.signup('cu_erin', PASS); await fay.signup('cu_fay', PASS); await gus.signup('cu_gus', PASS);
+  const gusId = await befriend(erin, gus);
+  await befriend(fay, gus);
+  gus._reset();                                         // away while both of them write
+  for (const t of seq('e', 100)) await erin.sendText(gusId, t);
+  for (const t of seq('f', 50)) await fay.sendText(gusId, t);
+
+  const gus2 = client(), n = countCommits(gus2);
+  await gus2.login('cu_gus', PASS);
+  await waitFor(() => texts(gus2, erin.me.userId).length === 100 && texts(gus2, fay.me.userId).length === 50, 'catch-up', 30000);
+  assert.deepEqual(texts(gus2, erin.me.userId), seq('e', 100));
+  assert.deepEqual(texts(gus2, fay.me.userId), seq('f', 50));
+  assert.equal(gus2.unread.get(erin.me.userId), 100);
+  assert.equal(gus2.unread.get(fay.me.userId), 50);
+  await waitFor(() => srv.db.inbox(gusId, 300).length === 0, 'mailbox acked');
+  assert.ok(n.commits <= 12, 'one commit per message would be 150; this took ' + n.commits);
+  await waitFor(() => erin.thread(gusId).every(m => m.state === 'delivered'), 'receipts', 15000);
+
+  // the ratchet as saved keeps working, and a new device gets the whole history from the server
+  await gus2.sendText(erin.me.userId, 'caught up');
+  await waitFor(() => texts(erin, gusId).includes('caught up'), 'reply');
+  const gus3 = client();
+  await gus3.login('cu_gus', PASS);
+  assert.deepEqual(texts(gus3, erin.me.userId), [...seq('e', 100), 'caught up']);
+  assert.deepEqual(texts(gus3, fay.me.userId), seq('f', 50));
+});
+
+test('a catch-up batch that fails to save is taken back and handled again', async () => {
+  const hal = client(), ivy = client();
+  await hal.signup('cu_hal', PASS); await ivy.signup('cu_ivy', PASS);
+  const ivyId = await befriend(hal, ivy);
+  await hal.sendText(ivyId, 'before');
+  await waitFor(() => texts(ivy, hal.me.userId).length === 1, 'first message');
+  ivy._reset();
+  for (const t of seq('h', 40)) await hal.sendText(ivyId, t);
+
+  // the first batch of the catch-up does not reach the server
+  const ivy2 = client(), api = ivy2.api.bind(ivy2);
+  let failed = false;
+  ivy2.api = (m, p, b) => {
+    if (p === '/api/commit' && !failed && b && b.ack && b.ack.length > 1) { failed = true; return Promise.reject(new Error('network down (test)')); }
+    return api(m, p, b);
+  };
+  await ivy2.login('cu_ivy', PASS);
+  await waitFor(() => texts(ivy2, hal.me.userId).length === 41, 'catch-up after the retry', 30000);
+  assert.ok(failed);
+  assert.deepEqual(texts(ivy2, hal.me.userId), ['before', ...seq('h', 40)]);
+  assert.equal(ivy2.unread.get(hal.me.userId), 40);   // each counted once, not again on the retry
+  await waitFor(() => srv.db.inbox(ivyId, 300).length === 0, 'mailbox acked');
+
+  await ivy2.sendText(hal.me.userId, 'all here');
+  await waitFor(() => texts(hal, ivyId).includes('all here'), 'reply');
+  const ivy3 = client();
+  await ivy3.login('cu_ivy', PASS);
+  assert.deepEqual(texts(ivy3, hal.me.userId), ['before', ...seq('h', 40), 'all here']);
+});
+
 test('simultaneous first messages converge on one session', async () => {
   const erin = client(), finn = client();
   await erin.signup('erin', PASS);
