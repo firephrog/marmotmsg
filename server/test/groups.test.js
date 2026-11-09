@@ -158,3 +158,98 @@ test('group tags: off by default, friends-only or everyone, join or apply', asyn
   await waitFor(() => { const p = pal.profile(boss.me.userId); return p && !p.tag; }, 'tag gone');
   await rejects(pal.api('POST', '/api/groups/join', { group: gid, via: boss.me.userId }), 404);
 });
+
+test('sender keys: one ciphertext per group message, fanned out, rotated when someone leaves', async () => {
+  const a = client(), b = client(), c = client(), x = client();
+  await a.signup('ska', PASS); await b.signup('skb', PASS); await c.signup('skc', PASS); await x.signup('skx', PASS);
+  await Promise.all([a, b, c, x].map(live));
+  await befriend(a, b); await befriend(a, c); await befriend(a, x);
+  const gid = await a.createGroup('keys', [b.me.userId, c.me.userId]);
+  const conv = 'g:' + gid;
+  await waitFor(() => b.group(gid) && c.group(gid), 'group');
+
+  // watch what a commits
+  const commits = [];
+  const api = a.api.bind(a);
+  a.api = (m, p, body) => { if (p === '/api/commit') commits.push(body); return api(m, p, body); };
+  const sends = () => commits.flatMap(x => x.send || []);
+
+  commits.length = 0;
+  await a.sendText(conv, 'first');
+  await waitFor(() => texts(b, conv).includes('first') && texts(c, conv).includes('first'), 'first message');
+  // the group message itself is a single envelope for both members
+  const shared = sends().filter(s => Array.isArray(s.to));
+  assert.equal(shared.length, 1);
+  assert.deepEqual([...shared[0].to].sort(), [b.me.userId, c.me.userId].sort());
+  const env = JSON.parse(shared[0].payload);
+  assert.equal(env.v, 2); assert.equal(env.g, gid); assert.ok(Number.isInteger(env.n));
+  assert.ok(!/first/.test(shared[0].payload));
+
+  // the key went out once: the next message is nothing but the one shared envelope
+  commits.length = 0;
+  await a.sendText(conv, 'second');
+  await waitFor(() => texts(b, conv).includes('second') && texts(c, conv).includes('second'), 'second message');
+  const skdmMsgs = sends().filter(s => !Array.isArray(s.to) && s.g === gid);
+  assert.equal(skdmMsgs.length, 0);
+  assert.equal(JSON.parse(sends().find(s => Array.isArray(s.to)).payload).n, env.n + 1);
+  // receipts still come back pairwise
+  await waitFor(() => { const m = a.thread(conv).find(m => m.text === 'second'); return m && (m.got || []).length === 2; }, 'receipts');
+
+  // b and c are not friends, yet they read each other through the group
+  await c.sendText(conv, 'from c');
+  await waitFor(() => texts(b, conv).includes('from c') && texts(a, conv).includes('from c'), 'c to the group');
+
+  // the server only fans out to members of the named group
+  await rejects(a.api('POST', '/api/commit', { send: [{ to: [x.me.userId], payload: '{}', g: gid }] }), 404);
+  await rejects(a.api('POST', '/api/commit', { send: [{ to: [b.me.userId], payload: '{}' }] }), 400, /name its group/);
+  await rejects(x.api('POST', '/api/commit', { send: [{ to: [a.me.userId], payload: '{}', g: gid }] }), 404);
+
+  // c is removed: a's next message is under a new key c never gets
+  const kid = a.get('skout:' + gid).kid;
+  await a.kickFromGroup(gid, c.me.userId);
+  await waitFor(() => !c.group(gid), 'c removed');
+  commits.length = 0;
+  await a.sendText(conv, 'after c');
+  await waitFor(() => texts(b, conv).includes('after c'), 'message after removal');
+  const now = a.get('skout:' + gid);
+  assert.notEqual(now.kid, kid);
+  assert.deepEqual(now.sent, [b.me.userId]);
+  assert.ok(sends().every(s => s.to !== c.me.userId && !(Array.isArray(s.to) && s.to.includes(c.me.userId))));
+  assert.ok(!texts(c, conv).includes('after c'));
+
+  // b loses a's key: the message cannot be read, b asks, and a's next one carries the key again
+  b._del('skin:' + gid + ':' + a.me.userId);
+  await a.sendText(conv, 'lost');
+  await waitFor(() => b.thread(conv).some(m => m.dir === 'sys' && /could not be decrypted \(no key/.test(m.text)), 'undecryptable line');
+  await waitFor(() => !a.get('skout:' + gid).sent.includes(b.me.userId), 'key request reaches a');
+  await a.sendText(conv, 'found');
+  await waitFor(() => texts(b, conv).includes('found'), 'readable again');
+});
+
+test('a client older than Sender Keys is told to update when it sends in a group', async () => {
+  const a = client(), b = client();
+  await a.signup('olda', PASS); await b.signup('oldb', PASS);
+  await Promise.all([a, b].map(live));
+  await befriend(a, b);
+  const gid = await a.createGroup('', [b.me.userId]);
+  // what a 0.6.2 client sends: one pairwise copy per member, labelled with the group, and no protocol header
+  const old = body => fetch(base + '/api/commit', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.token }, body: JSON.stringify(body) })
+    .then(async r => ({ status: r.status, body: await r.json() }));
+  const r = await old({ send: [{ to: b.me.userId, payload: '{}', optional: true, say: true, g: gid }] });
+  assert.equal(r.status, 426);
+  assert.equal(r.body.error, 'Your client is using the old group chat protocol, please update your client');
+  assert.equal(r.body.outdated, true);
+  // it can still talk outside groups
+  assert.equal((await old({ send: [{ to: b.me.userId, payload: '{}' }] })).status, 200);
+
+  // a current client is told the same way if the server ever needs a newer protocol
+  const seen = [];
+  a.on('outdated', m => seen.push(m));
+  const prev = globalThis.fetch;
+  globalThis.fetch = (u, o) => prev(u, Object.assign({}, o, { headers: Object.assign({}, o.headers, { 'X-Marmot-Proto': '1' }) }));
+  try { await assert.rejects(a.sendText('g:' + gid, 'hello'), /old group chat protocol/); }
+  finally { globalThis.fetch = prev; }
+  assert.deepEqual(seen, ['Your client is using the old group chat protocol, please update your client']);
+  await a.sendText('g:' + gid, 'hello');
+  await waitFor(() => texts(b, 'g:' + gid).includes('hello'), 'current client sends');
+});

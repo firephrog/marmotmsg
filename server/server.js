@@ -22,7 +22,7 @@ const store = require('./db');
 const { Discord, Bridge } = require('./discord');
 const admin = require('./admin');
 
-const VERSION = '0.6.2';
+const VERSION = '0.6.3';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
 const ENVELOPE_TTL = 30 * 24 * 3600 * 1000;
 const MIN_ITER = 300000;
@@ -39,6 +39,9 @@ const USERNAME = /^[a-zA-Z0-9._-]{3,24}$/;
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const BLOBKEY = /^[0-9a-f]{32}$/;
 const GROUPID = /^[0-9a-f]{24}$/;
+/** The group chat protocol a client must speak to send in a group (2: Sender Keys). */
+const GROUP_PROTO = 2;
+const OUTDATED = 'Your client is using the old group chat protocol, please update your client';
 // A profile picture: already downscaled by the client to a small square image.
 const AVATAR = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 const AVATAR_CHARS = 64 * 1024;
@@ -185,7 +188,7 @@ function createServer(opts) {
   // or any host. Auth is a bearer token, never a cookie, so open CORS cannot be ridden.
   app.use((req, res, next) => {
     res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Marmot-Proto');
     res.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.set('Access-Control-Max-Age', '600');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -1018,15 +1021,32 @@ function createServer(opts) {
       // `say` marks an envelope that carries something the sender wrote (a text, an image,
       // a call, a group rename); a muted sender cannot send those. The server cannot see
       // inside an envelope, so this is the client's own label, which current clients set.
-      send: asArray(b.send, LIMITS.sends, 'envelopes').map(m => {
-        if (!m || typeof m.to !== 'string' || typeof m.payload !== 'string') throw bad('malformed envelope');
+      // An envelope whose `to` is a list is one group message under the sender's
+      // sender key: the same ciphertext goes to each listed member of the group it
+      // names, and to no one outside it.
+      send: asArray(b.send, LIMITS.sends, 'envelopes').flatMap(m => {
+        if (!m || typeof m.payload !== 'string') throw bad('malformed envelope');
         if (m.payload.length > LIMITS.payloadBytes) throw bad('envelope too large');
-        if (m.to === me.id) throw bad('cannot send to yourself');
-        if (!db.userRow(m.to)) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
-        if (!canReach(me.id, m.to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
-        return { to: m.to, payload: m.payload, say: m.say === true, g: typeof m.g === 'string' && GROUPID.test(m.g) ? m.g : null };
+        const g = typeof m.g === 'string' && GROUPID.test(m.g) ? m.g : null;
+        const one = (to, inGroup) => {
+          if (typeof to !== 'string') throw bad('malformed envelope');
+          if (to === me.id) throw bad('cannot send to yourself');
+          if (!db.userRow(to) || (inGroup && !db.inGroup(g, to))) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
+          if (!canReach(me.id, to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
+          return { to, payload: m.payload, say: m.say === true, g };
+        };
+        if (!Array.isArray(m.to)) return [one(m.to, false)];
+        if (!g) throw bad('an envelope for several recipients must name its group');
+        if (!db.inGroup(g, me.id)) throw new HttpError(404, 'you are not in that group');
+        return [...new Set(asArray(m.to, LIMITS.groupMembers, 'recipients'))].map(to => one(to, true));
       }).filter(Boolean)
     };
+    // Group messages from a client older than Sender Keys (it sends no X-Marmot-Proto)
+    // would reach members who cannot read them: it is told to update instead. Old clients
+    // label everything they send in a group with `g`, which their receipts never carry.
+    if (c.send.some(m => m.g) && !(Number(req.get('x-marmot-proto')) >= GROUP_PROTO)) {
+      throw Object.assign(new HttpError(426, OUTDATED), { extra: { outdated: true } });
+    }
     if (c.send.some(m => m.say)) checkMute(me);
     // `g` is the client's label for an envelope sent as part of a group, like `say`
     for (const gid of new Set(c.send.filter(m => m.say && m.g).map(m => m.g))) {
@@ -1120,16 +1140,19 @@ function createServer(opts) {
    * works. Each frame is AES-GCM ciphertext under a key the two callers swapped over the
    * ratchet, so this only forwards bytes it cannot read. It is real-time traffic: frames past
    * the rate limit, to someone the sender cannot reach, or to a socket that is backed up are
-   * dropped, never queued.
+   * dropped, never queued. The limit is per recipient, since a group call may relay to several
+   * people at once, with a ceiling on everything one socket sends.
    */
-  const RELAY_FPS = 100, RELAY_MAX = 4096, RELAY_BACKLOG = 256 * 1024;
+  const RELAY_FPS = 100, RELAY_TOTAL = 800, RELAY_MAX = 4096, RELAY_BACKLOG = 256 * 1024;
   const reachCache = new Map();   // 'from to' -> {ok, until}: canReach is a few queries, frames come 50 a second
   function relayFrame(ws, m) {
     if (typeof m.to !== 'string' || m.to.length > 128 || m.to === ws.userId || typeof m.call !== 'string' || m.call.length > 64 ||
       !Number.isSafeInteger(m.n) || m.n < 0 || typeof m.d !== 'string' || m.d.length > RELAY_MAX) return;
     const now = Date.now();
-    if (!ws.vr || now - ws.vr.at >= 1000) ws.vr = { at: now, n: 0 };
-    if (++ws.vr.n > RELAY_FPS) return;
+    if (!ws.vr || now - ws.vr.at >= 1000) ws.vr = { at: now, n: 0, to: new Map() };
+    const sent = (ws.vr.to.get(m.to) || 0) + 1;
+    if (ws.vr.n >= RELAY_TOTAL || sent > RELAY_FPS || (!ws.vr.to.has(m.to) && ws.vr.to.size >= 64)) return;
+    ws.vr.n++; ws.vr.to.set(m.to, sent);
     const k = ws.userId + ' ' + m.to;
     let r = reachCache.get(k);
     if (!r || r.until < now) {

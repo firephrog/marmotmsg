@@ -241,6 +241,8 @@ select.inp{cursor:pointer}
 .tbtn[aria-pressed=true]{border-color:var(--accent);color:var(--accent-soft);background:var(--accent-wash)}
 /* group chats */
 .av.grp{font-size:10px;box-shadow:inset 0 0 0 1px var(--accent)}
+.pick.off{cursor:default;opacity:.55}
+.pick .pstate{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
 .picks{max-height:260px;overflow-y:auto;border:1px solid var(--line2);background:var(--input)}
 .pick{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)}
 .pick:last-child{border-bottom:0}
@@ -326,27 +328,44 @@ button.quote:hover{background:var(--row)}
 .callbar .who-btn{display:block;max-width:100%}
 .callbar .meta{font-variant-numeric:tabular-nums}
 .callbar .meta.warn{color:var(--warn)}
+/* the buttons keep their size; on a narrow screen the row scrolls sideways rather than squashing the name */
+.cacts{flex:none;display:flex;align-items:center;gap:8px;max-width:72%;overflow-x:auto;scrollbar-width:none}
+.cacts::-webkit-scrollbar{display:none}
+.cacts>button{flex:none}
 .send.ok{background:var(--ok)}
 .hang{padding:7px 12px;background:var(--bad);color:#fff;font-size:10px;font-weight:500;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
 .hang{transition:filter .15s}
 .hang:hover{filter:brightness(1.08)}
 .callbar.out{animation:rise .18s ease both;pointer-events:none}
-/* video: a floating panel under the call bar, or the whole window below it when expanded.
-   The biggest feed fills it; the rest sit as thumbnails in the corner, and a click swaps one in */
-.stage{position:fixed;top:70px;right:16px;width:min(460px,calc(100vw - 32px));aspect-ratio:16/10;z-index:29;background:#000;border:1px solid var(--line2);box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;animation:drop .22s ease both;--tw:112px;--th:63px}
+/* the call window: a tile for everyone in the call, the camera if it is on and their picture if not,
+   a screen share as a tile of its own. A grid of equals, or, with a tile picked (or a screen shared),
+   that one large over a row of the rest. Floating under the call bar, or the whole window below it */
+.stage{position:fixed;top:70px;right:16px;width:min(520px,calc(100vw - 32px));aspect-ratio:16/10;z-index:29;background:#0b0a09;border:1px solid var(--line2);box-shadow:0 12px 32px rgba(0,0,0,.45);overflow:hidden;animation:drop .22s ease both}
 .stage[hidden]{display:none}
-.stage.big{top:58px;left:0;right:0;bottom:0;width:auto;aspect-ratio:auto;border:0;box-shadow:none;--tw:208px;--th:117px}
-.stage:fullscreen{--tw:240px;--th:135px}
-.stage .tile{position:absolute;display:block;padding:0;background:#000;overflow:hidden}
-.stage .tile[hidden]{display:none}
-.stage .tile.main{inset:0;cursor:default}
-.stage .tile.thumb{right:8px;bottom:calc(8px + var(--i) * (var(--th) + 6px));width:var(--tw);height:var(--th);z-index:1;border:1px solid rgba(255,255,255,.28);box-shadow:0 4px 12px rgba(0,0,0,.5);transition:border-color .15s}
-.stage .tile.thumb:hover{border-color:var(--accent)}
-.stage video{width:100%;height:100%;object-fit:contain;display:block}
-.stage .tile.thumb video{object-fit:cover}
-.stage [data-tile=mycam] video{transform:scaleX(-1)}
-.stage .tag{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 16px);padding:2px 6px;background:rgba(0,0,0,.6);color:#fff;font:10px 'JetBrains Mono',ui-monospace,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stage .thumb .tag{left:4px;bottom:4px;font-size:9px}
+.stage.big{top:58px;left:0;right:0;bottom:0;width:auto;aspect-ratio:auto;border:0;box-shadow:none}
+.tiles{position:absolute;inset:0;display:grid;gap:4px;padding:4px;grid-template-columns:repeat(var(--cols,1),minmax(0,1fr));grid-auto-rows:minmax(0,1fr)}
+.tiles.focus{grid-template-columns:repeat(var(--cols,1),minmax(0,1fr));grid-template-rows:minmax(0,1fr) var(--strip,22%);grid-auto-rows:0}
+.tiles.focus .tile.main{grid-column:1/-1;grid-row:1}
+.tile{position:relative;display:block;padding:0;min-width:0;min-height:0;background:#1a1816;overflow:hidden;outline:2px solid transparent;outline-offset:-2px;transition:outline-color .15s,opacity .2s}
+.tile:hover{outline-color:var(--accent)}
+.tile.main:hover{outline-color:transparent}
+.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#000}
+.tile.cam video{display:block}
+.tile.screen video,.tile.main video{object-fit:contain}
+.tile.mine:not(.screen) video{transform:scaleX(-1)}
+.tile .tav{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.tile.cam .tav{display:none}
+.tile .tav .av{width:min(96px,42%);height:auto;aspect-ratio:1;font-size:clamp(12px,3.2vw,26px);border-radius:0}
+.tile.wait{opacity:.55}
+.tile.wait .tav .av{animation:pulse 1.4s ease-in-out infinite}
+.tile .tag{position:absolute;left:6px;bottom:6px;max-width:calc(100% - 12px);display:flex;align-items:center;gap:4px;padding:2px 6px;background:rgba(0,0,0,.62);color:#fff;font:10px 'JetBrains Mono',ui-monospace,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .tag span{overflow:hidden;text-overflow:ellipsis}
+.tile .tag svg{flex:none;width:12px;height:12px;color:var(--bad)}
+.tile .tst{position:absolute;right:6px;top:6px;padding:2px 6px;background:rgba(0,0,0,.62);color:#fff;font:9px 'JetBrains Mono',ui-monospace,Consolas,monospace;letter-spacing:.04em}
+.tile .tst:empty{display:none}
+.tile .tst.warn{color:var(--warn)}
+.tiles.focus .tile:not(.main) .tag{font-size:9px;left:3px;bottom:3px}
+.tiles.focus .tile:not(.main) .tst{display:none}
 .stage-ctl{position:absolute;top:8px;right:8px;z-index:2;display:flex;gap:6px;opacity:0;transition:opacity .15s}
 .stage:hover .stage-ctl,.stage:focus-within .stage-ctl{opacity:1}
 .stage-ctl .tbtn{background:rgba(0,0,0,.6);color:#fff;border-color:rgba(255,255,255,.25)}
@@ -378,6 +397,22 @@ button.quote:hover{background:var(--row)}
 .sys.held button:hover{color:var(--accent)}
 /* theme switch: everything eases between palettes for a moment */
 .theme-fade,.theme-fade *,.theme-fade *::before,.theme-fade *::after{transition:background-color .3s ease,color .3s ease,border-color .3s ease,box-shadow .3s ease!important}
+/* image theme: a picture behind everything (blurred, darkened or lightened), the palette drawn
+   from it (set inline on <html> by Theme), and the big surfaces see-through so it shows */
+#bgImg,#bgTint{position:fixed;inset:0;display:none;pointer-events:none}
+#bgImg{background:center/cover no-repeat}
+.imgtheme #bgImg,.imgtheme #bgTint{display:block}
+.imgtheme body,.imgtheme .app{background:transparent}
+.imgtheme .pane{background:var(--glass-bg)}
+.imgtheme .rail{background:var(--glass-rail)}
+.imgtheme .col{background:var(--glass-list)}
+.bgpal{display:flex;max-width:420px;height:34px;border:1px solid var(--line2)}
+.bgpal i{flex:1 1 0;min-width:10px}
+.bgpal.none{background:repeating-linear-gradient(45deg,var(--input) 0 4px,var(--row) 4px 8px)}
+.range{display:block;width:100%;max-width:360px;margin:0;accent-color:var(--accent)}
+.range:disabled{opacity:.4}
+.lbl .rv{float:right;color:var(--muted)}
+.rng{max-width:360px}
 @keyframes drop{from{opacity:0;transform:translateY(-8px)}}
 @keyframes rise{to{opacity:0;transform:translateY(-8px)}}
 @keyframes fadeout{to{opacity:0}}
@@ -480,8 +515,9 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
  .pane-head .meta,.pane-head .pane-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .callbar .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .callbar{gap:6px;padding:0 10px 0 12px}
+ .cacts{gap:6px;max-width:64%}
  .callbar .tbtn,.callbar .hang{padding:7px 8px}
- .stage{right:8px;width:calc(100vw - 16px);--tw:88px;--th:50px}
+ .stage{right:8px;width:calc(100vw - 16px)}
  .stage.big{right:0;width:auto}
  .msg{max-width:86%}
  .thread{padding:16px}
@@ -493,6 +529,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
 </style>
 </head>
 <body>
+<div id="bgImg"></div><div id="bgTint"></div>
 <div class="app" id="app">
   <div class="rail">
     <div class="brand"><svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg><b>MARMOT</b><div class="ver">v0.4</div></div>
@@ -515,6 +552,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
     <div class="seg" id="themeSeg">
       <button data-theme-set="light" aria-pressed="false">LIGHT</button>
       <button data-theme-set="dark" aria-pressed="true">DARK</button>
+      <button data-theme-set="image" aria-pressed="false" title="A theme made from your background image">IMAGE</button>
     </div>
   </div>
 
@@ -538,19 +576,17 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
 <div class="toasts" id="toasts"></div>
 <div class="hovercard" id="hovercard" data-pf="" hidden></div>
 <div id="callbar" role="status" aria-live="polite"></div>
-<audio id="callAudio" autoplay playsinline></audio>
+<div id="callAudios" hidden></div>
 <div id="stage" class="stage" hidden>
-  <button class="tile" data-act="stage-pin" data-tile="pscreen" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
-  <button class="tile" data-act="stage-pin" data-tile="pcam" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
-  <button class="tile" data-act="stage-pin" data-tile="myscreen" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
-  <button class="tile" data-act="stage-pin" data-tile="mycam" hidden><video autoplay playsinline muted></video><span class="tag"></span></button>
-  <div class="stage-ctl"><button class="tbtn" data-act="stage-full">FULLSCREEN</button><button class="tbtn" data-act="stage-size"></button></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="stage-ctl"><button class="tbtn" data-act="stage-full">FULLSCREEN</button><button class="tbtn" data-act="stage-size"></button><button class="tbtn" data-act="call-view">HIDE</button></div>
 </div>
 <div id="overlay"></div>
 
 <script type="application/json" id="patchNotes">
 [
- {"v": "0.6.2", "features": ["Restyled scrollbars to match the theme"], "fixes": ["Coming back to many unread messages no longer floods the app: they are saved in batches, chats show only the first new message until opened, and opening a chat shows the newest 10 without replaying animations", "Unread counters cap at 99+"]},
+ {"v": "0.6.3", "features": ["Group chats now use Sender Keys, as Signal does: each message is encrypted once and the server hands the same ciphertext to every member, instead of encrypting a copy per member. Each member has their own key for each group, shared once over the private one-to-one channel, and it is replaced whenever someone leaves or is removed, so former members cannot read anything sent afterwards"], "fixes": []},
+ {"v": "0.6.2", "features": ["Restyled scrollbars to match the theme", "Image themes: pick a background image in Settings → Appearance and Marmot builds a theme from its most common colors. Blur, darken / lighten and panel opacity are adjustable, and the text turns light or dark to match the image"], "fixes": ["Coming back to many unread messages no longer floods the app: they are saved in batches, chats show only the first new message until opened, and opening a chat shows the newest 10 without replaying animations", "Unread counters cap at 99+"]},
  {"v": "0.6.1", "features": ["Staff profile tags: staff with the new create tag permission can make short colored tags (up to 10 characters), and those with the assign tag permission can put them on people. Tags show beside the username on a profile"], "fixes": ["Calls that cannot connect directly now go through a relay server, or as a last resort carry their audio over the existing connection, encrypted end to end", "Chats open faster: only the latest messages are drawn at first, and older ones load as you scroll up"]},
  {"v": "0.6.0", "features": ["Added profiles: a display name, a bio, a custom status and an accent color, edited in Settings → Profile with a live preview", "You can now change your username (it takes your password)", "Online status: see when friends are online, idle or on do not disturb, and choose to show as online, do not disturb or invisible", "Hover over someone's picture in a chat for a mini profile; click it to open their full profile on the right", "Peers keeps your conversation open: picking someone there opens their profile beside it", "Do not disturb silences message toasts and the call ringtone"], "fixes": []},
  {"v": "0.5.0", "features": ["Added auto updating (longer start times, can download latest html for faster start times).", "Added Video and Screenshare to calls", "Added admin panel, moderators, and muting", "Added customizable chat filter (completely client side, disableable)", "Added patch notes display"], "fixes": ["Fixed Burst loading, where messages would load in a burst after inactivity"]}
@@ -578,7 +614,7 @@ const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
 /** Bump on every client release: copies older than the server's offer the new file. */
-const VERSION='0.6.2';
+const VERSION='0.6.3';
 /** What each release changed, newest first; the top entry is VERSION. The list itself is
     the #patchNotes data block above this script, where an older copy can read it too. */
 const PATCH_NOTES=JSON.parse(document.getElementById('patchNotes').textContent);
@@ -723,6 +759,9 @@ const chatFilter=(()=>{
 const isDiscord=id=>String(id).startsWith('dc:');
 const isGroup=id=>String(id).startsWith('g:');
 const GID=/^[0-9a-f]{24}$/,MAXNAME=64;
+/** The group chat protocol this client speaks (2: Sender Keys), sent with every request so
+    the server can turn away group messages from a client too old to be understood. */
+const GPROTO=2;
 const clock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 /** Whether an outgoing inner message says something (a text, image, call or group rename).
     The server holds those back from a muted account; it cannot see inside, so the client labels them. */
@@ -766,7 +805,7 @@ const EIGHTBALL=['It is certain.','Without a doubt.','Yes, definitely.','You may
 /** Fun commands anyone can use: [name, usage, what it does]. The result is sent to the chat as a normal message. */
 const FUN=[['coinflip','','flip a coin'],['rng','1 100','a random number (default 1–100)'],
  ['roll','2d6','roll dice (default 1d6)'],['8ball','question','ask the magic 8-ball'],['choose','pizza, tacos, sushi','pick one for you'],
- ['poll','"Lunch?" pizza tacos 2h','a poll everyone here can vote in (lasts 1d unless you say)']];
+ ['poll','"Better?" pizza burgers 2h','a poll everyone here can vote in (lasts 1d unless you say)']];
 /** Polls: up to POLLOPTS options, open for at most POLLMAX minutes. */
 const POLLOPTS=10,POLLMAX=43200,POLLDEF=1440;
 /** The poll a message carries {q, opts, ends}, cleaned up when it comes off the wire; `cap` is the
@@ -816,6 +855,10 @@ function funCommand(text,user){
   if(q.length>200||opts.some(o=>o.length>80))throw new Error('keep the title under 200 characters and each option under 80');
   return Object.assign(said('📊 '+q+'\n'+opts.map((o,i)=>(i+1)+'. '+o).join('\n')),{poll:{q,opts,ends:Date.now()+min*60000},min})}
  return null}
+/** Whether an inner message is a well-formed call signal (see Voice). */
+const callSig=x=>x.k==='call'&&typeof x.call==='string'&&x.call.length<=64&&
+ ['offer','answer','decline','busy','end','media','relay','roster'].includes(x.t)&&(x.sdp==null||(typeof x.sdp==='string'&&x.sdp.length<=MAXSDP))&&
+ (x.ids==null||(Array.isArray(x.ids)&&x.ids.length<=64));
 const says=x=>x.k==='text'||(x.k==='call'&&x.t==='offer')||(x.k==='group'&&(x.t==='name'||x.t==='icon')&&!!x.announce);
 /** How many different emoji one message can carry as reactions. */
 const REACTMAX=20;
@@ -1034,6 +1077,67 @@ const Ratchet={
   r.archived=keep.slice(0,this.ARCHIVE);r.active=st;return r}
 };
 
+/* ---------------------------------------------------------- sender keys */
+/* Group messages use Signal's Sender Keys. Each member keeps, per group, a
+   sender key of their own: a symmetric chain key that steps forward once per
+   message (HMAC-SHA256, as in a ratchet's chain) and an Ed25519 signing key.
+   It reaches each other member once, in a distribution message over the
+   ordinary pairwise ratchet; after that every group message is encrypted and
+   signed ONCE, and the server fans the one ciphertext out to the members.
+   Someone who joins gets the chain as it stands, so they cannot read what came
+   before; when anyone who held the key leaves or is removed, the sender starts
+   a new key, so they cannot read what comes after.
+     out  {kid,ck,n,priv,pub,sent:[userId]}   my key in a group, and who has it
+     in   {keys:[{kid,ck,n,pub,skipped:{n:mk}}]}  a member's keys, newest first
+   An envelope is {v:2,g,kid,n,ct,sig}: AES-GCM under the n-th message key, with the
+   group, the sender's id (which the server vouches for), kid and n as associated
+   data, and the sender's signature over that and the ciphertext. */
+const SKey={
+ MAX_SKIP:2000,MAX_KEPT:500,KEEP:4,
+ KID:/^[0-9a-f]{16}$/,
+ async fresh(){const s=await CR.pair('sign');return {kid:hex(rand(8)),ck:b64(rand(32)),n:0,priv:s.priv,pub:s.pub,sent:[]}},
+ /** What a distribution message carries: the chain from the next message on, and the public signing key. */
+ dist(out){return {kid:out.kid,ck:out.ck,n:out.n,pub:out.pub}},
+ aad(gid,from,kid,n){return te.encode('Marmot_SK1|'+gid+'|'+from+'|'+kid+'|'+n)},
+ async encrypt(out,gid,from,inner){
+  const o=Ratchet.clone(out),n=o.n;
+  const [next,mk]=await CR.kdfChain(ub64(o.ck));
+  const aad=this.aad(gid,from,o.kid,n);
+  const ct=b64(await CR.aead(mk,te.encode(JSON.stringify(inner)),aad));
+  const sig=await CR.sign(o.priv,cat(aad,te.encode('|'+ct)));
+  o.ck=b64(next);o.n=n+1;
+  return {out:o,env:{v:2,g:gid,kid:o.kid,n,ct,sig}}},
+ /** A member's distribution message, checked, added to what is kept of theirs; null if malformed. */
+ learn(rec,d){
+  const ok=d&&this.KID.test(d.kid)&&Number.isInteger(d.n)&&d.n>=0&&typeof d.ck==='string'&&typeof d.pub==='string';
+  if(!ok)return null;
+  try{if(ub64(d.ck).length!==32||ub64(d.pub).length!==32)return null}catch(e){return null}
+  const keys=((rec&&rec.keys)||[]).slice();
+  const have=keys.find(k=>k.kid===d.kid);
+  // the same key again: keep ours, unless it is a different key under that id or an earlier point we can still use
+  if(have&&have.pub===d.pub&&have.n<=d.n)return {keys};
+  return {keys:[{kid:d.kid,ck:d.ck,n:d.n,pub:d.pub,skipped:{}}].concat(keys.filter(k=>k.kid!==d.kid)).slice(0,this.KEEP)}},
+ async decrypt(rec,env,gid,from){
+  if(!this.KID.test(env.kid)||!Number.isInteger(env.n)||env.n<0||typeof env.ct!=='string'||typeof env.sig!=='string')throw new Error('malformed group message');
+  const keys=((rec&&rec.keys)||[]).map(k=>Ratchet.clone(k)),k=keys.find(x=>x.kid===env.kid);
+  if(!k)throw Object.assign(new Error('no key from this sender yet'),{nokey:true});
+  const aad=this.aad(gid,from,env.kid,env.n);
+  if(!await CR.verify(k.pub,env.sig,cat(aad,te.encode('|'+env.ct))))throw new Error('bad signature');
+  let mk;
+  if(env.n<k.n){
+   mk=k.skipped[env.n];
+   if(!mk)throw new Error('message key already used');
+   delete k.skipped[env.n]}
+  else{
+   if(env.n-k.n>this.MAX_SKIP)throw new Error('too many skipped messages');
+   while(k.n<env.n){const [next,m]=await CR.kdfChain(ub64(k.ck));k.skipped[k.n]=b64(m);k.ck=b64(next);k.n++}
+   const [next,m]=await CR.kdfChain(ub64(k.ck));k.ck=b64(next);k.n++;mk=b64(m);
+   const ns=Object.keys(k.skipped);
+   if(ns.length>this.MAX_KEPT)ns.sort((a,b)=>a-b).slice(0,ns.length-this.MAX_KEPT).forEach(x=>delete k.skipped[x])}
+  const pt=await CR.aead(ub64(mk),ub64(env.ct),aad,true);
+  return {rec:{keys},inner:JSON.parse(td.decode(pt))}}
+};
+
 /* ----------------------------------------------------------- the engine */
 /* Records live in memory under logical keys and are mirrored to the server
    as blobs, each AES-GCM sealed with the account's data key and stored under
@@ -1056,8 +1160,11 @@ const Ratchet={
    Group chats are conversations under the id "g:<groupId>". Who is in a
    group is held by the server (this.groups), because it is the server that
    lets members who are not friends reach each other. Everything said in a
-   group, its name included, is end-to-end encrypted: each message is sent
-   once per member over the ordinary pairwise ratchet, tagged with the group.
+   group, its name included, is end-to-end encrypted with Sender Keys (see
+   SKey): encrypted once under the sender's key for the group, and fanned out
+   by the server. Receipts, key distribution and call signals stay pairwise.
+     skout:<groupId>          my sender key in the group
+     skin:<groupId>:<userId>  a member's sender keys
      grp:<groupId>     {members:[userId]} as last seen, to tell joins and leaves apart
      gname:<groupId>   {name,ts,by} the group's name, newest wins
      gicon:<groupId>   {icon,ts,by} the group's icon (a small data: URL, '' for none), newest wins
@@ -1181,28 +1288,58 @@ const RelayAudio={
 
 /* ---------------------------------------------------------------- voice */
 /* Voice calls are WebRTC, so the audio is SRTP keyed by a DTLS handshake
-   between the two browsers. What makes that end-to-end is the signalling: the
+   between two browsers. What makes that end-to-end is the signalling: the
    offer and answer, which carry each side's DTLS certificate fingerprint,
    travel as ordinary Double Ratchet messages. The server relays them but can
    neither read nor alter them, so it cannot put itself in the middle of the
    DTLS handshake. A TURN relay, when one is needed, forwards SRTP it cannot
    decrypt.
-   One call at a time. Signals are {k:'call', t, call:<id>, sdp?} with t one
-   of offer | answer | decline | busy | end | media. Each call leaves one line
-   in the chat history, stored like any other record.
-   Video rides the same connection: the offer always carries an audio section
-   and two video sections, camera then screen, sending nothing until switched
-   on. Turning either on swaps a track into its sender, so there is never a
-   second round of offer and answer; a 'media' signal {cam, screen} tells the
-   other side which of its incoming videos to show. A call from an older,
-   audio-only client simply has no video sections, and video stays off.
+   One call at a time. A call is a set of links, one peer connection to each
+   other person in it: a direct call has one, a group call one per member who
+   joined (a full mesh). Signals are {k:'call', t, call:<id>, g?, sdp?} with t
+   one of offer | answer | decline | busy | end | media | relay | roster; in a
+   group call g names the group, so it travels and is checked like any other
+   group message (members only, and not from someone muted in the group). Each
+   call leaves one line in the chat history, stored like any other record.
+   A group call: whoever starts it rings the members they pick (an offer with
+   ring:true), and anyone in it can ring more later. Someone who answers is
+   connected to whoever rang them; to reach everyone else, each person sends a
+   'roster' {ids} of who they are connected to whenever that changes, and of
+   any two people in the call who are not yet connected, the lower user id
+   dials the other (an offer without ring, answered without ringing). An offer
+   without ring for a call this side is not in is turned away with 'end'.
+   Video rides the same connections: each offer carries an audio section and
+   two video sections, camera then screen, sending nothing until switched on.
+   Turning either on swaps a track into every link's sender, so there is never
+   a second round of offer and answer; a 'media' signal {cam, screen, muted}
+   tells the others which of its videos to show and whether it is muted. A call
+   from an older, audio-only client simply has no video sections, and video to
+   that person stays off.
    Getting through: ICE tries a direct path first and the server's TURN relay
-   second, both inside one peer connection. If that still fails, the call falls
+   second, both inside one peer connection. If that still fails, a link falls
    back to the WebSocket: the offer and answer also carry relay:{k, c}, a fresh
    AES-GCM key for frames that side sends and the codecs it can play. When ICE
    gives up, either side switches and sends a 'relay' signal so the other does
    too; audio then goes as encrypted 20 ms frames through the server, which
-   cannot read them (see RelayAudio). Relayed calls are voice only. */
+   cannot read them (see RelayAudio). A relayed link is voice only. */
+class VCall{
+ constructor(o){
+  Object.assign(this,{group:null,peer:null,muted:false,cam:false,screen:false,camStream:null,screenStream:null,
+   stream:null,actx:null,started:0,switching:new Set(),links:new Map()},o)}
+ /** The link a direct call is about (or, in a group, whoever rang, else the first). */
+ main(){return this.links.get(this.peer)||this.links.values().next().value||null}
+ get pc(){const l=this.main();return l?l.pc:null}
+ get relay(){const l=this.main();return !!l&&l.relay}
+ get remote(){const l=this.main();return l?l.remote:null}
+ get remoteCam(){const l=this.main();return l?l.remoteCam:null}
+ get remoteScreen(){const l=this.main();return l?l.remoteScreen:null}
+ get peerCam(){const l=this.main();return !!l&&l.peerCam}
+ get peerScreen(){const l=this.main();return !!l&&l.peerScreen}
+ get tx(){const l=this.main();return l?l.tx:null}
+ /** Whether any link is going through the socket relay, or struggling. */
+ get relayed(){for(const l of this.links.values())if(l.relay)return true;return false}
+ get unstable(){for(const l of this.links.values())if(l.unstable)return true;return false}
+}
 class Voice{
  constructor(c,opts){
   this.c=c;this.call=null;
@@ -1221,87 +1358,143 @@ class Voice{
  relayCodecs(){
   if(!this._codecs)this._codecs=(this.relayMedia&&this.c.WS?Promise.resolve(this.relayMedia.codecs()).catch(()=>[]):Promise.resolve([]));
   return this._codecs}
- /** What this side puts in its offer or answer for the socket fallback, or undefined. */
- async _relayOffer(call){
+ /** What this side puts in a link's offer or answer for the socket fallback, or undefined. */
+ async _relayOffer(l){
   const c=await this.relayCodecs();
   if(!c.length)return undefined;
-  call.rk=rand(32);call.codecs=c;
-  return {k:b64(call.rk),c}}
+  l.rk=rand(32);l.codecs=c;
+  return {k:b64(l.rk),c}}
  /** The audio context is made inside the click that starts or answers the call, where a
-     browser lets audio start; it is only resumed if the call ends up relayed. */
+     browser lets audio start; it is only resumed if a link ends up relayed. */
  _ctx(call){
   if(call.actx||!this.relayMedia||!this.relayMedia.context)return;
   try{call.actx=this.relayMedia.context()}catch(e){call.actx=null}}
  why(){return this.RTC?'voice calls need microphone access: open Marmot over https or from localhost':'this browser does not support voice calls'}
- /** Whether this call can carry video at all (both ends negotiated the video sections). */
- canVideo(){const c=this.call;return !!(c&&c.tx&&c.tx.cam)}
- canScreen(){const c=this.call;return !!(this.getDisplay&&c&&c.tx&&c.tx.screen)}
+ /** Whether this call can carry video at all (some link negotiated the video sections). */
+ canVideo(){const c=this.call;if(!c)return false;for(const l of c.links.values())if(l.tx&&l.tx.cam)return true;return false}
+ canScreen(){const c=this.call;if(!this.getDisplay||!c)return false;for(const l of c.links.values())if(l.tx&&l.tx.screen)return true;return false}
  emit(){this.c.emit('call',this.call)}
- send(call,t,extra){return this.c._sendInner(call.peer,Object.assign({k:'call',t,call:call.id},extra))}
+ _sig(peer,id,g,t,extra){
+  return this.c._sendInner(peer,Object.assign({k:'call',t,call:id},g?{g}:{},extra),null,g?{g}:null)}
+ send(call,peer,t,extra){return this._sig(peer,call.id,call.group,t,extra)}
+ /** Whether l is still one of the current call's links. */
+ _live(call,l){return this.call===call&&call.links.get(l.peer)===l}
+ _link(call,peer,o){
+  const l=Object.assign({peer,dir:'out',state:'calling',ring:false,pc:null,tx:null,remote:null,remoteCam:null,remoteScreen:null,
+   peerCam:false,peerScreen:false,peerMuted:false,unstable:false,relay:false,rk:null,codecs:null,codec:null,peerRelay:null,media:null},o);
+  call.links.set(peer,l);return l}
 
- async start(peerId){
-  const cur=this.call;
-  if(cur&&cur.peer===peerId&&cur.dir==='in'&&cur.state==='ringing')return this.accept();
+ /** Calls a friend, or, with a group ('g:<id>') and the members picked, rings them all. */
+ async start(target,ids){
+  const cur=this.call,gid=isGroup(target)?String(target).slice(2):null;
+  if(cur&&cur.dir==='in'&&cur.state==='ringing'&&(gid?cur.group===gid:!cur.group&&cur.peer===target))return this.accept();
   if(cur)throw new Error('you are already in a call');
   if(!this.supported())throw new Error(this.why());
-  if(!this.c.isFriend(peerId))throw new Error('you can only call friends');
-  const call=this.call={id:uid(),peer:peerId,dir:'out',state:'calling',created:Date.now(),muted:false,...Voice.fresh()};
-  this._ctx(call);
+  if(!gid){
+   if(!this.c.isFriend(target))throw new Error('you can only call friends');
+   const call=this.call=new VCall({id:uid(),peer:target,dir:'out',state:'calling',created:Date.now()});
+   this._ctx(call);this.emit();
+   try{await this._dial(call,target,true)}
+   catch(e){if(this.call===call)this.hangup('failed',e.message);throw e}
+   return this.call===call?call:null}
+  if(!this.c.group(gid))throw new Error('you are not in this group');
+  const me=this.c.me.userId;
+  ids=[...new Set(ids||[])].filter(id=>id!==me&&this.c.inGroup(gid,id));
+  if(!ids.length)throw new Error('pick someone to call');
+  const call=this.call=new VCall({id:uid(),group:gid,dir:'out',state:'calling',created:Date.now()});
+  this._ctx(call);this.emit();
+  // the microphone first: refusing it ends the call rather than each connection in turn
+  try{await this._mic(call)}
+  catch(e){if(this.call===call)this._finish(call,'failed',e.message);throw e}
+  const r=await Promise.allSettled(ids.map(id=>this._dial(call,id,true)));
+  if(r.every(x=>x.status==='rejected'))throw r[0].reason;
+  return this.call===call?call:null}
+
+ /** Rings more members of the group into the call this side is in. */
+ async invite(ids){
+  const call=this.call;
+  if(!call||!call.group||call.state==='ringing')throw new Error('you are not in a group call');
+  const me=this.c.me.userId;
+  ids=[...new Set(ids||[])].filter(id=>id!==me&&!call.links.has(id)&&this.c.inGroup(call.group,id));
+  if(!ids.length)return 0;
+  const r=await Promise.allSettled(ids.map(id=>this._dial(call,id,true)));
+  const ok=r.filter(x=>x.status==='fulfilled').length;
+  if(!ok)throw r[0].reason;
+  return ok}
+
+ /** Offers a connection to one person: ringing them (an invite), or quietly (someone already in the call). */
+ async _dial(call,peer,ring){
+  const l=this._link(call,peer,{dir:'out',state:'calling',ring:!!ring});
   this.emit();
   try{
-   await this._open(call);
-   await call.pc.setLocalDescription(await call.pc.createOffer());
-   await this._gathered(call.pc);
-   const relay=await this._relayOffer(call);
-   if(this.call!==call)return null;
-   call.timer=setTimeout(()=>{if(this.call===call&&call.state==='calling')this.hangup('timeout')},this.ring);
-   await this.send(call,'offer',{sdp:call.pc.localDescription.sdp,relay});
+   await this._open(call,l);
+   await l.pc.setLocalDescription(await l.pc.createOffer());
+   await this._gathered(l.pc);
+   const relay=await this._relayOffer(l);
+   if(!this._live(call,l))return;
+   l.timer=setTimeout(()=>{if(this._live(call,l)&&l.state==='calling')this._endLink(call,l,'timeout')},ring?this.ring:this.connect);
+   await this.send(call,peer,'offer',{sdp:l.pc.localDescription.sdp,relay,ring:ring||undefined});
   }catch(e){
-   if(this.call!==call)return null;        // hung up while starting
-   this._finish(call,'failed',e.message);this.send(call,'end').catch(()=>{});throw e}
-  return call}
+   if(!this._live(call,l))return;    // hung up while starting
+   this._endLink(call,l,'failed',e.message);throw e}}
 
  async accept(){
   const call=this.call;
   if(!call||call.dir!=='in'||call.state!=='ringing')return null;
   if(!this.supported()){const e=new Error(this.why());this.decline();throw e}
-  call.state='connecting';clearTimeout(call.timer);this._ctx(call);this.emit();
+  call.state='connecting';clearTimeout(call.timer);this._ctx(call);
+  const ls=[...call.links.values()];
+  for(const l of ls)l.state='connecting';
+  this.emit();
+  try{await this._mic(call)}
+  catch(e){if(this.call===call)this.hangup('failed',e.message);throw e}
+  const r=await Promise.allSettled(ls.map(l=>this._answer(call,l)));
+  if(r.every(x=>x.status==='rejected'))throw r[0].reason;
+  return this.call===call?call:null}
+
+ async _answer(call,l){
   try{
-   await this._open(call);
-   await call.pc.setLocalDescription(await call.pc.createAnswer());
-   await this._gathered(call.pc);
-   const relay=call.peerRelay?await this._relayOffer(call):undefined;
+   await this._open(call,l);
+   await l.pc.setLocalDescription(await l.pc.createAnswer());
+   await this._gathered(l.pc);
+   const relay=l.peerRelay?await this._relayOffer(l):undefined;
    // the codec is the first one in the caller's list that this side can also play
-   if(relay)call.codec=call.peerRelay.c.find(x=>relay.c.includes(x))||null;
-   if(this.call!==call)return null;
-   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this._lost(call)},this.connect);
-   await this.send(call,'answer',{sdp:call.pc.localDescription.sdp,relay});
+   if(relay)l.codec=l.peerRelay.c.find(x=>relay.c.includes(x))||null;
+   if(!this._live(call,l))return;
+   l.timer=setTimeout(()=>{if(this._live(call,l)&&l.state!=='active')this._lost(call,l)},this.connect);
+   await this.send(call,l.peer,'answer',{sdp:l.pc.localDescription.sdp,relay});
   }catch(e){
-   if(this.call!==call)return null;
-   this.hangup('failed',e.message);throw e}
-  return call}
+   if(!this._live(call,l))return;
+   this._endLink(call,l,'failed',e.message);throw e}}
 
  decline(){
   const call=this.call;
   if(!call||call.dir!=='in'||call.state!=='ringing')return;
-  this._finish(call,'declined');return this.send(call,'decline').catch(()=>{})}
+  const ls=[...call.links.values()];
+  this._finish(call,'declined');
+  return Promise.all(ls.map(l=>this.send(call,l.peer,'decline').catch(()=>{}))).then(()=>{})}
 
- /** Resolves once the other side has been told (or telling them failed). */
+ /** Leaves the call. Resolves once the others have been told (or telling them failed). */
  hangup(how,detail){
   const call=this.call;if(!call)return Promise.resolve();
   if(call.dir==='in'&&call.state==='ringing'&&!how)return this.decline();
-  this._finish(call,how||'ended',detail);return this.send(call,'end').catch(()=>{})}
+  const ls=[...call.links.values()];
+  this._finish(call,how||'ended',detail);
+  return Promise.all(ls.map(l=>this.send(call,l.peer,'end').catch(()=>{}))).then(()=>{})}
 
  setMuted(on){
   const call=this.call;if(!call)return;
   call.muted=!!on;
   if(call.stream)call.stream.getTracks().forEach(t=>{t.enabled=!on});
-  this.emit()}
+  this.emit();
+  this._media(call).catch(()=>{})}
 
- static fresh(){return {cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,switching:new Set(),
-  relay:false,rk:null,codecs:null,codec:null,peerRelay:null,actx:null,media:null}}
+ /** Tells everyone connected (or connecting) what this side shows: camera, screen, muted. */
+ _media(call,only){
+  const ls=only?[only]:[...call.links.values()].filter(l=>l.state==='active'||l.state==='connecting');
+  return Promise.all(ls.map(l=>this.send(call,l.peer,'media',{cam:call.cam,screen:call.screen,muted:call.muted}).catch(()=>{})))}
 
- /** Camera on or off. Resolves once the track is in (or out of) its sender. */
+ /** Camera on or off. Resolves once the track is in (or out of) every sender. */
  setCamera(on){return this._video('cam',on,()=>this.getMedia({audio:false,
   video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}}))}
 
@@ -1315,126 +1508,154 @@ class Voice{
 
  async _video(kind,on,open){
   const call=this.call;on=!!on;
-  if(!call||(!call.pc&&!call.relay))throw new Error('not in a call');
+  if(!call||!call.links.size)throw new Error('not in a call');
   if(!(kind==='cam'?this.canVideo():this.canScreen()))
-   throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':call.relay?'a relayed call is voice only':'this call is voice only');
+   throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':call.relayed?'a relayed call is voice only':'this call is voice only');
   if(call[kind]===on||call.switching.has(kind))return;
-  const key=kind+'Stream',sender=call.tx[kind].sender;
+  const key=kind+'Stream',senders=()=>[...call.links.values()].filter(l=>l.tx).map(l=>l.tx[kind].sender);
   call.switching.add(kind);
   try{
    if(on){
     const s=await open();
     if(this.call!==call){s.getTracks().forEach(t=>t.stop());return}
     const t=s.getTracks()[0];
-    await sender.replaceTrack(t);
-    if(this.call!==call){s.getTracks().forEach(x=>x.stop());return}
+    // set first, so a link that opens meanwhile picks the track up too
+    call[key]=s;call[kind]=true;
     t.onended=()=>{if(this.call===call&&call[key]===s)this._video(kind,false).catch(()=>{})};
-    call[key]=s;call[kind]=true}
+    await Promise.all(senders().map(x=>x.replaceTrack(t).catch(()=>{})));
+    if(this.call!==call){s.getTracks().forEach(x=>x.stop());return}}
    else{
     const s=call[key];call[key]=null;call[kind]=false;
     if(s)s.getTracks().forEach(t=>t.stop());
-    await sender.replaceTrack(null).catch(()=>{})}
+    await Promise.all(senders().map(x=>x.replaceTrack(null).catch(()=>{})))}
   }finally{call.switching.delete(kind)}
   if(this.call!==call)return;
   this.emit();
-  await this.send(call,'media',{cam:call.cam,screen:call.screen}).catch(()=>{})}
+  await this._media(call)}
 
- /** Microphone, ICE servers and the peer connection, checking after each wait
-     that the call was not hung up meanwhile (and releasing the mic if it was).
-     The answering side applies the offer here, so its transceivers line up with it. */
- async _open(call){
-  const stream=await this.getMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+ /** The microphone, once per call however many links it feeds. */
+ async _mic(call){
+  if(!call.micP){
+   call.micP=Promise.resolve().then(()=>this.getMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false}));
+   call.micP.catch(()=>{})}
+  const stream=await call.micP;
   if(this.call!==call){stream.getTracks().forEach(t=>t.stop());throw new Error('call ended')}
-  call.stream=stream;
-  if(call.muted)stream.getTracks().forEach(t=>{t.enabled=false});
-  let ice={iceServers:[]};
-  try{ice=await this.c.api('GET','/api/ice')}catch(e){}
-  if(this.call!==call)throw new Error('call ended');
-  const pc=call.pc=new this.RTC({iceServers:ice.iceServers||[]});
+  if(!call.stream){call.stream=stream;if(call.muted)stream.getTracks().forEach(t=>{t.enabled=false})}
+  return stream}
+
+ /** Microphone, ICE servers and the link's peer connection, checking after each wait
+     that the link was not dropped meanwhile. The answering side applies the offer
+     here, so its transceivers line up with it. */
+ async _open(call,l){
+  const stream=await this._mic(call);
+  if(!call.iceP)call.iceP=this.c.api('GET','/api/ice').catch(()=>({iceServers:[]}));
+  const ice=await call.iceP;
+  if(!this._live(call,l))throw new Error('call ended');
+  const pc=l.pc=new this.RTC({iceServers:ice.iceServers||[]});
   pc.ontrack=ev=>{
-   if(this.call!==call||(ev.track&&ev.track.kind==='video'))return;   // video is picked up from the transceivers below
-   call.remote=(ev.streams&&ev.streams[0])||(ev.track&&globalThis.MediaStream?new MediaStream([ev.track]):null);this.emit()};
-  if(call.dir==='in')await pc.setRemoteDescription({type:'offer',sdp:call.offer});
-  if(this.call!==call)throw new Error('call ended');
+   if(!this._live(call,l)||l.pc!==pc||(ev.track&&ev.track.kind==='video'))return;   // video is picked up from the transceivers below
+   l.remote=(ev.streams&&ev.streams[0])||(ev.track&&globalThis.MediaStream?new MediaStream([ev.track]):null);this.emit()};
+  if(l.dir==='in')await pc.setRemoteDescription({type:'offer',sdp:l.offer});
+  if(!this._live(call,l))throw new Error('call ended');
   // after the offer is applied, addTrack takes over the offer's audio section
   for(const t of stream.getTracks())pc.addTrack(t,stream);
   if(pc.getTransceivers){
-   if(call.dir==='out'&&pc.addTransceiver)for(let i=0;i<2;i++)pc.addTransceiver('video',{direction:'sendrecv'});
+   if(l.dir==='out'&&pc.addTransceiver)for(let i=0;i<2;i++)pc.addTransceiver('video',{direction:'sendrecv'});
    const v=pc.getTransceivers().filter(t=>t.receiver&&t.receiver.track&&t.receiver.track.kind==='video');
    if(v.length>=2){
     for(const t of v.slice(0,2))t.direction='sendrecv';
     const MS=globalThis.MediaStream,of=t=>MS?new MS([t.receiver.track]):null;
-    call.tx={cam:v[0],screen:v[1]};
-    call.remoteCam=of(v[0]);call.remoteScreen=of(v[1])}}
+    l.tx={cam:v[0],screen:v[1]};
+    l.remoteCam=of(v[0]);l.remoteScreen=of(v[1]);
+    // video already on in this call goes out on a new connection too
+    for(const k of ['cam','screen']){const s=call[k]&&call[k+'Stream'];if(s)await l.tx[k].sender.replaceTrack(s.getTracks()[0]).catch(()=>{})}}}
   const watch=()=>{
-   if(this.call!==call||call.pc!==pc)return;
+   if(!this._live(call,l)||l.pc!==pc)return;
    const s=pc.connectionState||pc.iceConnectionState;
-   if(s==='connected'||s==='completed'){
-    clearTimeout(call.lost);call.unstable=false;
-    if(call.state!=='active'){call.state='active';call.started=Date.now();clearTimeout(call.timer)}
-    this.emit()}
-   else if(s==='disconnected'&&call.state==='active'&&!call.unstable){
-    call.unstable=true;this.emit();
-    call.lost=setTimeout(()=>{if(this.call===call&&call.unstable)this._lost(call)},this.grace)}
-   else if(s==='failed')this._lost(call)};
+   if(s==='connected'||s==='completed'){clearTimeout(l.lost);l.unstable=false;this._up(call,l);this.emit()}
+   else if(s==='disconnected'&&l.state==='active'&&!l.unstable){
+    l.unstable=true;this.emit();
+    l.lost=setTimeout(()=>{if(this._live(call,l)&&l.unstable)this._lost(call,l)},this.grace)}
+   else if(s==='failed')this._lost(call,l)};
   pc.onconnectionstatechange=watch;pc.oniceconnectionstatechange=watch}
 
+ /** A link got through: the call is on, and in a group everyone hears who this side now reaches. */
+ _up(call,l){
+  if(l.state==='active')return;
+  l.state='active';clearTimeout(l.timer);
+  if(!call.started)call.started=Date.now();
+  call.state='active';
+  if(call.cam||call.screen||call.muted)this._media(call,l).catch(()=>{});
+  if(call.group)this._roster(call)}
+
+ /** Where a call that is not ringing stands, from its links. */
+ _sync(call){
+  if(call.state==='ringing')return;
+  const ls=[...call.links.values()];
+  call.state=call.started||ls.some(l=>l.state==='active')?'active':ls.some(l=>l.state==='connecting')?'connecting':call.dir==='out'?'calling':'connecting'}
+
+ /** Sends everyone connected the list of who this side is connected to. */
+ _roster(call){
+  const on=[...call.links.values()].filter(l=>l.state==='active'),ids=on.map(l=>l.peer);
+  for(const l of on)this.send(call,l.peer,'roster',{ids}).catch(()=>{})}
+
  /* ---- socket relay: the fallback when ICE (direct, then TURN) cannot connect ---- */
- _canRelay(call){return !!(call.rk&&call.codec&&call.peerRelay&&this.relayMedia)}
+ _canRelay(l){return !!(l.rk&&l.codec&&l.peerRelay&&this.relayMedia)}
 
- /** WebRTC gave up: carry on over the socket if both sides can, otherwise the call is lost. */
- _lost(call){
-  if(this.call!==call||call.relay)return;
-  if(this._canRelay(call))this._toRelay(call,true).catch(e=>{if(this.call===call)this.hangup('failed',e.message)});
-  else this.hangup('lost')}
+ /** WebRTC gave up on a link: carry on over the socket if both sides can, otherwise that link is lost. */
+ _lost(call,l){
+  if(!this._live(call,l)||l.relay)return;
+  if(this._canRelay(l))this._toRelay(call,l,true).catch(e=>{if(this._live(call,l))this._endLink(call,l,'failed',e.message)});
+  else this._endLink(call,l,'lost')}
 
- async _toRelay(call,tell){
-  if(call.relay)return;
-  call.relay=true;call.unstable=false;
-  clearTimeout(call.timer);clearTimeout(call.lost);
-  // video does not survive the switch: release the camera and the screen
-  for(const s of [call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
-  Object.assign(call,{cam:false,screen:false,peerCam:false,peerScreen:false,camStream:null,screenStream:null,tx:null,remote:null,remoteCam:null,remoteScreen:null});
-  const pc=call.pc;call.pc=null;
+ async _toRelay(call,l,tell){
+  if(l.relay)return;
+  l.relay=true;l.unstable=false;
+  clearTimeout(l.timer);clearTimeout(l.lost);
+  Object.assign(l,{peerCam:false,peerScreen:false,tx:null,remote:null,remoteCam:null,remoteScreen:null});
+  const pc=l.pc;l.pc=null;
   if(pc){pc.onconnectionstatechange=pc.oniceconnectionstatechange=pc.ontrack=null;try{pc.close()}catch(e){}}
+  // video does not survive the switch: with nobody left to see it, release the camera and the screen
+  for(const k of ['cam','screen'])if(call[k]&&!(k==='cam'?this.canVideo():this.canScreen())){
+   const s=call[k+'Stream'];if(s)s.getTracks().forEach(t=>t.stop());call[k+'Stream']=null;call[k]=false}
   this.emit();
-  if(tell)this.send(call,'relay').catch(()=>{});
+  if(tell)this.send(call,l.peer,'relay').catch(()=>{});
   const S=crypto.subtle,key=k=>S.importKey('raw',k,'AES-GCM',false,['encrypt','decrypt']);
-  const [tx,rx]=await Promise.all([key(call.rk),key(ub64(call.peerRelay.k))]);
-  if(this.call!==call)return;
-  Object.assign(call,{txKey:tx,rxKey:rx,sendN:0,recvN:-1,sq:Promise.resolve(),rq:Promise.resolve(),lastRx:0,
+  const [tx,rx]=await Promise.all([key(l.rk),key(ub64(l.peerRelay.k))]);
+  if(!this._live(call,l))return;
+  Object.assign(l,{txKey:tx,rxKey:rx,sendN:0,recvN:-1,sq:Promise.resolve(),rq:Promise.resolve(),lastRx:0,
    ad:te.encode('marmot-relay:'+call.id)});
-  call.media=await this.relayMedia.open({codec:call.codec,stream:call.stream,ctx:call.actx,send:p=>this._relayOut(call,p)});
-  if(this.call!==call){call.media.close();return}
+  l.media=await this.relayMedia.open({codec:l.codec,stream:call.stream,ctx:call.actx,send:p=>this._relayOut(call,l,p)});
+  if(!this._live(call,l)){l.media.close();return}
   // audio has to arrive from the other side within the usual connect window
-  call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this.hangup('lost')},this.connect);
-  call.rxWatch=setInterval(()=>{
-   if(this.call!==call||call.state!=='active')return;
-   const gap=Date.now()-call.lastRx;
-   if(gap>this.grace)this.hangup('lost');
-   else if((gap>2000)!==call.unstable){call.unstable=gap>2000;this.emit()}},500)}
+  l.timer=setTimeout(()=>{if(this._live(call,l)&&l.state!=='active')this._endLink(call,l,'lost')},this.connect);
+  l.rxWatch=setInterval(()=>{
+   if(!this._live(call,l)||l.state!=='active')return;
+   const gap=Date.now()-l.lastRx;
+   if(gap>this.grace)this._endLink(call,l,'lost');
+   else if((gap>2000)!==l.unstable){l.unstable=gap>2000;this.emit()}},500)}
 
- /** One encoded audio frame out: sealed under this side's key, numbered for the nonce. */
- _relayOut(call,pkt){
-  if(this.call!==call||!call.txKey)return;
-  const n=call.sendN++;
+ /** One encoded audio frame out on a link: sealed under this side's key, numbered for the nonce. */
+ _relayOut(call,l,pkt){
+  if(!this._live(call,l)||!l.txKey)return;
+  const n=l.sendN++;
   // frames are sealed one after another so they leave in order
-  call.sq=call.sq.then(async()=>{
-   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:Voice.nonce(n),additionalData:call.ad},call.txKey,pkt);
-   if(this.call===call)this.c._relaySend({t:'vr',to:call.peer,call:call.id,n,d:b64(ct)})}).catch(()=>{})}
+  l.sq=l.sq.then(async()=>{
+   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:Voice.nonce(n),additionalData:l.ad},l.txKey,pkt);
+   if(this._live(call,l))this.c._relaySend({t:'vr',to:l.peer,call:call.id,n,d:b64(ct)})}).catch(()=>{})}
 
- /** One frame in from the socket. Anything that does not open under the peer's key,
+ /** One frame in from the socket. Anything that does not open under the sender's key,
      or comes after a later frame already did, is dropped. */
  _relayIn(m){
-  const call=this.call;
-  if(!call||!call.rxKey||m.from!==call.peer||m.call!==call.id||!Number.isSafeInteger(m.n)||typeof m.d!=='string')return;
-  call.rq=call.rq.then(async()=>{
-   if(m.n<=call.recvN)return;
-   let pt;try{pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:Voice.nonce(m.n),additionalData:call.ad},call.rxKey,ub64(m.d)))}catch(e){return}
-   if(this.call!==call||m.n<=call.recvN)return;
-   call.recvN=m.n;call.lastRx=Date.now();
-   if(call.state!=='active'){call.state='active';call.started=Date.now();clearTimeout(call.timer);this.emit()}
-   if(call.media)call.media.play(pt)}).catch(()=>{})}
+  const call=this.call,l=call&&call.id===m.call&&call.links.get(m.from);
+  if(!l||!l.rxKey||!Number.isSafeInteger(m.n)||typeof m.d!=='string')return;
+  l.rq=l.rq.then(async()=>{
+   if(m.n<=l.recvN)return;
+   let pt;try{pt=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:Voice.nonce(m.n),additionalData:l.ad},l.rxKey,ub64(m.d)))}catch(e){return}
+   if(!this._live(call,l)||m.n<=l.recvN)return;
+   l.recvN=m.n;l.lastRx=Date.now();
+   if(l.state!=='active'){this._up(call,l);this.emit()}
+   if(l.media)l.media.play(pt)}).catch(()=>{})}
 
  /** 96-bit GCM nonce from a frame number. Each side seals under its own key, so numbers never repeat under one key. */
  static nonce(n){const iv=new Uint8Array(12),v=new DataView(iv.buffer);v.setUint32(4,Math.floor(n/4294967296));v.setUint32(8,n>>>0);return iv}
@@ -1448,43 +1669,80 @@ class Voice{
    pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete')done()};
    pc.onicecandidate=ev=>{if(!ev.candidate)done()}})}
 
- /** Inbound signal from a friend, already authenticated by the ratchet. */
+ /** Inbound signal, already authenticated by the ratchet (and, with g, checked to be from a member of that group). */
  _signal(peer,s,ts){
-  const call=this.call,mine=!!call&&call.peer===peer&&call.id===s.call;
+  const g=s.g!=null?String(s.g):null,me=this.c.me.userId;
+  let call=this.call;
+  const same=!!call&&call.id===s.call&&call.group===g;
   if(s.t==='offer'){
    if(typeof s.sdp!=='string')return;
-   if(call&&call.peer===peer&&call.dir==='out'&&call.state==='calling'){
-    // both called at once: the call from the lower user id goes ahead, the other side answers it
-    if(this.c.me.userId<peer)return;
-    this._drop(call)}
-   else if(call){
-    if(call.peer!==peer)this.c._logCall(peer,'call-'+s.call,ts,'missed voice call (you were on another call)',true).catch(()=>{});
-    this.send({peer,id:s.call},'busy').catch(()=>{});return}
-   const glare=!!call;
-   const c=this.call={id:s.call,peer,dir:'in',state:'ringing',created:ts,offer:s.sdp,muted:false,...Voice.fresh()};
-   c.peerRelay=Voice.relayOf(s);
+   const link={dir:'in',offer:s.sdp,peerRelay:Voice.relayOf(s)};
+   if(same){
+    if(!g)return;                       // a direct call has its one connection already
+    const l=call.links.get(peer);
+    if(call.state==='ringing'){
+     // rung by a second person in the same call: answering answers both
+     if(!l){this._link(call,peer,Object.assign(link,{state:'ringing'}));this.emit()}
+     return}
+    if(l){
+     // both dialled each other: the lower user id's offer goes ahead
+     if(l.dir==='out'&&l.state==='calling'&&me<peer)return;
+     this._close(call,l)}
+    this._answer(call,this._link(call,peer,Object.assign(link,{state:'connecting'}))).catch(()=>{});
+    this.emit();return}
+   // an offer without ring only joins up people already in a call: never a ringing phone
+   if(g&&!s.ring){this._sig(peer,s.call,g,'end').catch(()=>{});return}
+   let glare=false;
+   if(call){
+    // both called at once (a friend each other, or two members the same group): the call
+    // from the lower user id goes ahead, and the other side answers it
+    const crossed=call.dir==='out'&&call.state==='calling'&&call.group===g&&(g?call.links.has(peer):call.peer===peer);
+    if(crossed&&me<peer)return;
+    if(crossed){
+     const ls=[...call.links.values()].filter(l=>l.peer!==peer);
+     this._drop(call);glare=true;
+     for(const l of ls)this.send(call,l.peer,'end').catch(()=>{})}
+    else{
+     // a second call from someone already on this one is not a missed call
+     const conv=g?'g:'+g:peer,known=g?call.group===g&&call.links.has(peer):!call.group&&call.peer===peer;
+     if(!known)
+      this.c._logCall(conv,'call-'+s.call,ts,(g?'missed group call from '+this.c.displayName(peer):'missed voice call')+' (you were on another call)',true).catch(()=>{});
+     this._sig(peer,s.call,g,'busy').catch(()=>{});return}}
+   call=this.call=new VCall({id:s.call,group:g,peer,dir:'in',state:'ringing',created:ts});
+   this._link(call,peer,Object.assign(link,{state:'ringing'}));
+   const c=call;
    c.timer=setTimeout(()=>{if(this.call===c&&c.state==='ringing')this._finish(c,'timeout')},Math.max(1000,this.ring-(this.c.serverNow()-ts)));
    this.emit();
    if(glare)this.accept().catch(()=>{});
    return}
-  if(!mine)return;
-  if(s.t==='answer'&&call.dir==='out'&&call.state==='calling'&&typeof s.sdp==='string'){
-   call.state='connecting';clearTimeout(call.timer);
-   call.peerRelay=Voice.relayOf(s);
-   if(call.peerRelay&&call.codecs)call.codec=call.codecs.find(x=>call.peerRelay.c.includes(x))||null;
-   this.emit();
-   call.timer=setTimeout(()=>{if(this.call===call&&call.state!=='active')this._lost(call)},this.connect);
-   call.pc.setRemoteDescription({type:'answer',sdp:s.sdp}).then(()=>{
+  const l=same&&call.links.get(peer);
+  if(!l)return;
+  if(s.t==='answer'&&l.dir==='out'&&l.state==='calling'&&typeof s.sdp==='string'){
+   l.state='connecting';clearTimeout(l.timer);
+   l.peerRelay=Voice.relayOf(s);
+   if(l.peerRelay&&l.codecs)l.codec=l.codecs.find(x=>l.peerRelay.c.includes(x))||null;
+   this._sync(call);this.emit();
+   l.timer=setTimeout(()=>{if(this._live(call,l)&&l.state!=='active')this._lost(call,l)},this.connect);
+   const pc=l.pc;
+   pc.setRemoteDescription({type:'answer',sdp:s.sdp}).then(()=>{
     // an older client answers voice only: it would neither send video nor show ours
-    const t=call.tx&&call.tx.cam;
-    if(this.call===call&&t&&'currentDirection' in t&&t.currentDirection!=='sendrecv'){call.tx=null;this.emit()}
-   }).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
-  else if(s.t==='media'){if(!call.relay){call.peerCam=!!s.cam;call.peerScreen=!!s.screen;this.emit()}}
+    const t=l.tx&&l.tx.cam;
+    if(this._live(call,l)&&l.pc===pc&&t&&'currentDirection' in t&&t.currentDirection!=='sendrecv'){l.tx=null;this.emit()}
+   }).catch(e=>{if(this._live(call,l))this._endLink(call,l,'failed',e.message)})}
+  else if(s.t==='media'){
+   if(!l.relay){l.peerCam=!!s.cam;l.peerScreen=!!s.screen}
+   if('muted' in s)l.peerMuted=!!s.muted;
+   this.emit()}
   else if(s.t==='relay'){
    // the other side's ICE gave up first; it only sends this once it has our answer or offer
-   if(this._canRelay(call))this._toRelay(call,false).catch(e=>{if(this.call===call)this.hangup('failed',e.message)})}
-  else if((s.t==='decline'||s.t==='busy')&&call.dir==='out')this._finish(call,s.t==='busy'?'busy':'declined');
-  else if(s.t==='end')this._finish(call,'ended')}
+   if(this._canRelay(l))this._toRelay(call,l,false).catch(e=>{if(this._live(call,l))this._endLink(call,l,'failed',e.message)})}
+  else if(s.t==='roster'){
+   // not waiting for this side to see the link up too: the other end may get there first
+   if(!call.group||call.state==='ringing'||!Array.isArray(s.ids))return;
+   for(const id of s.ids.slice(0,64))
+    if(typeof id==='string'&&id!==me&&me<id&&!call.links.has(id)&&this.c.inGroup(call.group,id))this._dial(call,id,false).catch(()=>{})}
+  else if((s.t==='decline'||s.t==='busy')&&l.dir==='out'&&l.state==='calling')this._gone(call,l,s.t==='busy'?'busy':'declined');
+  else if(s.t==='end')this._gone(call,l,'ended')}
 
  /** A peer's relay:{k, c} from its offer or answer, if well formed. */
  static relayOf(s){
@@ -1493,28 +1751,51 @@ class Voice{
   const c=r.c.filter(x=>typeof x==='string'&&x.length<=16).slice(0,8);
   return c.length?{k:r.k,c}:null}
 
+ /** Lets go of one link's connection, relay and timers. */
+ _release(l){
+  clearTimeout(l.timer);clearTimeout(l.lost);clearInterval(l.rxWatch);
+  if(l.pc){const pc=l.pc;pc.onconnectionstatechange=pc.oniceconnectionstatechange=pc.ontrack=null;try{pc.close()}catch(e){}}
+  if(l.media)try{l.media.close()}catch(e){}}
+ /** Takes a link out of the call without a word to anyone. */
+ _close(call,l){this._release(l);if(call.links.get(l.peer)===l)call.links.delete(l.peer)}
+ /** A link is over. A direct call ends with it; a group call goes on while anyone is left. */
+ _gone(call,l,how,detail){
+  if(!this._live(call,l))return;
+  const was=l.state;
+  this._close(call,l);
+  if(!call.group||!call.links.size)return this._finish(call,how,detail);
+  this._sync(call);this.emit();
+  if(was==='active')this._roster(call)}
+ /** Ends one link and tells that person. */
+ _endLink(call,l,how,detail){
+  if(!this._live(call,l))return;
+  this.send(call,l.peer,'end').catch(()=>{});
+  this._gone(call,l,how,detail)}
+
  /** Ends a call without a trace: sign-out, or yielding to a crossing call. */
  _drop(call){
   call=call||this.call;if(!call||this.call!==call)return;
   this.call=null;
-  clearTimeout(call.timer);clearTimeout(call.lost);clearInterval(call.rxWatch);
+  clearTimeout(call.timer);
+  for(const l of call.links.values())this._release(l);
   for(const s of [call.stream,call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
-  if(call.pc)try{call.pc.close()}catch(e){}
-  if(call.media)try{call.media.close()}catch(e){}
   if(call.actx&&call.actx.close)call.actx.close().catch(()=>{});
   this.emit()}
 
  _finish(call,how,detail){
   if(this.call!==call)return;
   this._drop(call);
+  const g=!!call.group,kind=g?'group call':'voice call';
   let text;
-  if(call.started)text='voice call · '+clock(Math.round((Date.now()-call.started)/1000))+(how==='lost'?' · connection lost':'');
-  else if(call.dir==='in')text={declined:'declined voice call',lost:'voice call failed: could not connect',
-   failed:'voice call failed: '+detail}[how]||'missed voice call';
+  if(call.started)text=kind+' · '+clock(Math.round((Date.now()-call.started)/1000))+(how==='lost'?' · connection lost':'');
+  else if(call.dir==='in')text={declined:'declined '+kind,lost:kind+' failed: could not connect',
+   failed:kind+' failed: '+detail}[how]||'missed '+kind+(g&&call.peer?' from '+this.c.displayName(call.peer):'');
+  else if(g)text={timeout:'no one joined the group call',declined:'no one joined the group call',busy:'no one joined the group call',
+   lost:kind+' failed: could not connect',failed:kind+' failed: '+detail}[how]||'cancelled group call';
   else text={timeout:'no answer',declined:'voice call declined',busy:'they were on another call',
    lost:'voice call failed: could not connect',failed:'voice call failed: '+detail}[how]||'cancelled voice call';
   const missed=call.dir==='in'&&call.state==='ringing'&&how!=='declined';
-  this.c._logCall(call.peer,'call-'+call.id,call.created,text,missed).catch(()=>{})}
+  this.c._logCall(g?'g:'+call.group:call.peer,'call-'+call.id,call.created,text,missed).catch(()=>{})}
 }
 
 class MarmotClient{
@@ -1553,7 +1834,7 @@ class MarmotClient{
  async api(method,path,body){
   let res;
   try{res=await fetch(this.server+path,{method,
-   headers:Object.assign({'Content-Type':'application/json'},this.token?{Authorization:'Bearer '+this.token}:{}),
+   headers:Object.assign({'Content-Type':'application/json','X-Marmot-Proto':String(GPROTO)},this.token?{Authorization:'Bearer '+this.token}:{}),
    body:body===undefined?undefined:JSON.stringify(body)})}
   catch(e){const err=new Error('cannot reach the server at '+this.server);err.network=true;throw err}
   let j={};try{j=await res.json()}catch(e){}
@@ -1562,6 +1843,7 @@ class MarmotClient{
    if(res.status===401&&this.token&&path!=='/api/account/delete')this._signedOut(err.message);
    if(j.banned&&this.token)this._signedOut(err.message);
    if(j.muted!=null&&this.token){this.mute={until:j.muted};this.emit('change')}
+   if(j.outdated)this.emit('outdated',err.message);
    throw err}
   return j}
 
@@ -1829,13 +2111,14 @@ class MarmotClient{
   await this.lock(peerId,async()=>{
    if(this.done.has(e.id))return;
    let env=null;try{env=JSON.parse(e.payload)}catch(x){}
-   const rec=this.get('sess:'+peerId)||Ratchet.empty();
+   const rec=this.get('sess:'+peerId)||Ratchet.empty(),v2=!!env&&env.v===2;
    let out=null,why='';
-   try{out=await Ratchet.decrypt(rec,env,{me:this.me,peerId,spk:id=>this._spk(id),opk:id=>this.get('opk:'+id)})}
+   if(!v2)try{out=await Ratchet.decrypt(rec,env,{me:this.me,peerId,spk:id=>this._spk(id),opk:id=>this.get('opk:'+id)})}
    catch(x){why=x.message||'authentication failed'}
    const tx=new Tx(this);tx.ack.push(e.id);
    await this._peerRecord(peerId,tx);
-   if(!out){
+   if(v2){const r=await this._senderKeyEnv(peerId,env,e,tx);note=r.note;after=r.after||null;sig=r.sig||null}
+   else if(!out){
     const id='x'+e.id;
     await tx.put('msg:'+peerId+':'+id,{id,peer:peerId,dir:'sys',ts:e.ts,text:'a message could not be decrypted ('+why+')'});
    }else{
@@ -1844,7 +2127,7 @@ class MarmotClient{
     if(out.opk!=null)await tx.del('opk:'+out.opk);
     if(inner.g!=null){
      const r=await this._groupInner(peerId,inner,e,tx,sess);
-     sess=r.sess;note=r.note;after=r.after||null}
+     sess=r.sess;note=r.note;after=r.after||null;sig=r.sig||null}
     else if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
      const key='msg:'+peerId+':'+inner.id;
      if(!this.get(key)){
@@ -1864,8 +2147,7 @@ class MarmotClient{
      for(const id of inner.ids.slice(0,100)){
       const key='msg:'+peerId+':'+id,m=this.get(key);
       if(m&&m.dir==='out'&&m.state!=='delivered')await tx.put(key,Object.assign({},m,{state:'delivered'}))}}
-    else if(inner.k==='call'&&typeof inner.call==='string'&&inner.call.length<=64&&
-     ['offer','answer','decline','busy','end','media','relay'].includes(inner.t)&&(inner.sdp==null||(typeof inner.sdp==='string'&&inner.sdp.length<=MAXSDP))){
+    else if(callSig(inner)){
      const key='msg:'+peerId+':call-'+inner.call;
      // an offer that waited in the mailbox past its ring time is a missed call, not a ringing phone
      if(inner.t==='offer'&&this.serverNow()-e.ts>this.voice.ring){
@@ -1882,6 +2164,30 @@ class MarmotClient{
   if(after)after();
   if(note)this._note(note.peer,note.text,quiet)}
 
+ /** A group message under a member's sender key. Once opened it is handled like
+     any other group message; a pairwise receipt may still step our session with
+     the sender. One that cannot be opened for want of their key leaves a line in
+     the chat and asks them for the key. The caller holds peerId's lock. */
+ async _senderKeyEnv(peerId,env,e,tx){
+  const gid=String(env.g||''),none={note:null};
+  if(!GID.test(gid))return none;
+  if(!this.inGroup(gid,peerId))await this.loadGroups().catch(()=>{});
+  if(!this.inGroup(gid,peerId))return none;
+  const conv='g:'+gid,k='skin:'+gid+':'+peerId;
+  let o;
+  try{o=await SKey.decrypt(this.get(k),env,gid,peerId)}
+  catch(x){
+   const id='x'+e.id;
+   await tx.put('msg:'+conv+':'+id,{id,peer:conv,dir:'sys',ts:e.ts,text:'a message from '+this.displayName(peerId)+' could not be decrypted ('+(x.message||'authentication failed')+')'});
+   return {note:null,after:x.nokey?()=>this._once('skreq:'+gid+':'+peerId,
+    ()=>this._sendInner(peerId,{k:'group',t:'skreq',g:gid},null,{g:gid}).catch(()=>{})):null}}
+  await tx.put(k,o.rec);
+  const sess=this.get('sess:'+peerId)||Ratchet.empty();
+  const inner=Object.assign({},o.inner,{g:gid});
+  const r=await this._groupInner(peerId,inner,Object.assign({},e,{sk:true}),tx,sess);
+  if(r.sess!==sess)await tx.put('sess:'+peerId,r.sess);
+  return r}
+
  /** The group part of an inbound message: a text, a receipt for one of mine,
      or a new name. Only counts if the sender is in the group, as far as the
      server says; a message can beat the push about who joined, so an unknown
@@ -1892,6 +2198,15 @@ class MarmotClient{
   if(!this.inGroup(gid,peerId))await this.loadGroups().catch(()=>{});
   if(!this.inGroup(gid,peerId))return none;
   const conv='g:'+gid;
+  // a member's sender key for this group (only ever sent pairwise)
+  if(inner.k==='skdm'){
+   if(e.sk)return none;
+   const k='skin:'+gid+':'+peerId,r=SKey.learn(this.get(k),inner);
+   if(r)await tx.put(k,r);
+   return none}
+  // a member could not read one of mine: they get my key again with my next message
+  if(inner.k==='group'&&inner.t==='skreq'&&!e.sk)
+   return {sess,note:null,after:()=>this._once('skre:'+gid+':'+peerId,()=>this._resendKey(gid,peerId))};
   // a member muted in this group by its moderators: what they say is dropped here too
   if((says(inner)||inner.k==='react')&&this.groupMuted(gid,peerId))return none;
   if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
@@ -1901,13 +2216,24 @@ class MarmotClient{
     const m=Object.assign({id:String(inner.id),peer:conv,from:peerId,dir:'in',text:inner.t.slice(0,MAXTEXT),ts,state:'received',re:reOf(inner.re),poll:pollOf(inner.poll,e.ts+POLLMAX*60000)},imgOf(inner));
     await tx.put(key,m);
     note={peer:conv,text:this.displayName(peerId)+': '+gist(m)}}
-   const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
-   tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true});
+   // the receipt goes back pairwise; with no session to the sender yet there is none
+   let rs=sess;
+   if(sess.active&&sess.active.cks){
+    const r=await Ratchet.encrypt(sess,{k:'receipt',g:gid,ids:[inner.id]});
+    rs=r.rec;tx.send.push({to:peerId,payload:JSON.stringify(r.env),optional:true})}
    // the sender has a newer name or icon than this account: ask them for it
    const gs=Array.isArray(inner.gs)?inner.gs:[],mine=this._groupStamp(gid);
    const behind=Number(gs[0])>mine[0]||Number(gs[1])>mine[1];
-   return {sess:r.rec,note,after:behind?()=>this._once('want:'+gid+':'+peerId,
+   return {sess:rs,note,after:behind?()=>this._once('want:'+gid+':'+peerId,
     ()=>this._sendGroup(gid,{k:'group',t:'want',g:gid},null,[peerId])):null}}
+  if(callSig(inner)){
+   // a group call: a ringing offer that waited in the mailbox past its ring time is a missed call
+   if(inner.t==='offer'&&this.serverNow()-e.ts>this.voice.ring){
+    if(!inner.ring||this.get('msg:'+conv+':call-'+inner.call))return none;
+    const text='missed group call from '+this.displayName(peerId);
+    await tx.put('msg:'+conv+':call-'+inner.call,{id:'call-'+inner.call,peer:conv,dir:'sys',ts:e.ts,text});
+    return {sess,note:{peer:conv,text}}}
+   return {sess,note:null,sig:inner}}
   if(inner.k==='group'&&inner.t==='want')
    return {sess,note:null,after:()=>this._once('give:'+gid+':'+peerId,()=>this._sendGroupMeta(gid,[peerId]))};
   if(inner.k==='del'&&typeof inner.id==='string'){
@@ -2162,23 +2488,45 @@ class MarmotClient{
    const id='i'+uid();await tx.put('msg:g:'+gid+':'+id,{id,peer:'g:'+gid,dir:'sys',ts:Date.now(),
     text:icon?'you changed the group icon':'you removed the group icon'})})}
 
- /** Encrypts `inner` to every other member (or just `only`) and commits it all at
-     once with whatever `more(tx)` adds. Each member's ratchet is locked in a
-     fixed order, so two sends to overlapping groups never wait on each other.
-     A member the server no longer lets this account reach (one of you blocked
-     the other) is skipped rather than failing the send for everyone. */
+ /** Encrypts `inner` once under my sender key for the group and has the server
+     fan it out to every other member (or just `only`), committed together with
+     whatever `more(tx)` adds. Members who do not have my key yet get it first,
+     pairwise, in the same commit; if anyone who had it has since left the group,
+     a new key replaces it. The group's key is locked first, then each recipient
+     in a fixed order: that also keeps what they send from being handled while
+     `more` rewrites the same records (a poll's votes, say). A member the server no
+     longer lets this account reach (one of you blocked the other) is skipped
+     rather than failing the send for everyone. */
  async _sendGroup(gid,inner,more,only){
   const g=this.group(gid);if(!g)throw new Error('you are not in this group');
-  const to=g.members.map(m=>m.userId).filter(id=>id!==this.me.userId&&(!only||only.includes(id))).sort();
-  const run=async()=>{
+  const me=this.me.userId,members=g.members.map(m=>m.userId).filter(id=>id!==me);
+  const to=members.filter(id=>!only||only.includes(id)).sort();
+  await this.lock('sk:'+gid,async()=>{
+   let out=this.get('skout:'+gid);
+   out=out&&out.sent.every(id=>members.includes(id))?Ratchet.clone(out):await SKey.fresh();
+   const need=to.filter(id=>!out.sent.includes(id)),d=SKey.dist(out);
+   const run=async()=>{
+    const tx=new Tx(this),reach=to.filter(id=>out.sent.includes(id));
+    for(const id of need){
+     let env;
+     try{env=await this._encryptTo(id,Object.assign({k:'skdm',g:gid},d),tx)}catch(e){if(e.status===403||e.status===404)continue;throw e}
+     tx.send.push({to:id,payload:JSON.stringify(env),optional:true,g:gid});
+     out.sent.push(id);reach.push(id)}
+    const r=await SKey.encrypt(out,gid,me,inner);
+    await tx.put('skout:'+gid,r.out);
+    if(reach.length)tx.send.push({to:reach,payload:JSON.stringify(r.env),optional:true,say:says(inner),g:gid});
+    if(more)await more(tx);
+    await tx.commit()};
+   await to.reduceRight((fn,id)=>()=>this.lock(id,fn),run)()})}
+
+ /** A member lost my key for a group: forget I gave it to them, so my next message carries it again. */
+ async _resendKey(gid,userId){
+  await this.lock('sk:'+gid,async()=>{
+   const out=this.get('skout:'+gid);
+   if(!out||!out.sent.includes(userId))return;
    const tx=new Tx(this);
-   for(const id of to){
-    let env;
-    try{env=await this._encryptTo(id,inner,tx)}catch(e){if(e.status===403||e.status===404)continue;throw e}
-    tx.send.push({to:id,payload:JSON.stringify(env),optional:true,say:says(inner),g:gid})}
-   if(more)await more(tx);
-   await tx.commit()};
-  await to.reduceRight((fn,id)=>()=>this.lock(id,fn),run)()}
+   await tx.put('skout:'+gid,Object.assign({},out,{sent:out.sent.filter(id=>id!==userId)}));
+   await tx.commit()})}
 
  /* ---- peers ---- */
  /** Looks a user up by exact username and pins their identity locally. */
@@ -2253,6 +2601,20 @@ class MarmotClient{
   const f=Object.assign(this.filter(),o);
   if(!FILTER_LEVELS.includes(f.level)||!FILTER_ACTIONS.includes(f.action))throw new Error('unknown filter setting');
   const tx=new Tx(this);await tx.put('pref:filter',f);await tx.commit();return f}
+ /** Alerts for new messages, {desktop, sound, mentions, preview}. Kept with the account (the
+     installer can set them before the first sign-in), so they follow it to every browser. */
+ notifyPrefs(){
+  const n=this.get('pref:notify')||{};
+  return {desktop:n.desktop===true,sound:n.sound===true,mentions:n.mentions===true,preview:n.preview!==false}}
+ async setNotify(o){
+  const n=Object.assign(this.notifyPrefs(),o);
+  for(const k in n)if(typeof n[k]!=='boolean')throw new Error('unknown notification setting');
+  const tx=new Tx(this);await tx.put('pref:notify',n);await tx.commit();return n}
+ /** The account's theme, 'light' or 'dark', or '' when it has none. An image theme stays on its device. */
+ themePref(){const t=(this.get('pref:theme')||{}).theme;return t==='light'||t==='dark'?t:''}
+ async setThemePref(theme){
+  if((theme!=='light'&&theme!=='dark')||this.themePref()===theme)return;
+  const tx=new Tx(this);await tx.put('pref:theme',{theme});await tx.commit()}
  /** True when the chat filter catches m. Only what other people send is checked. */
  filtered(m){
   if(!m||m.dir!=='in'||m.deleted||!m.text)return false;
@@ -2480,13 +2842,14 @@ class MarmotClient{
   this.emit('change');
   return m.id}
 
- /** Encrypts `inner` to a friend and commits it with whatever `more(tx)` adds. */
- async _sendInner(peerId,inner,more){
+ /** Encrypts `inner` to a friend (or a fellow group member) and commits it with whatever
+     `more(tx)` adds; `label` goes on the envelope, as {g} for one sent as part of a group. */
+ async _sendInner(peerId,inner,more,label){
   await this.lock(peerId,async()=>{
    const tx=new Tx(this);
    const env=await this._encryptTo(peerId,inner,tx);
    if(more)await more(tx);
-   tx.send.push({to:peerId,payload:JSON.stringify(env),say:says(inner)});
+   tx.send.push(Object.assign({to:peerId,payload:JSON.stringify(env),say:says(inner)},label));
    await tx.commit()})}
 
  /** One step of peerId's ratchet into `tx`, opening a session from their prekey
@@ -2707,6 +3070,16 @@ function toast(msg,ms){const box=$('#toasts'),t=document.createElement('div');t.
  while(box.children.length>=4)box.firstChild.remove();
  box.appendChild(t);
  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),250)},ms||5000)}
+/** A short two-note chime for a new message; at most one every 1.5 s, so a burst is one sound. */
+let chimeCtx=null,chimeAt=0;
+function chime(){
+ const now=Date.now();if(now-chimeAt<1500)return;chimeAt=now;
+ try{
+  chimeCtx=chimeCtx||new (window.AudioContext||window.webkitAudioContext)();
+  const c=chimeCtx,t=c.currentTime,o=c.createOscillator(),g=c.createGain();
+  o.type='sine';o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1320,t+.09);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.32);
+  o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.34)}catch(e){}}
 /** One toast for a batch of messages, e.g. what came in while away. */
 /** A count as a badge shows it: blank for none, capped at 99+, "+" while more are on the way. */
 function count(n,more){return !n?'':n>99?'99+':n+(more?'+':'')}
@@ -2716,6 +3089,144 @@ const store={
  set(k,v){try{v==null?localStorage.removeItem('marmot.'+k):localStorage.setItem('marmot.'+k,v)}catch(e){}},
  sget(){try{return JSON.parse(sessionStorage.getItem('marmot.session')||'null')}catch(e){return null}},
  sset(v){try{v?sessionStorage.setItem('marmot.session',JSON.stringify(v)):sessionStorage.removeItem('marmot.session')}catch(e){}}
+};
+
+/* ---------- image theme ----------
+   A background picture the whole palette is drawn from. analyze() finds the picture's most
+   common colors and sorts them dark to light; build() hands them out to the surfaces in that
+   order (darkest first on a dark theme, lightest first on a light one) and picks the most
+   colorful one as the accent. Whether the theme is dark or light, and so whether the text is
+   light or dark, follows how bright the picture looks once darkened / lightened. Colors are
+   worked in OKLab, where lightness matches what the eye sees. Kept on this device only. */
+const Theme={
+ DEF:{blur:12,tone:-25,op:72},
+ VARS:[],
+ cfg(){let c=null;try{c=JSON.parse(store.get('bgcfg')||'null')}catch(e){}return Object.assign({},this.DEF,c||{})},
+ setCfg(p){store.set('bgcfg',JSON.stringify(Object.assign(this.cfg(),p)))},
+ img(){return store.get('bgimg')},
+ pal(){try{return JSON.parse(store.get('bgpal')||'null')}catch(e){return null}},
+ has(){return !!(this.img()&&this.pal())},
+ /** What the rail's switch shows: 'light', 'dark' or 'image' (only while a picture is saved). */
+ choice(){const t=store.get('theme');return t==='image'?(this.has()?'image':'dark'):t==='light'?'light':'dark'},
+
+ // sRGB (0–255) ↔ OKLab
+ lin(c){c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)},
+ gam(c){c=Math.min(1,Math.max(0,c));return 255*(c<=0.0031308?12.92*c:1.055*Math.pow(c,1/2.4)-0.055)},
+ lab(rgb){const [r,g,b]=rgb.map(c=>this.lin(c));
+  const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b),
+   m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b),
+   s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s]},
+ /** OKLab → linear RGB (may fall outside 0–1). */
+ linRGB([L,a,b]){const l=(L+0.3963377774*a+0.2158037573*b)**3,m=(L-0.1055613458*a-0.0638541728*b)**3,s=(L-0.0894841775*a-1.2914855480*b)**3;
+  return [4.0767416621*l-3.3077115913*m+0.2309699292*s,-1.2684380046*l+2.6097574011*m-0.3413193965*s,-0.0041960863*l-0.7034186147*m+1.7076147010*s]},
+ dist(p,q){return Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2])},
+ /** An OKLCH color (h in radians) as [r,g,b] 0–255, its chroma eased down until it fits sRGB. */
+ rgb(L,C,h){let v;
+  for(let i=0;i<30;i++,C*=0.88){v=this.linRGB([L,C*Math.cos(h),C*Math.sin(h)]);if(v.every(x=>x>=-1e-4&&x<=1.0001))break}
+  return v.map(x=>Math.round(this.gam(x)))},
+ hex(L,C,h){return '#'+this.rgb(L,C,h).map(x=>x.toString(16).padStart(2,'0')).join('')},
+ rgba(L,C,h,a){return 'rgba('+this.rgb(L,C,h).join(',')+','+(+a.toFixed(3))+')'},
+
+ /** The picture's palette: up to 8 of its commonest distinct colors, sorted dark to light,
+     each with its share of the picture, plus the picture's mean lightness. */
+ analyze(img){
+  const k=Math.min(1,96/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.max(1,Math.round(img.naturalWidth*k)),h=Math.max(1,Math.round(img.naturalHeight*k));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);
+  const d=x.getImageData(0,0,w,h).data,bins=new Map();let n=0;
+  // count pixels in 32×32×32 color bins
+  for(let i=0;i<d.length;i+=4){if(d[i+3]<128)continue;
+   const key=(d[i]>>3)<<10|(d[i+1]>>3)<<5|d[i+2]>>3;let e=bins.get(key);
+   if(!e)bins.set(key,e={n:0,r:0,g:0,b:0});
+   e.n++;e.r+=d[i];e.g+=d[i+1];e.b+=d[i+2];n++}
+  if(!n)throw new Error('that image has no visible pixels');
+  const all=[...bins.values()].map(e=>({lab:this.lab([e.r/e.n,e.g/e.n,e.b/e.n]),n:e.n})).sort((a,b)=>b.n-a.n);
+  const lum=all.reduce((s,e)=>s+e.lab[0]*e.n,0)/n;
+  // seeds: the commonest bins that differ enough from each other (looser until there are 6)
+  let seeds=[];
+  for(const gap of [0.12,0.09,0.06,0.04,0.02]){seeds=[];
+   for(const e of all){if(seeds.length>=8)break;if(seeds.every(s=>this.dist(s,e.lab)>gap))seeds.push(e.lab)}
+   if(seeds.length>=6)break}
+  // a few k-means rounds, so each color is the mean of the pixels nearest it
+  let groups;
+  for(let round=0;round<4;round++){
+   groups=seeds.map(()=>({n:0,s:[0,0,0]}));
+   for(const e of all){let bi=0,bd=Infinity;
+    seeds.forEach((s,i)=>{const dd=this.dist(s,e.lab);if(dd<bd){bd=dd;bi=i}});
+    const g=groups[bi];g.n+=e.n;for(let j=0;j<3;j++)g.s[j]+=e.lab[j]*e.n}
+   seeds=groups.map((g,i)=>g.n?g.s.map(v=>v/g.n):seeds[i])}
+  // shades that ended up nearly the same are one color
+  const cl=seeds.map((lab,i)=>({lab,n:groups[i].n}));
+  for(let i=0;i<cl.length;i++)for(let j=cl.length-1;j>i;j--)if(this.dist(cl[i].lab,cl[j].lab)<0.04){
+   const a=cl[i],b=cl[j],t=a.n+b.n||1;a.lab=a.lab.map((v,q)=>(v*a.n+b.lab[q]*b.n)/t);a.n+=b.n;cl.splice(j,1)}
+  const colors=cl.map(c=>({lab:c.lab.map(v=>+v.toFixed(4)),share:c.n/n}))
+   .filter(c=>c.share>=0.01).sort((a,b)=>a.lab[0]-b.lab[0]);
+  return {lum:+lum.toFixed(4),colors:colors.map(c=>{const [L,a,b]=c.lab;return {lab:c.lab,share:+c.share.toFixed(4),hex:this.hex(L,Math.hypot(a,b),Math.atan2(b,a))}})}},
+
+ /** How bright the picture looks behind its darken (tone < 0) or lighten (tone > 0) layer. */
+ seen(pal,tone){const t=tone/100;return t<0?pal.lum*(1+t):pal.lum+(1-pal.lum)*t},
+ /** The theme for a palette: {dark, vars} where vars are the CSS variables to set. */
+ build(pal,cfg){
+  const dark=this.seen(pal,cfg.tone)<0.6,op=cfg.op/100;
+  const cols=pal.colors.map(c=>({L:c.lab[0],C:Math.hypot(c.lab[1],c.lab[2]),h:Math.atan2(c.lab[2],c.lab[1]),share:c.share}));
+  // surfaces, from the one text sits on most to the one nearest the text's own lightness
+  const order=dark?cols:cols.slice().reverse(),cap=dark?0.045:0.025;
+  const SLOTS=dark?[['bg',.165],['list',.18],['rail',.19],['input',.195],['panel',.21],['bubble',.228],['row',.238],['avatar',.3]]
+   :[['bg',.975],['list',.962],['rail',.948],['input',.948],['panel',.935],['bubble',.928],['row',.912],['avatar',.87]];
+  const v={},at={};
+  SLOTS.forEach(([name,L],i)=>{const c=order[Math.round(i*(order.length-1)/(SLOTS.length-1))];
+   at[name]=[L,Math.min(c.C,cap),c.h];v[name]=this.hex(...at[name])});
+  // the text takes the background's hue, barely tinted
+  const h0=at.bg[1]>0.004?at.bg[2]:1.3,ink=(L,c)=>this.hex(L,c,h0);
+  Object.assign(v,dark?{text:ink(.95,.008),muted:ink(.72,.014),dim:ink(.62,.014),faint:ink(.55,.014),'avatar-fg':ink(.87,.012),
+    line:'rgba(255,255,255,.08)',line2:'rgba(255,255,255,.14)'}
+   :{text:ink(.22,.012),muted:ink(.45,.016),dim:ink(.53,.016),faint:ink(.62,.014),'avatar-fg':ink(.33,.014),
+    line:'rgba(20,16,12,.1)',line2:'rgba(20,16,12,.18)'});
+  // accent: the most colorful of the common colors (amber if the picture is all greys)
+  const best=cols.reduce((b,c)=>c.C*(0.5+Math.sqrt(c.share))>b.C*(0.5+Math.sqrt(b.share))?c:b,cols[0]);
+  const ah=best.C>0.03?best.h:1.31,ac=Math.min(0.2,Math.max(0.12,best.C));
+  Object.assign(v,dark?{accent:this.hex(.79,ac,ah),'accent-soft':this.hex(.85,ac*.75,ah),'accent-ink':this.hex(.24,.05,ah),'accent-wash':this.rgba(.79,ac,ah,.13)}
+   :{accent:this.hex(.52,ac,ah),'accent-soft':this.hex(.45,ac,ah),'accent-ink':this.hex(.98,.015,ah),'accent-wash':this.rgba(.52,ac,ah,.1)});
+  // see-through versions of the big surfaces
+  v['glass-bg']=this.rgba(...at.bg,op);v['glass-rail']=this.rgba(...at.rail,Math.min(1,op+.08));v['glass-list']=this.rgba(...at.list,Math.min(1,op+.04));
+  return {dark,vars:v}},
+
+ /** Puts the chosen theme on the page. */
+ apply(fade){
+  const r=document.documentElement,ch=this.choice();
+  if(fade){r.classList.add('theme-fade');clearTimeout(this._t);this._t=setTimeout(()=>r.classList.remove('theme-fade'),350)}
+  for(const k of this.VARS)r.style.removeProperty(k);
+  this.VARS=[];
+  if(ch!=='image'){r.classList.remove('imgtheme');r.dataset.theme=ch;return}
+  const cfg=this.cfg(),th=this.build(this.pal(),cfg);
+  r.dataset.theme=th.dark?'dark':'light';r.classList.add('imgtheme');
+  for(const k in th.vars){r.style.setProperty('--'+k,th.vars[k]);this.VARS.push('--'+k)}
+  const bi=$('#bgImg'),u=this.img();
+  if(this._url!==u){bi.style.backgroundImage='url("'+u+'")';this._url=u}
+  // the blurred edge fades to nothing, so the picture is drawn past the screen's edges
+  bi.style.filter=cfg.blur?'blur('+cfg.blur+'px)':'';bi.style.inset=(-cfg.blur*2)+'px';
+  const t=cfg.tone/100;$('#bgTint').style.background=t<0?'rgba(0,0,0,'+(-t)+')':'rgba(255,255,255,'+t+')'},
+
+ /** Saves a new picture (shrunk until it fits in local storage) and switches to its theme. */
+ async setImage(file){
+  await withImage(file,img=>{
+   const pal=this.analyze(img);
+   store.set('bgimg',null);
+   for(const [max,q] of [[1920,.85],[1600,.8],[1280,.75],[960,.7]]){
+    const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*k));c.height=Math.max(1,Math.round(img.naturalHeight*k));
+    const x=c.getContext('2d');x.fillStyle='#808080';x.fillRect(0,0,c.width,c.height);x.imageSmoothingQuality='high';x.drawImage(img,0,0,c.width,c.height);
+    try{localStorage.setItem('marmot.bgimg',c.toDataURL('image/jpeg',q));store.set('bgpal',JSON.stringify(pal));store.set('theme','image');return}catch(e){}}
+   throw new Error('could not keep that image: this browser is out of space for it')});
+  this.apply(true)},
+ /** Forgets the picture and goes back to the plain theme it looked closest to. */
+ clear(){
+  const was=document.documentElement.dataset.theme;
+  store.set('bgimg',null);store.set('bgpal',null);
+  if(store.get('theme')==='image')store.set('theme',was==='light'?'light':'dark');
+  this._url=null;$('#bgImg').style.backgroundImage='';this.apply(true)}
 };
 
 const M=new MarmotClient();
@@ -2743,6 +3254,7 @@ const ECODE=(()=>{
 const emojify=t=>t.replace(/:([a-z][a-z0-9_]{0,31}|[+-]1|100):/gi,(all,n)=>ECODE.get(n.toLowerCase())||all);
 
 const ICON={
+ micOff:svg('<path d="M6 6.5v.5a2 2 0 0 0 3.4 1.4M10 6V4a2 2 0 0 0-3.9-.6"/><path d="M4 7a4 4 0 0 0 6.6 3M12 7a4 4 0 0 1-.3 1.5M8 11v3M5.5 14h5"/><path d="m2.5 2.5 11 11"/>'),
  smile:svg('<circle cx="8" cy="8" r="6"/><path d="M5.5 9.75c.6.8 1.45 1.25 2.5 1.25s1.9-.45 2.5-1.25"/><path d="M6 6.25v.5M10 6.25v.5"/>'),
  image:svg('<rect x="2" y="3" width="12" height="10"/><path d="m2.5 11.5 3.5-3.5 3 3 2-2 2.5 2.5"/><path d="M10.25 5.75h.5v.5h-.5z"/>'),
  reply:svg('<path d="M6.5 3.5 2.5 7.5l4 4"/><path d="M3 7.5h5.5a5 5 0 0 1 5 5v.5"/>'),
@@ -2792,8 +3304,8 @@ const UI={
   const live=M.wsState==='live',pr=M.me?M.presence(M.me.userId):'offline',sx=M.me?M.status(M.me.userId):'';
   $('#meLive').className='live'+(!live?(M.token?' warn':' off'):{idle:' warn',dnd:' bad',invisible:' off'}[pr]||'');
   $('#meStatus').textContent=live?this.PRES[pr]+(sx?' · '+sx:''):(M.token?'reconnecting…':'offline');
-  document.querySelectorAll('#themeSeg button').forEach(b=>
-   b.setAttribute('aria-pressed',String(b.dataset.themeSet===document.documentElement.dataset.theme)))},
+  const theme=Theme.choice();
+  document.querySelectorAll('[data-theme-set]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeSet===theme)))},
 
  renderStatus(){
   const dot=$('#statusDot'),txt=$('#statusText');
@@ -2822,6 +3334,8 @@ const UI={
    const sec=this.S.set||'profile',row=(v,name,sub)=>'<button class="row" data-act="open-settings" data-v="'+v+'"'+(sec===v?' aria-current="true"':'')+'>'+
     '<div class="row-main"><div class="row-name">'+name+'</div><div class="row-sub">'+sub+'</div></div></button>';
    rows.innerHTML=row('profile','Profile','customize your profile')+
+    row('appearance','Appearance','theme and background image')+
+    row('notifications','Notifications','desktop alerts and sounds')+
     row('account','Account &amp; security','security and account settings');
    return}
   if(!M.me){rows.innerHTML='';return}
@@ -3184,14 +3698,14 @@ const UI={
   const key=scr==='settings'?'settings:'+sec:chat?'conv:'+chat:'empty:'+scr;
   if(key!==this.S.paneKey){
    this.S.paneKey=key;this.enter(pane);
-   if(scr==='settings'){pane.innerHTML=sec==='profile'?this.profileHTML():this.settingsHTML();if(sec==='profile')this.initProfileForm()}
+   if(scr==='settings'){pane.innerHTML=sec==='profile'?this.profileHTML():sec==='appearance'?this.appearanceHTML():sec==='notifications'?this.notificationsHTML():this.settingsHTML();if(sec==='profile')this.initProfileForm()}
    else if(!chat)pane.innerHTML='<div class="empty">'+(!M.me?'':scr==='discord'?'SELECT A CHANNEL<br>OR JOIN ONE WITH + JOIN':scr==='peers'?'PICK SOMEONE TO SEE THEIR PROFILE<br>OR ADD A FRIEND WITH + ADD':'SELECT A CONVERSATION<br>OR START ONE WITH + NEW')+'</div>';
    else{
     const dm=!isGroup(chat)&&!isDiscord(chat),pf=dm?' data-pf="'+esc(chat)+'"':'';
     pane.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="back">←</button>'+
      '<div class="av av-34" id="chatAv"'+pf+'></div><div style="min-width:0"><div class="pane-title" id="chatName"'+pf+'></div><div class="meta" id="chatMeta"></div></div>'+
      '<div class="acts" id="chatActs">'+(isDiscord(chat)?'<button class="tbtn danger" data-act="leave">LEAVE</button>'
-      :isGroup(chat)?(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members" id="gManage">MANAGE</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
+      :isGroup(chat)?(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="g-call" id="gCallBtn">CALL</button><button class="tbtn" data-act="g-invite">INVITE</button><button class="tbtn" data-act="g-members" id="gManage">MANAGE</button><button class="tbtn danger" data-act="g-leave">LEAVE</button>'
       :(M.can('purge')?'<button class="tbtn danger" data-act="purge">PURGE</button>':'')+'<button class="tbtn" data-act="call" id="callBtn">CALL</button><button class="tbtn" data-act="profile">PROFILE</button><button class="tbtn" data-act="verify">VERIFY</button>')+'</div></div>'+
      '<div class="thread" id="thread"></div>'+
      '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><div class="attbar hidden" id="attBar"></div><textarea id="composer" placeholder="'+(isDiscord(chat)?'Message '+esc(M.displayName(chat))+' on Discord…':isGroup(chat)?'Message the group…':'Write a message…')+'" maxlength="'+(isDiscord(chat)?DCTEXT:MAXTEXT)+'"></textarea>'+
@@ -3200,7 +3714,7 @@ const UI={
      '<span class="hint" id="cHint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
      '<div class="gate hidden" id="gate"></div>';
     if(M.isFriend(chat)||M.link(chat)||M.group(chat))$('#composer').focus()}}
-  if(scr==='settings')sec==='profile'?this.fillProfile():this.fillSettings();
+  if(scr==='settings')sec==='profile'?this.fillProfile():sec==='appearance'?this.fillAppearance():sec==='notifications'?this.fillNotifications():this.fillSettings();
   else if(chat){this.renderThread();this.renderReply();this.renderAtt();this.renderHint();if(!this._follow)this.more()}},
  /** The composer's hint line, which says so while this account is muted. */
  renderHint(){
@@ -3223,7 +3737,8 @@ const UI={
   $('#composerBox').classList.toggle('hidden',!friend);gate.classList.toggle('hidden',friend);
   // CALL answers a call ringing from this person; otherwise one call at a time
   const cb=$('#callBtn');
-  if(cb){cb.disabled=!friend||(!!vc&&!(vc.peer===id&&vc.state==='ringing'));cb.textContent=vc&&vc.peer===id?(vc.state==='ringing'?'ANSWER':'IN CALL'):'CALL'}
+  const withThem=!!vc&&!vc.group&&vc.peer===id;
+  if(cb){cb.disabled=!friend||(!!vc&&!(withThem&&vc.state==='ringing'));cb.textContent=withThem?(vc.state==='ringing'?'ANSWER':'IN CALL'):'CALL'}
   if(!friend){
    const n=esc(M.displayName(id));
    const g={none:['You and '+n+' are not friends, so neither of you can send messages.','request','ADD FRIEND'],
@@ -3634,6 +4149,10 @@ const UI={
   if((!g||muted)&&gate.innerHTML!==ghtml)gate.innerHTML=ghtml;
   document.querySelectorAll('#chatActs button').forEach(b=>b.classList.toggle('hidden',!g));
   const inv=$('#chatActs [data-act=g-invite]');if(inv&&g)inv.classList.toggle('hidden',!M.canInvite(id));
+  // CALL rings members; while this group's call rings here it joins it, and once in it, it adds people
+  const gc=$('#gCallBtn'),vc=M.voice.call,here=!!vc&&vc.group===id.slice(2);
+  if(gc&&g){gc.disabled=!!vc&&!here||muted;gc.textContent=here?(vc.state==='ringing'?'JOIN CALL':'ADD TO CALL'):'CALL';
+   gc.dataset.act=here&&vc.state!=='ringing'?'call-invite':'g-call'}
   const mg=$('#gManage');if(mg){const n=g&&g.apps?g.apps.length:0,h='MANAGE'+(n?'<span class="badge-n">'+n+'</span>':'');if(mg.innerHTML!==h)mg.innerHTML=h}
   if(M.unread.get(id)&&!document.hidden){M.unread.delete(id);M.pinged.delete(id);this.renderRail();this.renderCol()}
   const atBottom=this.following(th);
@@ -3938,6 +4457,52 @@ const UI={
    '<div class="field" style="max-width:360px"><div class="lbl">PASSWORD</div><input class="inp" type="password" id="delPass" autocomplete="current-password"></div>'+
    '<div class="btnrow"><button class="tbtn danger" data-act="delete">DELETE ACCOUNT</button></div><div class="err" id="delErr"></div></div>'+
    '</div>'},
+ appearanceHTML(){
+  const slider=(id,name,min,max)=>'<div class="field rng"><div class="lbl">'+name+'<span class="rv" id="'+id+'V"></span></div>'+
+   '<input type="range" class="range" id="'+id+'" min="'+min+'" max="'+max+'" step="1"></div>';
+  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Appearance</div><div class="meta">light and dark follow your account · the image stays on this device</div></div></div>'+
+   '<div class="sheet">'+
+   '<div class="sec"><h3>Theme</h3>'+
+   '<div class="btnrow" style="margin-top:0"><button class="tbtn" data-theme-set="light">LIGHT</button><button class="tbtn" data-theme-set="dark">DARK</button><button class="tbtn" data-theme-set="image">IMAGE</button></div></div>'+
+   '<div class="sec"><h3>Background image</h3>'+
+   '<div class="lbl">PALETTE · DARK TO LIGHT</div><div class="bgpal" id="bgPal"></div>'+
+   '<div class="note" id="bgMode" style="margin:8px 0 0"></div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="bg-pick">CHOOSE IMAGE</button><button class="tbtn danger" data-act="bg-clear" id="bgClear">REMOVE</button></div>'+
+   '<div class="err" id="bgErr"></div>'+
+   slider('bgBlur','BLUR',0,40)+slider('bgTone','DARKEN / LIGHTEN',-90,90)+slider('bgOp','PANEL OPACITY',30,100)+
+   '</div></div>'},
+ notificationsHTML(){
+  const pair=(k,name,note,on,off)=>'<div class="sec"><h3>'+name+'</h3><div class="note">'+note+'</div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="notif-set" data-k="'+k+'" data-v="1">'+on+'</button><button class="tbtn" data-act="notif-set" data-k="'+k+'" data-v="0">'+off+'</button></div></div>';
+  return '<div class="pane-head"><button class="tbtn back" data-act="back">←</button><div><div class="pane-title">Notifications</div><div class="meta">stored encrypted with your account</div></div></div>'+
+   '<div class="sheet">'+
+   '<div class="sec"><h3>Desktop notifications</h3><div class="note">A system notification for each new message while Marmot is in the background. Do not disturb silences them.</div>'+
+   '<div class="btnrow"><button class="tbtn" data-act="notif-set" data-k="desktop" data-v="1">ON</button><button class="tbtn" data-act="notif-set" data-k="desktop" data-v="0">OFF</button>'+
+   '<button class="tbtn" data-act="notif-allow" id="notifAllow">ALLOW IN THIS BROWSER</button></div><div class="note" id="notifPerm" style="margin:8px 0 0"></div></div>'+
+   pair('sound','Sound','A short chime when a message comes in, unless you are reading that chat.','ON','OFF')+
+   pair('mentions','Alert me for','Mentions only: notifications and sounds only for messages that @mention you.','MENTIONS ONLY','EVERY MESSAGE')+
+   pair('preview','Message preview','Show what the message says in the notification, or only who sent it.','SHOW TEXT','HIDE TEXT')+
+   '<div class="err" id="notifErr"></div></div>'},
+ fillNotifications(){
+  if(!$('#notifPerm'))return;
+  const n=M.notifyPrefs();
+  for(const b of document.querySelectorAll('[data-act=notif-set]'))b.setAttribute('aria-pressed',String(n[b.dataset.k]===(b.dataset.v==='1')));
+  const p='Notification' in window?Notification.permission:'unsupported';
+  $('#notifAllow').classList.toggle('hidden',p!=='default');
+  $('#notifPerm').textContent=p==='unsupported'?'This browser cannot show desktop notifications.':p==='denied'?'This browser has blocked notifications from Marmot. Allow them in the site settings to get them.'
+   :p==='granted'?'This browser may show Marmot notifications.':'This browser has not been asked yet.'},
+ fillAppearance(){
+  const has=Theme.has(),cfg=Theme.cfg(),pal=Theme.pal(),box=$('#bgPal');
+  if(!box)return;
+  box.classList.toggle('none',!has);
+  box.innerHTML=has?pal.colors.map(c=>'<i style="background:'+c.hex+'" title="'+c.hex+' · '+Math.round(c.share*100)+'% of the image"></i>').join(''):'';
+  const seen=has&&Theme.seen(pal,cfg.tone);
+  $('#bgMode').textContent=!has?'No image yet.'
+   :(seen<0.6?'Dark':'Light')+' theme'+(Theme.choice()==='image'?'':' · pick IMAGE to use it')+'.';
+  $('#bgClear').disabled=!has;
+  const fmt={bgBlur:v=>v+'px',bgTone:v=>v<0?'darken '+(-v)+'%':v>0?'lighten '+v+'%':'none',bgOp:v=>v+'%'};
+  for(const [id,k] of [['bgBlur','blur'],['bgTone','tone'],['bgOp','op']]){
+   const i=$('#'+id);i.disabled=!has;if(document.activeElement!==i)i.value=cfg[k];$('#'+id+'V').textContent=fmt[id](cfg[k])}},
  fillSettings(){
   if(!M.me)return;
   const kv=(k,v)=>'<div class="kv"><b>'+k+'</b><span>'+esc(v)+'</span></div>';
@@ -4212,7 +4777,7 @@ const UI={
     $('#aNote').textContent='deriving keys…';
     if(mode==='signup')await M.signup(user,pass);else await M.login(user,pass);
     store.set('server',M.server);store.sset(M.session());
-    this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.side=null;this.S.paneKey='';this.render();
+    this.close();this.S.screen='messages';this.S.chat=null;this.S.dc=null;this.S.side=null;this.S.paneKey='';this.render();this.accountPrefs();
    }catch(e){err.textContent=e.message;go.disabled=false;$('#aNote').textContent=''}}},
 
  /** + ADD, and the direct side of + NEW (`seg` switches back to a group): a friend
@@ -4388,11 +4953,34 @@ const UI={
      so otherwise a busy group leaves hundreds waiting on return. */
  notify(peer,text){
   const ping=M.pings(text);
+  {const f=M.filter(),caught=f.level!=='none'&&chatFilter.test(f.level,text);
+   if(!(caught&&f.action==='delete'))this.alert(peer,text,ping,caught)}
   if(document.hidden){const a=this._away||(this._away={n:0,peers:new Set(),pings:0});a.n++;a.peers.add(peer);if(ping)a.pings++;return}
   if(this.cur()===peer||M.presenceMode==='dnd')return;
   const f=M.filter(),caught=f.level!=='none'&&chatFilter.test(f.level,text);
   if(caught&&f.action==='delete')return;
   toast((ping?'@ you were mentioned · ':'')+M.displayName(peer)+': '+(caught?'message hidden by your chat filter':text.slice(0,ping?140:80)),ping?9000:4000)},
+ /** A desktop notification (while the tab is hidden) and/or a chime, as the account's notification settings say. */
+ alert(peer,text,ping,caught){
+  const n=M.notifyPrefs();
+  if(M.presenceMode==='dnd'||(n.mentions&&!ping)||(!document.hidden&&this.cur()===peer))return;
+  if(n.sound)chime();
+  if(!n.desktop||!document.hidden||!('Notification' in window)||Notification.permission!=='granted')return;
+  try{
+   const x=new Notification((ping?'@ ':'')+M.displayName(peer),{tag:'marmot:'+peer,silent:true,
+    body:!n.preview?'new message':caught?'message hidden by your chat filter':(text||'sent a photo').slice(0,140)});
+   x.onclick=()=>{window.focus();this.open(peer);x.close()}}catch(e){}},
+ /** Desktop alerts are on for this account but this browser has not been asked yet: the next click asks. */
+ askNotify(){
+  if(!M.notifyPrefs().desktop||!('Notification' in window)||Notification.permission!=='default'||this._asking)return;
+  this._asking=true;
+  toast('desktop notifications are on for your account — click anywhere to allow them in this browser',8000);
+  document.addEventListener('click',()=>{Notification.requestPermission().catch(()=>{}).then(()=>{this._asking=false;this.fillNotifications()})},{once:true})},
+ /** After signing in: the account's theme and notification settings take effect on this device. */
+ accountPrefs(){
+  const t=M.themePref();
+  if(t&&Theme.choice()!=='image'&&Theme.choice()!==t){store.set('theme',t);Theme.apply(true)}
+  this.askNotify()},
  /** The messages that came in while the tab was hidden, as one toast. */
  back(){
   const a=this._away;this._away=null;
@@ -4402,41 +4990,96 @@ const UI={
   if(a.pings)toast('@ you were mentioned '+(a.pings===1?'once':a.pings+' times')+' while you were away',8000)},
 
  /* ---------- voice ---------- */
- async call(id){
-  try{await M.voice.start(id)}
+ async call(id,ids){
+  try{await M.voice.start(id,ids)}
   catch(e){toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'microphone access was blocked — allow it in the browser to call':'call failed: '+e.message,7000)}},
  async answer(){
   try{await M.voice.accept()}
   catch(e){toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'microphone access was blocked — allow it in the browser to answer':'could not answer: '+e.message,7000)}},
+ /** Whether someone can be rung into a group call: signed in and showing it, and not on do not disturb. */
+ callable(id){const p=M.presence(id);return p==='online'||p==='idle'},
+ /** CALL in a group: pick who to ring. With `invite`, rings more people into the call already going. */
+ groupCall(id,invite){
+  const g=M.group(id),vc=M.voice.call;if(!g)return;
+  const gid=String(id).replace(/^g:/,'');
+  if(!invite&&vc&&vc.group===gid&&vc.state==='ringing')return this.answer();
+  if(invite&&!(vc&&vc.group===gid&&vc.state!=='ringing'))return;
+  const inCall=invite?vc.links:new Map();
+  const others=g.members.filter(m=>m.userId!==M.me.userId&&!inCall.has(m.userId)).map(m=>m.userId);
+  // who can be rung first, then everyone else, each by name
+  const ok=others.filter(u=>this.callable(u)),rank=u=>ok.includes(u)?0:1;
+  others.sort((a,b)=>rank(a)-rank(b)||M.displayName(a).localeCompare(M.displayName(b)));
+  const why=u=>{const p=M.presence(u);return p==='dnd'?'do not disturb':p==='idle'?'idle':p==='online'?'online':'offline'};
+  const rows=others.map(u=>{const can=ok.includes(u);
+   return '<label class="pick'+(can?'':' off')+'" data-name="'+esc(M.displayName(u).toLowerCase()+' '+(M.username(u)||'').toLowerCase())+'">'+
+    '<input type="checkbox" value="'+esc(u)+'"'+(can?'':' disabled')+'>'+this.av(u,'av-26')+
+    '<span class="row-main">'+esc(M.displayName(u))+'</span><span class="pstate">'+why(u)+'</span></label>'}).join('');
+  const label=n=>(invite?'INVITE':'CALL')+(n?' '+n:'');
+  this.modal('<h3>'+(invite?'Invite to the call':'Call '+esc(M.displayName(id)))+'</h3>'+
+   '<div class="note">Pick who to ring. Only members who are online and not on do not disturb can be called'+(invite?'.':'; you can invite more once the call is going.')+'</div>'+
+   (others.length?'<input class="search" id="pickFilter" placeholder="filter members…" autocomplete="off" style="margin:0 0 8px;width:100%"><div class="picks" id="picks">'+rows+'</div>'
+    :'<div class="picks"><div class="grouplbl">'+(invite?'EVERYONE IN THE GROUP IS IN THE CALL':'NO ONE ELSE IS IN THIS GROUP')+'</div></div>')+
+   '<div class="err" id="gErr"></div><div class="modal-foot">'+(ok.length>1?'<button class="tbtn" data-m="all">SELECT ALL</button>':'')+
+   '<span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go" id="gGo" disabled>'+label(0)+'</button></div>',
+   async(act,btn)=>{
+    if(act==='cancel')return this.close();
+    if(act==='all'){document.querySelectorAll('#picks input:not(:disabled)').forEach(i=>{i.checked=true});
+     const b=$('#gGo');b.textContent=label(this.picked().length);b.disabled=false;return}
+    if(act!=='go')return;
+    const ids=this.picked();if(!ids.length)return;
+    if(!invite){this.close();return this.call('g:'+gid,ids)}
+    const err=$('#gErr');err.textContent='';btn.disabled=true;
+    try{const n=await M.voice.invite(ids);this.close();toast('ringing '+n+(n===1?' person':' people'))}
+    catch(e){err.textContent='could not invite: '+e.message;btn.disabled=false}});
+  this.wirePicker(n=>{const b=$('#gGo');b.textContent=label(n);b.disabled=!n})},
 
- /** The floating call bar. It sits outside the panes so a call survives switching screens. */
+ /** The call bar along the top. It sits outside the panes so a call survives switching screens. */
  renderCall(){
-  const box=$('#callbar'),c=M.voice.call,au=$('#callAudio');
-  const remote=(c&&c.remote)||null;
-  if(au.srcObject!==remote){au.srcObject=remote;if(remote)au.play().catch(()=>{})}
+  const box=$('#callbar'),c=M.voice.call;
+  this.renderCallAudio(c);
   Ring.set(!!c&&c.dir==='in'&&c.state==='ringing'&&M.presenceMode!=='dnd');
   $('#app').classList.toggle('with-call',!!c);
   if(!c){
-   clearInterval(this._callTick);this._callTick=0;
+   clearInterval(this._callTick);this._callTick=0;this._callId=null;
    if(box.classList.contains('callbar')&&!box.classList.contains('out')){
     box.classList.add('out');
     setTimeout(()=>{if(!M.voice.call){box.innerHTML='';box.className=''}},180)}
+   this.renderStage(null);
    return}
+  // a new call shows its window again, even if the last one was hidden
+  if(this._callId!==c.id){this._callId=c.id;this._stageOff=false;this._pin=null}
   if(!this._callTick)this._callTick=setInterval(()=>this.renderCall(),1000);
-  const ringing=c.dir==='in'&&c.state==='ringing';
-  const st=c.state==='active'?(c.unstable?'reconnecting… · ':'')+clock(Math.floor((Date.now()-c.started)/1000))+(c.muted?' · muted':'')
-   :{calling:'calling…',ringing:'incoming voice call',connecting:'connecting…'}[c.state];
-  const html=this.av(c.peer,'av-34')+
-   '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(M.displayName(c.peer))+
-   (M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
-   '<div class="meta'+(c.unstable?' warn':'')+'"'+(c.relay?' title="no direct or TURN connection: audio goes through the server, still end-to-end encrypted"':'')+'>'+esc(st)+(c.relay?' · relayed':'')+' · end-to-end encrypted</div></div>'+
-   (ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">ACCEPT</button>'
-    :(M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+c.cam+'">CAMERA</button>':'')+
+  const ringing=c.dir==='in'&&c.state==='ringing',grp=c.group?'g:'+c.group:null;
+  const ls=[...c.links.values()],on=ls.filter(l=>l.state==='active').length;
+  const who=grp?M.displayName(grp):M.displayName(c.peer);
+  const st=c.state==='active'?(c.unstable?'reconnecting… · ':'')+clock(Math.floor((Date.now()-c.started)/1000))+
+    (grp?' · '+(on+1)+' in call':'')+(c.muted?' · muted':'')
+   :ringing?(grp?'group call from '+M.displayName(c.peer):'incoming voice call')
+   :{calling:grp?'ringing '+ls.length+'…':'calling…',connecting:'connecting…'}[c.state];
+  const html=this.av(grp||c.peer,'av-34')+
+   '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(who)+
+   (!grp&&M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
+   '<div class="meta'+(c.unstable?' warn':'')+'"'+(c.relayed?' title="no direct or TURN connection: audio goes through the server, still end-to-end encrypted"':'')+'>'+esc(st)+(c.relayed?' · relayed':'')+' · end-to-end encrypted</div></div>'+
+   '<div class="cacts">'+(ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">'+(grp?'JOIN':'ACCEPT')+'</button>'
+    :(grp?'<button class="tbtn" data-act="call-invite">INVITE</button>':'')+
+     (M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+c.cam+'">CAMERA</button>':'')+
      (M.voice.canScreen()?'<button class="tbtn" data-act="call-screen" aria-pressed="'+c.screen+'">SCREEN</button>':'')+
-     '<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button><button class="hang" data-act="call-hangup">HANG UP</button>');
+     '<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button>'+
+     '<button class="tbtn" data-act="call-view" aria-pressed="'+!this._stageOff+'" title="show or hide the call window">VIEW</button>'+
+     '<button class="hang" data-act="call-hangup">'+(grp?'LEAVE':'HANG UP')+'</button>')+'</div>';
   box.className='callbar'+(ringing?' ringing':'');
   if(box.innerHTML!==html)box.innerHTML=html;
   this.renderStage(c)},
+
+ /** One audio element per person on the call (a relayed link plays through its own audio context instead). */
+ renderCallAudio(c){
+  const box=$('#callAudios'),want=new Map();
+  if(c)for(const l of c.links.values())if(l.remote)want.set(l.peer,l.remote);
+  for(const a of [...box.children])if(!want.has(a.dataset.peer)){a.srcObject=null;a.remove()}
+  for(const [peer,src] of want){
+   let a=[...box.children].find(x=>x.dataset.peer===peer);
+   if(!a){a=document.createElement('audio');a.autoplay=true;a.setAttribute('playsinline','');a.dataset.peer=peer;box.appendChild(a)}
+   if(a.srcObject!==src){a.srcObject=src;a.play().catch(()=>{})}}},
 
  async video(kind){
   const c=M.voice.call;if(!c)return;
@@ -4448,32 +5091,51 @@ const UI={
    toast(/permission|denied|notallowed/i.test(e.name+' '+e.message)?'camera access was blocked — allow it in the browser to turn it on'
     :(kind==='cam'?'camera':'screen share')+' failed: '+e.message,7000)}},
 
- /** The video panel: every feed that is on, the pinned (or else the most important) one large. */
+ /** The call window: a tile for everyone in the call and one for each screen being shared. */
  renderStage(c){
-  const st=$('#stage');
-  const feeds=c?[
-   ['pscreen',c.peerScreen&&c.remoteScreen,M.displayName(c.peer)+' · screen'],
-   ['pcam',c.peerCam&&c.remoteCam,M.displayName(c.peer)],
-   ['myscreen',c.screen&&c.screenStream,'your screen'],
-   ['mycam',c.cam&&c.camStream,'you']]:[];
-  const on=feeds.filter(f=>f[1]);
-  if(!on.length){
+  const st=$('#stage'),box=$('#tiles');
+  if(!c||c.state==='ringing'||this._stageOff){
    if(!st.hidden&&document.fullscreenElement===st)document.exitFullscreen().catch(()=>{});
-   st.hidden=true;st.classList.remove('big');this._pin=null;
-   for(const v of st.querySelectorAll('video'))if(v.srcObject)v.srcObject=null;
+   st.hidden=true;
+   if(!c){st.classList.remove('big');this._pin=null;for(const v of box.querySelectorAll('video'))v.srcObject=null;box.innerHTML=''}
    return}
   st.hidden=false;
-  const main=on.find(f=>f[0]===this._pin)||on[0];
-  let i=0;
-  for(const [k,src,label] of feeds){
-   const el=st.querySelector('[data-tile='+k+']'),v=el.firstElementChild,s=src||null;
+  const me=M.me.userId,tiles=[];
+  for(const l of c.links.values()){
+   const name=M.displayName(l.peer);
+   const wait=l.state!=='active',stat=l.state==='calling'?(l.ring?'ringing…':'connecting…'):l.state==='connecting'?'connecting…'
+    :l.unstable?'reconnecting…':l.relay?'relayed':'';
+   tiles.push({k:'p:'+l.peer,id:l.peer,src:l.peerCam&&l.remoteCam||null,label:name,muted:l.peerMuted,wait,stat,warn:l.unstable});
+   if(l.peerScreen&&l.remoteScreen)tiles.push({k:'s:'+l.peer,id:l.peer,src:l.remoteScreen,label:name+' · screen',screen:true})}
+  tiles.push({k:'p:me',id:me,src:c.cam&&c.camStream||null,label:'you',muted:c.muted,mine:true});
+  if(c.screen&&c.screenStream)tiles.push({k:'s:me',id:me,src:c.screenStream,label:'your screen',screen:true,mine:true});
+  // one tile large: the one picked, else a screen being shared; otherwise everyone the same size
+  // ('grid' when the large one was clicked back down)
+  const main=tiles.length>1&&this._pin!=='grid'&&(tiles.find(t=>t.k===this._pin)||tiles.find(t=>t.screen&&!t.mine)||tiles.find(t=>t.screen))||null;
+  const rest=main?tiles.length-1:tiles.length;
+  box.classList.toggle('focus',!!main);
+  // under a large tile the rest sit in a row, never wider than a quarter each
+  box.style.setProperty('--cols',main?Math.max(4,rest):rest<=1?1:rest<=4?2:rest<=9?3:4);
+  // keep each tile's element, so a playing video is never pulled out of the page
+  const keep=new Set(tiles.map(t=>t.k));
+  for(const el of [...box.children])if(!keep.has(el.dataset.tile)){const v=el.querySelector('video');if(v)v.srcObject=null;el.remove()}
+  tiles.forEach((t,i)=>{
+   let el=[...box.children].find(x=>x.dataset.tile===t.k);
+   if(!el){
+    el=document.createElement('button');el.className='tile';el.dataset.act='stage-pin';el.dataset.tile=t.k;
+    el.innerHTML='<video autoplay playsinline muted></video><div class="tav"></div><span class="tag"></span><span class="tst"></span>'}
+   if(box.children[i]!==el)box.insertBefore(el,box.children[i]||null);
+   const v=el.firstElementChild,s=t.src||null;
    if(v.srcObject!==s){v.srcObject=s;if(s)v.play().catch(()=>{})}
-   el.hidden=!s;
-   el.classList.toggle('main',!!s&&main[0]===k);
-   el.classList.toggle('thumb',!!s&&main[0]!==k);
-   if(s&&main[0]!==k)el.style.setProperty('--i',i++);
-   el.title=s&&main[0]!==k?'show '+label+' large':'';
-   el.lastElementChild.textContent=label}
+   el.classList.toggle('cam',!!s);el.classList.toggle('screen',!!t.screen);el.classList.toggle('mine',!!t.mine);
+   el.classList.toggle('wait',!!t.wait);el.classList.toggle('main',main===t);
+   el.title=main===t?'click to show everyone the same size':'click to show '+t.label+' large';
+   const av='<div class="av">'+this.avInner(t.id,t.mine?M.displayName(me):t.label,false)+'</div>';
+   const tav=el.querySelector('.tav');if(tav.innerHTML!==av)tav.innerHTML=av;
+   const tag=(t.muted?ICON.micOff:'')+'<span>'+esc(t.label)+'</span>';
+   const tg=el.querySelector('.tag');if(tg.innerHTML!==tag)tg.innerHTML=tag;
+   tg.title=t.muted?t.label+' is muted':'';
+   const ts=el.querySelector('.tst');if(ts.textContent!==(t.stat||''))ts.textContent=t.stat||'';ts.classList.toggle('warn',!!t.warn)});
   st.querySelector('[data-act=stage-size]').textContent=st.classList.contains('big')?'SHRINK':'EXPAND';
   const fs=st.querySelector('[data-act=stage-full]');
   fs.hidden=!st.requestFullscreen;fs.textContent=document.fullscreenElement===st?'EXIT FULLSCREEN':'FULLSCREEN'}
@@ -4507,7 +5169,12 @@ document.addEventListener('click',async e=>{
  if(rv&&!e.target.closest('button')){UI.S.unveiled.delete(UI.cur()+'|'+rv.dataset.reveil);UI.render();return}
  const t=e.target.closest('button');if(!t||t.closest('#overlay'))return;
  if(t.dataset.screen){UI.screen(t.dataset.screen);return}
- if(t.dataset.themeSet){const r=document.documentElement;r.classList.add('theme-fade');clearTimeout(UI._themeT);UI._themeT=setTimeout(()=>r.classList.remove('theme-fade'),350);r.dataset.theme=t.dataset.themeSet;store.set('theme',t.dataset.themeSet);UI.render();return}
+ if(t.dataset.themeSet){
+  // IMAGE with no image yet goes to where one is chosen
+  if(t.dataset.themeSet==='image'&&!Theme.has()){UI.screen('settings');UI.S.set='appearance';UI.render();toast('choose a background image to make a theme from');return}
+  store.set('theme',t.dataset.themeSet);Theme.apply(true);UI.render();
+  if(M.token)M.setThemePref(t.dataset.themeSet).catch(()=>{});
+  return}
  if(t.dataset.chat){UI.open(t.dataset.chat);return}
  if(t.dataset.dc){UI.open(t.dataset.dc);return}
  if(t.dataset.dcpub){UI.joinPublic(t.dataset.dcpub);return}
@@ -4548,10 +5215,13 @@ document.addEventListener('click',async e=>{
   case 'call-decline':M.voice.decline();break;
   case 'call-hangup':M.voice.hangup();break;
   case 'call-mute':M.voice.setMuted(!(M.voice.call&&M.voice.call.muted));break;
-  case 'call-open':if(M.voice.call)UI.open(M.voice.call.peer);break;
+  case 'call-open':{const c=M.voice.call;if(c)UI.open(c.group?'g:'+c.group:c.peer)}break;
+  case 'call-invite':{const c=M.voice.call;if(c&&c.group)UI.groupCall('g:'+c.group,true)}break;
+  case 'call-view':UI._stageOff=!UI._stageOff;UI.renderCall();break;
+  case 'g-call':UI.groupCall(UI.S.chat);break;
   case 'call-cam':UI.video('cam');break;
   case 'call-screen':UI.video('screen');break;
-  case 'stage-pin':UI._pin=t.dataset.tile;UI.renderStage(M.voice.call);break;
+  case 'stage-pin':UI._pin=t.classList.contains('main')?'grid':t.dataset.tile;UI.renderStage(M.voice.call);break;
   case 'stage-size':$('#stage').classList.toggle('big');UI.renderStage(M.voice.call);break;
   case 'stage-full':{const st=$('#stage');document.fullscreenElement===st?document.exitFullscreen().catch(()=>{}):st.requestFullscreen().catch(()=>{})}break;
   case 'profile':UI.S.side===UI.S.chat?UI.closeSide():UI.showPeer(UI.S.chat);break;
@@ -4585,8 +5255,20 @@ document.addEventListener('click',async e=>{
    const err=$('#filterErr');err.textContent='';
    try{await M.setFilter(t.dataset.act==='filter-level'?{level:t.dataset.v}:{action:t.dataset.v})}catch(x){err.textContent=x.message}
    break}
+  case 'notif-set':{
+   const err=$('#notifErr');err.textContent='';
+   try{const on=t.dataset.v==='1';await M.setNotify({[t.dataset.k]:on});if(on&&t.dataset.k==='desktop'&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}
+   catch(x){err.textContent=x.message}
+   UI.fillNotifications();break}
+  case 'notif-allow':if('Notification' in window)try{await Notification.requestPermission()}catch(x){}UI.fillNotifications();break;
   case 'upd-on':case 'upd-off':store.set('autoupdate',t.dataset.act==='upd-on'?null:'off');UI.fillSettings();break;
   case 'upd-notes':showNotes();break;
+  case 'bg-pick':{
+   const err=$('#bgErr'),f=await pickImage();if(!f)break;
+   if(err)err.textContent='';t.disabled=true;
+   try{await Theme.setImage(f)}catch(x){const e2=$('#bgErr');if(e2)e2.textContent=x.message}
+   t.disabled=false;UI.render();break}
+  case 'bg-clear':Theme.clear();UI.render();break;
   case 'upd-get':{
    const err=$('#updErr');err.textContent='';t.disabled=true;
    try{await saveLatest()}catch(x){err.textContent='could not download: '+x.message}
@@ -4613,6 +5295,13 @@ document.addEventListener('keydown',e=>{
  else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply();
  else if(e.key==='Escape'&&UI.S.side&&!$('#overlay .scrim'))UI.closeSide()});
 document.addEventListener('input',e=>{if(e.target.id==='composer')UI.acUpdate()});
+// Settings → Appearance sliders restyle live; moving one switches to the image theme
+document.addEventListener('input',e=>{
+ const k={bgBlur:'blur',bgTone:'tone',bgOp:'op'}[e.target.id];
+ if(!k||!Theme.has())return;
+ Theme.setCfg({[k]:+e.target.value});
+ if(Theme.choice()!=='image'){store.set('theme','image');Theme.apply(true);UI.render()}
+ else{Theme.apply();UI.fillAppearance()}});
 // the profile form edits a draft; the preview follows it, and SAVE sends it
 document.addEventListener('input',e=>{
  const k={pfDisplay:'display',pfStatus:'status',pfBio:'bio'}[e.target.id];
@@ -4666,6 +5355,7 @@ M.on('change',()=>UI.renderSoon());
 M.on('status',()=>UI.render());
 M.on('message',(peer,text)=>UI.notify(peer,text));
 M.on('backlog',(n,chats)=>summary(n,chats));
+M.on('outdated',msg=>outdatedPopup(msg));
 M.on('call',()=>{UI.renderCall();UI.render()});
 // closing the tab mid-call would drop it without telling the other side
 window.addEventListener('beforeunload',e=>{const c=M.voice.call;if(c&&c.state!=='ringing'){e.preventDefault();e.returnValue=''}});
@@ -4725,6 +5415,24 @@ async function checkUpdate(){
   '<div class="pnotes">'+notesHTML(VERSION,c.html)+'</div>'+
   '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="later">LATER</button>'+dlButton(c)+'</div>',
   k=>{if(k==='get')toast('saved marmot.html — open it and close this tab',8000)})}
+/** The server turned something away because this client is too old to speak with the
+    others: say so, with the server's client to swap in now or to download. Once per page. */
+let outdatedShown=false;
+async function outdatedPopup(msg){
+ if(outdatedShown)return;outdatedShown=true;
+ let c=null;
+ try{const base=await updateBase();const r=base&&await getJSON(base+'/api/client',20000);
+  if(r&&typeof r.v==='string'&&typeof r.html==='string'&&r.html.includes("const VERSION='"+r.v+"'"))c=r}
+ catch(e){console.warn('Marmot could not fetch the current client:',e.message)}
+ popup(brandHTML()+'<h3 style="margin-top:16px">Update needed</h3>'+
+  '<div class="note" style="margin:0">'+esc(msg||'Your client is using the old group chat protocol, please update your client')+'</div>'+
+  (c?'':'<div class="note">The server could not send the new version just now. Try again in a moment.</div>')+
+  '<div class="modal-foot"><span class="grow"></span><button class="tbtn" data-u="later">LATER</button>'+
+  (c?'<button class="tbtn" data-u="swap">UPDATE NOW</button>'+dlButton(c):'')+'</div>',
+  k=>{
+   if(k==='later')outdatedShown=false;
+   if(k==='get')toast('saved marmot.html — open it and close this tab',8000);
+   if(k==='swap'&&c){window.__marmotUpdate={from:VERSION,to:c.v,html:c.html};document.open();document.write(c.html);document.close()}})}
 function brandHTML(){return '<div class="brand" style="padding:0">'+LOGO+'<b>MARMOT</b><div class="ver">v'+esc(VERSION)+'</div></div>'}
 function dlButton(c){
  const url=URL.createObjectURL(new Blob([c.html],{type:'text/html'}));
@@ -4773,7 +5481,7 @@ async function saveLatest(){
 
 /* ---------- boot ---------- */
 (async function boot(){
- document.documentElement.dataset.theme=store.get('theme')||'dark';
+ Theme.apply();
  const subtle=window.crypto&&crypto.subtle;
  let ok=!!subtle;
  if(ok){try{await crypto.subtle.generateKey({name:'X25519'},false,['deriveBits']);await crypto.subtle.generateKey({name:'Ed25519'},false,['sign'])}catch(e){ok=false}}
@@ -4794,7 +5502,7 @@ async function saveLatest(){
  store.set('seen',VERSION);
  const s=store.sget();
  if(s&&s.token){
-  try{await M.resume(s);UI.render();return}
+  try{await M.resume(s);UI.render();UI.accountPrefs();return}
   catch(e){store.sset(null);UI.auth('login',e.network?e.message:'session ended — sign in again');return}}
  UI.auth('login');
 })();

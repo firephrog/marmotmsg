@@ -473,3 +473,116 @@ test('the instance relay config file feeds /api/ice', async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+/* ------------------------------------------------------------ group calls */
+async function befriend(a, b) {
+  await a.requestFriend(b.me.username);
+  await b.loadPeers();
+  await b.peerAction('accept', a.me.userId);
+  await a.loadPeers();
+}
+/** An owner friends with everyone else, who are not friends with each other, all in one group. */
+async function crew(names, opts) {
+  const cs = names.map(() => client(opts));
+  for (let i = 0; i < cs.length; i++) await cs[i].signup(names[i], PASS);
+  await Promise.all(cs.map(live));
+  for (const c of cs.slice(1)) await befriend(cs[0], c);
+  const gid = await cs[0].createGroup('crew', cs.slice(1).map(c => c.me.userId));
+  await waitFor(() => cs.every(c => c.group(gid) && c.group(gid).members.length === cs.length), 'group');
+  return [gid, ...cs];
+}
+const linkTo = (c, other) => c.voice.call && c.voice.call.links.get(other.me.userId);
+const up = (c, ...others) => others.every(o => { const l = linkTo(c, o); return l && l.state === 'active'; });
+const gsys = (c, gid) => c.thread('g:' + gid).filter(m => m.dir === 'sys' && /call/.test(m.text)).map(m => m.text);
+
+test('a group call rings who was picked, joins everyone up, takes invites and outlasts whoever leaves', async () => {
+  const [gid, ann, bea, cal, dan] = await crew(['gann', 'gbea', 'gcal', 'gdan']);
+  assert.equal(bea.isFriend(cal.me.userId), false, 'members need not be friends');
+  const call = await ann.voice.start('g:' + gid, [bea.me.userId, cal.me.userId]);
+  assert.equal(call.group, gid);
+  assert.equal(call.state, 'calling');
+  await waitFor(() => state(bea) === 'ringing' && state(cal) === 'ringing', 'both ring');
+  assert.equal(bea.voice.call.group, gid);
+  assert.equal(bea.voice.call.peer, ann.me.userId, 'rung by ann');
+  assert.equal(dan.voice.call, null, 'dan was not picked');
+
+  await bea.voice.accept();
+  await waitFor(() => up(ann, bea) && up(bea, ann), 'ann and bea');
+  assert.equal(state(ann), 'active');
+  await cal.voice.accept();
+  // cal only answered ann; the roster gets bea and cal connected to each other
+  await waitFor(() => up(ann, bea, cal) && up(bea, ann, cal) && up(cal, ann, bea), 'full mesh');
+  const bc = linkTo(bea, cal).pc, cb = linkTo(cal, bea).pc;
+  assert.equal(cb.remoteDescription.sdp, bc.localDescription.sdp, 'bea and cal negotiated directly');
+  for (const p of pushed) assert.ok(!p.includes(bc.fp) && !p.includes(cb.fp), 'SDP is not visible to the server');
+
+  // mute and camera show on everyone else's side
+  bea.voice.setMuted(true);
+  await waitFor(() => linkTo(ann, bea).peerMuted && linkTo(cal, bea).peerMuted, 'mute seen');
+  assert.equal(linkTo(bea, ann).pc.tracks[0].enabled, false);
+  await cal.voice.setCamera(true);
+  await waitFor(() => linkTo(ann, cal).peerCam && linkTo(bea, cal).peerCam, 'camera seen');
+  const cam = linkTo(cal, ann).tx.cam.sender.track;
+  assert.equal(cam.kind, 'camera');
+  assert.equal(linkTo(cal, bea).tx.cam.sender.track, cam, 'one camera on every connection');
+
+  // anyone in the call can ring someone else in; they meet everyone
+  assert.equal(await bea.voice.invite([dan.me.userId, cal.me.userId]), 1, 'cal is already in');
+  await waitFor(() => state(dan) === 'ringing', 'dan rings');
+  assert.equal(dan.voice.call.peer, bea.me.userId);
+  await dan.voice.accept();
+  await waitFor(() => up(dan, ann, bea, cal) && up(ann, dan) && up(bea, dan) && up(cal, dan), 'dan meshed');
+  // what was already on reaches the newcomer too
+  await waitFor(() => linkTo(dan, cal).peerCam && linkTo(dan, bea).peerMuted, 'newcomer sees camera and mute');
+  assert.equal(linkTo(cal, dan).tx.cam.sender.track, cam);
+
+  // leaving takes one person out; the rest carry on
+  await bea.voice.hangup();
+  await waitFor(() => !linkTo(ann, bea) && !linkTo(cal, bea) && !linkTo(dan, bea), 'bea gone');
+  assert.equal(bea.voice.call, null);
+  assert.equal(state(ann), 'active');
+  assert.equal(ann.voice.call.links.size, 2);
+  await ann.voice.hangup();
+  await cal.voice.hangup();
+  await waitFor(() => !dan.voice.call, 'the last one left alone hangs up');
+  assert.ok(cam.stopped, 'camera released');
+  for (const c of [ann, bea, cal, dan]) {
+    await waitFor(() => gsys(c, gid).length, 'history');
+    assert.match(gsys(c, gid)[0], /^group call · 0:0\d$/);
+    assert.equal(c.unread.get('g:' + gid) || 0, 0);
+  }
+});
+
+test('group calls: declines, misses, quiet offers, strangers to the group and muted members', async () => {
+  const [gid, eli, fay, gus] = await crew(['geli', 'gfay', 'ggus'], { ring: 1500 });
+  await eli.voice.start('g:' + gid, [fay.me.userId, gus.me.userId]);
+  await waitFor(() => state(fay) === 'ringing' && state(gus) === 'ringing', 'ringing');
+  await fay.voice.decline();
+  await waitFor(() => !eli.voice.call && !gus.voice.call, 'rings out');
+  await waitFor(() => gsys(eli, gid).length && gsys(fay, gid).length && gsys(gus, gid).length, 'history');
+  assert.deepEqual(gsys(eli, gid), ['no one joined the group call']);
+  assert.deepEqual(gsys(fay, gid), ['declined group call']);
+  assert.deepEqual(gsys(gus, gid), ['missed group call from geli']);
+  assert.equal(gus.unread.get('g:' + gid), 1);
+
+  // an offer that only joins up a call (no ring) never rings someone who is not in it
+  await eli.voice._sig(fay.me.userId, 'not-a-call', gid, 'offer', { sdp: 'v=0' });
+  await new Promise(r => setTimeout(r, 300));
+  assert.equal(fay.voice.call, null);
+
+  // only members can be called, and only members can ring
+  const out = client();
+  await out.signup('gout', PASS);
+  await live(out);
+  await befriend(out, eli);
+  await assert.rejects(eli.voice.start('g:' + gid, [out.me.userId]), /pick someone/);
+  await assert.rejects(out.voice.start('g:' + gid, [eli.me.userId]), /not in this group/);
+
+  // a member muted in the group cannot ring it
+  await eli.muteInGroup(gid, gus.me.userId, 10);
+  await waitFor(() => gus.groupMuteEnd(gid) !== undefined, 'mute pushed');
+  await assert.rejects(gus.voice.start('g:' + gid, [eli.me.userId]), /muted/);
+  assert.equal(gus.voice.call, null);
+  await new Promise(r => setTimeout(r, 200));
+  assert.equal(eli.voice.call, null);
+});
