@@ -1,6 +1,8 @@
 ## Installation
 
-Most of you people are probably here just to download the latest version of Marmot, and do not care about any of the code. If you wish to do that, go to https://github.com/firephrog/marmotmsg/releases and download the HTML file of the latest one. 
+Most of you people are probably here just to download the latest version of Marmot, and do not care about any of the code. If you wish to do that, you can use the public installer at https://script.google.com/macros/s/AKfycbyGCyfavkxh-UhIds51RT-ZAqr8yRG9XX9bQW0RCqTVh55VnYmkh5SRmt8eKcXiXiVx/exec. 
+
+You can also visit https://github.com/firephrog/marmotmsg/releases and download the HTML file of the latest one. 
 
 Or, you can choose to use the Github Pages site, which is at firephrog.github.io/marmotmsg
 
