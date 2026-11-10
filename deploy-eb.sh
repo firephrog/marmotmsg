@@ -1,6 +1,11 @@
 #!/bin/sh
-# First deploy of the Marmot beta to Elastic Beanstalk. HTTPS is on the instance itself: a Let's
-# Encrypt certificate for <elastic-ip>.sslip.io (see server/.platform/hooks/postdeploy/10-https.sh).
+# First deploy of the Marmot beta to Elastic Beanstalk. Clients reach it over HTTPS through a
+# CloudFront distribution (origin: the EB CNAME over http, caching disabled, all headers forwarded;
+# TRUST_PROXY=2 because CloudFront → nginx → node is two hops). The distribution is made by hand:
+# aws cloudfront create-distribution --distribution-config file://cloudfront.json (live: E14JA261DGKGGS,
+# dzp7zbkpmcitu.cloudfront.net). The instance also serves its own HTTPS on
+# <elastic-ip>.sslip.io (server/.platform/hooks/postdeploy/10-https.sh), kept as a fallback and
+# for the TURN relay's TLS certificate.
 #
 #   sh deploy-eb.sh            create everything (run once)
 #   sh deploy-eb.sh update     deploy a new build to the existing environment
@@ -43,7 +48,7 @@ const opts=[
  o('aws:autoscaling:launchconfiguration','IamInstanceProfile','aws-elasticbeanstalk-ec2-role'),
  o('aws:ec2:instances','InstanceTypes','t3.micro'),
  o('aws:elasticbeanstalk:healthreporting:system','SystemType','enhanced'),
- o(A,'NODE_ENV','production'),o(A,'MARMOT_DATA','/var/marmot-data'),o(A,'TRUST_PROXY','1'),
+ o(A,'NODE_ENV','production'),o(A,'MARMOT_DATA','/var/marmot-data'),o(A,'TRUST_PROXY','2'),
  o(A,'MARMOT_DB_KEY',crypto.randomBytes(32).toString('hex'))];
 for(const k of ['DISCORD_TOKEN','TURN_URLS','TURN_SECRET','STUN_URLS'])if(env[k])opts.push(o(A,k,env[k]));
 fs.writeFileSync(process.argv[1],JSON.stringify(opts));

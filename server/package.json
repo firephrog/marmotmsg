@@ -4,7 +4,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/e2e.test.js test/discord.test.js test/voice.test.js test/admin.test.js test/chatfilter.test.js test/update.test.js test/profile.test.js test/groups.test.js"
+    "test": "node --test test/e2e.test.js test/discord.test.js test/voice.test.js test/admin.test.js test/chatfilter.test.js test/update.test.js test/profile.test.js test/groups.test.js test/servers.test.js"
   },
   "description": "Marmot server: accounts, prekeys, encrypted mailbox and blob store",
   "dependencies": {

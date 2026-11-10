@@ -155,6 +155,42 @@ CREATE TABLE IF NOT EXISTS user_tags (
   PRIMARY KEY (user_id, tag_id)
 );
 CREATE INDEX IF NOT EXISTS user_tags_tag ON user_tags(tag_id);
+-- Servers: communities with text and voice channels, roles and permissions (see servers.js).
+-- Unlike direct and group chats these are not end-to-end encrypted: the server keeps channel
+-- history, so people who join later can read it and permissions can be enforced. Everything
+-- but ids and timestamps is sealed, and members are found by a keyed tag, as in groups.
+CREATE TABLE IF NOT EXISTS servers (
+  id         TEXT PRIMARY KEY,
+  created    INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {name, owner, createdBy, roles, channels, bans}
+);
+CREATE TABLE IF NOT EXISTS server_members (
+  server_id  TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+  user_tag   TEXT NOT NULL,
+  body       TEXT NOT NULL,              -- sealed {userId, joined, roles}
+  PRIMARY KEY (server_id, user_tag)
+);
+CREATE INDEX IF NOT EXISTS server_members_user ON server_members(user_tag);
+CREATE TABLE IF NOT EXISTS server_invites (
+  code_hash  TEXT PRIMARY KEY,           -- sha256 of the code
+  server_id  TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+  expires    INTEGER NOT NULL,
+  uses       INTEGER NOT NULL,
+  blob       TEXT                        -- an encrypted server's keys, locked by the part of the code the server never sees
+);
+CREATE TABLE IF NOT EXISTS server_msgs (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  server_id  TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+  channel    TEXT NOT NULL,
+  ts         INTEGER NOT NULL,
+  body       TEXT NOT NULL               -- sealed {from, text, re}
+);
+CREATE INDEX IF NOT EXISTS server_msgs_chan ON server_msgs(server_id, channel, id);
+-- A server's icon, apart from its settings so they stay small (they are read on every request).
+CREATE TABLE IF NOT EXISTS server_icons (
+  server_id  TEXT PRIMARY KEY REFERENCES servers(id) ON DELETE CASCADE,
+  body       TEXT NOT NULL               -- sealed data: URL
+);
 `;
 
 /** Columns added after a table first shipped; applied to older databases on open. */
@@ -166,7 +202,8 @@ const MIGRATIONS = [
   ['users', 'last_ip', 'ALTER TABLE users ADD COLUMN last_ip TEXT'],   // sealed; what an IP ban bans
   ['users', 'profile', 'ALTER TABLE users ADD COLUMN profile TEXT'],
   ['users', 'profile_v', 'ALTER TABLE users ADD COLUMN profile_v INTEGER NOT NULL DEFAULT 0'],
-  ['users', 'presence', "ALTER TABLE users ADD COLUMN presence TEXT NOT NULL DEFAULT 'auto'"]
+  ['users', 'presence', "ALTER TABLE users ADD COLUMN presence TEXT NOT NULL DEFAULT 'auto'"],
+  ['server_invites', 'blob', 'ALTER TABLE server_invites ADD COLUMN blob TEXT']
 ];
 
 function open(opts) {
@@ -283,8 +320,45 @@ function open(opts) {
     stagCounts: db.prepare('SELECT tag_id, COUNT(*) n FROM user_tags GROUP BY tag_id'),
     userStags: db.prepare('SELECT s.* FROM user_tags u JOIN staff_tags s ON s.id = u.tag_id WHERE u.user_id = ? ORDER BY u.ts'),
     addUserStag: db.prepare('INSERT OR IGNORE INTO user_tags (user_id, tag_id, ts) VALUES (?, ?, ?)'),
-    delUserStag: db.prepare('DELETE FROM user_tags WHERE user_id = ? AND tag_id = ?')
+    delUserStag: db.prepare('DELETE FROM user_tags WHERE user_id = ? AND tag_id = ?'),
+    insertServer: db.prepare('INSERT INTO servers (id, created, body) VALUES (?, ?, ?)'),
+    server: db.prepare('SELECT * FROM servers WHERE id = ?'),
+    setServer: db.prepare('UPDATE servers SET body = ? WHERE id = ?'),
+    deleteServer: db.prepare('DELETE FROM servers WHERE id = ?'),
+    putServerMember: db.prepare(`INSERT INTO server_members (server_id, user_tag, body) VALUES (?, ?, ?)
+                                 ON CONFLICT (server_id, user_tag) DO UPDATE SET body = excluded.body`),
+    serverMember: db.prepare('SELECT body FROM server_members WHERE server_id = ? AND user_tag = ?'),
+    delServerMember: db.prepare('DELETE FROM server_members WHERE server_id = ? AND user_tag = ?'),
+    serverMembersOf: db.prepare('SELECT user_tag, body FROM server_members WHERE server_id = ?'),
+    countServerMembers: db.prepare('SELECT COUNT(*) n FROM server_members WHERE server_id = ?'),
+    serversOfUser: db.prepare('SELECT server_id FROM server_members WHERE user_tag = ?'),
+    insertServerInvite: db.prepare('INSERT INTO server_invites (code_hash, server_id, expires, uses, blob) VALUES (?, ?, ?, ?, ?)'),
+    serverInvite: db.prepare('SELECT * FROM server_invites WHERE code_hash = ?'),
+    useServerInvite: db.prepare('UPDATE server_invites SET uses = uses - 1 WHERE code_hash = ?'),
+    expireServerInvites: db.prepare('DELETE FROM server_invites WHERE expires < ? OR uses <= 0'),
+    insertServerMsg: db.prepare("INSERT INTO server_msgs (server_id, channel, ts, body) VALUES (?, ?, ?, '')"),
+    sealServerMsg: db.prepare('UPDATE server_msgs SET body = ? WHERE id = ?'),
+    serverMsg: db.prepare('SELECT * FROM server_msgs WHERE server_id = ? AND id = ?'),
+    serverMsgs: db.prepare('SELECT * FROM server_msgs WHERE server_id = ? AND channel = ? AND id < ? ORDER BY id DESC LIMIT ?'),
+    delServerMsg: db.prepare('DELETE FROM server_msgs WHERE server_id = ? AND id = ?'),
+    delChannelMsgs: db.prepare('DELETE FROM server_msgs WHERE server_id = ? AND channel = ?'),
+    lastServerMsgs: db.prepare('SELECT channel, MAX(id) m FROM server_msgs WHERE server_id = ? GROUP BY channel'),
+    serverIcon: db.prepare('SELECT body FROM server_icons WHERE server_id = ?'),
+    putServerIcon: db.prepare('INSERT INTO server_icons (server_id, body) VALUES (?, ?) ON CONFLICT (server_id) DO UPDATE SET body = excluded.body'),
+    delServerIcon: db.prepare('DELETE FROM server_icons WHERE server_id = ?')
   };
+  const smTag = userId => S.tag('server-member|' + userId);
+  const smCtx = (serverId, tag) => 'server_members:' + serverId + ':' + tag;
+  const serverMembers = serverId => q.serverMembersOf.all(serverId).map(r => S.open(r.body, smCtx(serverId, r.user_tag)));
+  const serverIdsOf = userId => q.serversOfUser.all(smTag(userId)).map(r => r.server_id);
+  /** Removes one member; a server nobody is left in is deleted. Returns whether they were in it. */
+  const leaveServer = (serverId, userId) => {
+    const gone = q.delServerMember.run(serverId, smTag(userId)).changes > 0;
+    if (gone && !q.countServerMembers.get(serverId).n) q.deleteServer.run(serverId);
+    return gone;
+  };
+  const openServerRow = id => { const row = q.server.get(id); return row && S.open(row.body, 'servers:' + row.id); };
+  const openServerMsg = r => r && Object.assign({ id: r.id, channel: r.channel, ts: r.ts }, S.open(r.body, 'server_msgs:' + r.id));
   const openStag = r => r && Object.assign({ id: r.id, created: r.created }, S.open(r.body, 'staff_tags:' + r.id));
 
   const memberTag = userId => S.tag('discord-member|' + userId);
@@ -347,6 +421,7 @@ function open(opts) {
       }
       q.delUserMemberships.run(memberTag(id));
       q.delUserApps.run(gmTag(id));
+      for (const s of serverIdsOf(id)) leaveServer(s, id);
       q.deleteUser.run(id);
       return [...others];
     }),
@@ -438,6 +513,8 @@ function open(opts) {
     appliedGroups: userId => q.appsOfUser.all(gmTag(userId)).map(r => r.group_id),
     /** Whether two users are in at least one group together. */
     shareGroup: (a, b) => { const tb = gmTag(b); return groupIdsOf(a).some(g => !!q.groupMember.get(g, tb)); },
+    /** Whether two users are both in some end-to-end encrypted server (they may pass its keys to each other). */
+    shareE2eeServer: (a, b) => { const tb = smTag(b); return serverIdsOf(a).some(s => !!q.serverMember.get(s, tb) && !!(openServerRow(s) || {}).e2ee); },
     /** Runs fn inside one transaction. */
     tx: fn => db.transaction(fn)(),
 
@@ -609,10 +686,70 @@ function open(opts) {
     /** Puts a tag on a user or takes it off; true if that changed anything. */
     setUserStaffTag: (userId, tagId, on) => (on ? q.addUserStag.run(userId, tagId, Date.now()) : q.delUserStag.run(userId, tagId)).changes > 0,
 
+    /* ---- servers ---- */
+    /** Creates a server (`body` is its sealed settings) with its owner as the first member; returns its id. */
+    createServer: db.transaction((owner, body) => {
+      const id = crypto.randomBytes(12).toString('hex'), now = Date.now(), tag = smTag(owner);
+      q.insertServer.run(id, now, S.seal(body, 'servers:' + id));
+      q.putServerMember.run(id, tag, S.seal({ userId: owner, joined: now, roles: [] }, smCtx(id, tag)));
+      return id;
+    }),
+    server(id) {
+      const row = q.server.get(String(id));
+      return row && Object.assign({ id: row.id, created: row.created }, S.open(row.body, 'servers:' + row.id));
+    },
+    /** Replaces a server's sealed settings (everything but id and created). */
+    setServer(id, body) {
+      const b = Object.assign({}, body); delete b.id; delete b.created;
+      q.setServer.run(S.seal(b, 'servers:' + id), id);
+    },
+    deleteServer: id => q.deleteServer.run(id),
+    /** A server's icon as a data: URL, or null. */
+    serverIcon(id) { const r = q.serverIcon.get(String(id)); return r ? S.open(r.body, 'server_icons:' + id) : null; },
+    /** Sets (or, with null, removes) a server's icon. */
+    setServerIcon(id, icon) { if (icon) q.putServerIcon.run(id, S.seal(icon, 'server_icons:' + id)); else q.delServerIcon.run(id); },
+    serverMembers,
+    serverIdsOf,
+    serverMemberCount: id => q.countServerMembers.get(id).n,
+    /** One member as {userId, joined, roles}, or null. */
+    serverMember(serverId, userId) {
+      const tag = smTag(userId), r = q.serverMember.get(serverId, tag);
+      return r ? S.open(r.body, smCtx(serverId, tag)) : null;
+    },
+    /** Adds a member or replaces their record. */
+    putServerMember(serverId, m) {
+      const tag = smTag(m.userId);
+      q.putServerMember.run(serverId, tag, S.seal({ userId: m.userId, joined: m.joined, roles: m.roles || [] }, smCtx(serverId, tag)));
+    },
+    leaveServer: db.transaction(leaveServer),
+    createServerInvite: (code, serverId, uses, expires, blob) => q.insertServerInvite.run(sha(code), serverId, expires, uses, blob || null),
+    /** An invite's encrypted key blob (an end-to-end encrypted server's), or null. */
+    serverInviteBlob(code) { const inv = q.serverInvite.get(sha(code)); return inv && inv.blob || null; },
+    /** The server an invite code is for, or null if it is unknown, used up or expired. */
+    serverInvite(code) {
+      const inv = q.serverInvite.get(sha(code));
+      return inv && inv.expires >= Date.now() && inv.uses > 0 ? inv.server_id : null;
+    },
+    useServerInvite: code => q.useServerInvite.run(sha(code)),
+    /** Stores a channel message {from, text, re}; returns it with its id and time. */
+    addServerMsg: db.transaction((serverId, channel, m) => {
+      const ts = Date.now(), id = Number(q.insertServerMsg.run(serverId, channel, ts).lastInsertRowid);
+      q.sealServerMsg.run(S.seal(m, 'server_msgs:' + id), id);
+      return Object.assign({ id, channel, ts }, m);
+    }),
+    serverMsg: (serverId, id) => openServerMsg(q.serverMsg.get(serverId, id)),
+    /** Up to `limit` messages of a channel older than `before` (an id), newest first. */
+    serverMsgs: (serverId, channel, before, limit) => q.serverMsgs.all(serverId, channel, before, limit).map(openServerMsg),
+    delServerMsg: (serverId, id) => q.delServerMsg.run(serverId, id).changes > 0,
+    delChannelMsgs: (serverId, channel) => q.delChannelMsgs.run(serverId, channel),
+    /** The newest message id in each channel of a server, as {channel: id}. */
+    lastServerMsgs: serverId => Object.fromEntries(q.lastServerMsgs.all(serverId).map(r => [r.channel, r.m])),
+
     sweep(now, envelopeTtl) {
       q.expireSessions.run(now);
       q.expireEnvelopes.run(now - envelopeTtl);
       q.expireInvites.run(now);
+      q.expireServerInvites.run(now);
       q.expireMutes.run(now);
     }
   };

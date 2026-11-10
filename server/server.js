@@ -21,6 +21,7 @@ const { WebSocketServer } = require('ws');
 const store = require('./db');
 const { Discord, Bridge } = require('./discord');
 const admin = require('./admin');
+const servers = require('./servers');
 
 const VERSION = '0.6.3';
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;
@@ -538,8 +539,9 @@ function createServer(opts) {
     const row = db.userRow(req.params.id);
     if (!row) throw new HttpError(404, 'no such user');
     if (row.id === me.id) throw bad('cannot open a session with yourself');
-    // Only friends and fellow group members can start a session, so strangers cannot drain someone's prekeys.
-    if (!canReach(me.id, row.id)) throw new HttpError(403, 'you can only message friends');
+    // Only friends, fellow group members and fellow members of an encrypted server can start a
+    // session, so strangers cannot drain someone's prekeys.
+    if (!canReach(me.id, row.id, true)) throw new HttpError(403, 'you can only message friends');
     const u = db.publicUser(row);
     const opk = db.takePrekey(row.id);
     const left = db.prekeyCount(row.id);
@@ -659,12 +661,16 @@ function createServer(opts) {
    * Friends can always reach each other. Two people who are not friends can
    * when they share a group, unless either one has blocked the other.
    */
-  function canReach(a, b) {
+  function canReach(a, b, skey) {
     if (db.isFriend(a, b)) return true;
-    if (!db.shareGroup(a, b)) return false;
+    if (!db.shareGroup(a, b) && !(skey && db.shareE2eeServer(a, b))) return false;
     const ab = db.peer(a, b), ba = db.peer(b, a);
     return !(ab && ab.state === 'blocked') && !(ba && ba.state === 'blocked');
   }
+  /* Members of the same end-to-end encrypted server pass its keys to each other over
+     their own sessions (see servers.js), friends or not: they may open a session, and
+     send envelopes the client labels `skey`. Their clients take nothing else from
+     someone they reach only that way. */
   /*
    * Inside a group there are three ranks: the owner, the group's moderators, and
    * everyone else. These are separate from the server's own staff (admin.js).
@@ -1032,7 +1038,7 @@ function createServer(opts) {
           if (typeof to !== 'string') throw bad('malformed envelope');
           if (to === me.id) throw bad('cannot send to yourself');
           if (!db.userRow(to) || (inGroup && !db.inGroup(g, to))) { if (m.optional === true) return null; throw new HttpError(404, 'recipient does not exist'); }
-          if (!canReach(me.id, to)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
+          if (!canReach(me.id, to, m.skey === true && !g)) { if (m.optional === true) return null; throw new HttpError(403, 'you can only message friends'); }
           return { to, payload: m.payload, say: m.say === true, g };
         };
         if (!Array.isArray(m.to)) return [one(m.to, false)];
@@ -1064,7 +1070,9 @@ function createServer(opts) {
   app.post('/api/account/delete', strict, wrap(req => {
     const me = auth(req);
     if (!b64bytes((req.body || {}).auth, 32) || !checkVerifier(me.verifier, req.body.auth)) throw new HttpError(401, 'wrong password');
+    const sids = db.serverIdsOf(me.id);
     const others = db.deleteUser(me.id);
+    srv.userGone(me.id, sids);
     hub.revoke(me.id);
     // a moderator's appointment is by username: it must not pass to whoever takes the name next
     const was = staff.of(me.username);
@@ -1079,6 +1087,10 @@ function createServer(opts) {
     text: profileText,
     // a staff tag went on or came off: clients showing the profile refetch it, and its owner their standing
     profileChanged: id => { if (!db.userRow(id)) return; db.bumpProfile(id); pushProfile(db.userRow(id)); hub.push(id, { t: 'me' }); } });
+
+  const srv = servers.mount(app, { db, wrap, auth, HttpError, text: profileText, limiter, checkMute, brief: userBrief,
+    voiceGrace: opts.voiceGrace,
+    hub: { push: (u, m) => hub.push(u, m), online: u => hub.sockets.has(u) } });
 
   // Serving the client is a convenience; the same file works opened from disk.
   // ../client in the repo; ./client in a deployment bundle, where the server directory is the root.
@@ -1108,7 +1120,7 @@ function createServer(opts) {
 
   /* ------------------------------------------------------------- push */
   const server = http.createServer(app);
-  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
 
   const hub = {
     sockets: new Map(),   // userId -> Set<ws>
@@ -1157,7 +1169,7 @@ function createServer(opts) {
     let r = reachCache.get(k);
     if (!r || r.until < now) {
       if (reachCache.size > 10000) reachCache.clear();
-      reachCache.set(k, r = { ok: !!db.userRow(m.to) && canReach(ws.userId, m.to), until: now + 15000 });
+      reachCache.set(k, r = { ok: !!db.userRow(m.to) && (canReach(ws.userId, m.to) || srv.sameVoice(ws.userId, m.to)), until: now + 15000 });
     }
     if (!r.ok) return;
     const set = hub.sockets.get(m.to);
@@ -1174,10 +1186,12 @@ function createServer(opts) {
       let m;
       try { m = JSON.parse(data); } catch (e) { return ws.close(4000, 'bad frame'); }
       if (ws.userId) {
-        // A signed-in socket says two things: whether its user has gone idle, and call audio
-        // relayed when WebRTC cannot connect at all. All writes go through /api/commit.
+        // A signed-in socket says three things: whether its user has gone idle, call audio
+        // relayed when WebRTC cannot connect at all, and voice channel call signals (servers.js).
+        // All writes go through /api/commit.
         if (m.t === 'idle' && typeof m.idle === 'boolean' && ws.idle !== m.idle) { ws.idle = m.idle; presenceChanged(ws.userId, true); }
         else if (m.t === 'vr') relayFrame(ws, m);
+        else if (m.t === 'vsig') srv.signal(ws, m);
         return;
       }
       if (m.t !== 'auth' || typeof m.token !== 'string') return ws.close(4000, 'auth first');
@@ -1197,7 +1211,7 @@ function createServer(opts) {
     ws.on('close', () => {
       clearTimeout(timeout);
       const set = ws.userId && hub.sockets.get(ws.userId);
-      if (set) { set.delete(ws); if (!set.size) hub.sockets.delete(ws.userId); presenceChanged(ws.userId); }
+      if (set) { set.delete(ws); if (!set.size) { hub.sockets.delete(ws.userId); srv.offline(ws.userId); } presenceChanged(ws.userId); }
     });
   });
 
@@ -1220,7 +1234,7 @@ function createServer(opts) {
     bridge.started = bridge.start().catch(e => console.error('[discord] could not start:', e.message));
   }
 
-  server.on('close', () => { stopped = true; clearInterval(heartbeat); clearInterval(sweeper); for (const t of prTimers.values()) clearTimeout(t); wss.close(); if (bridge) bridge.stop(); });
+  server.on('close', () => { stopped = true; clearInterval(heartbeat); clearInterval(sweeper); for (const t of prTimers.values()) clearTimeout(t); wss.close(); srv.stop(); if (bridge) bridge.stop(); });
 
   return { app, server, db, hub, staff, get bridge() { return bridge; } };
 }

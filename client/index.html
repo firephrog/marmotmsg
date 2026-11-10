@@ -164,7 +164,7 @@ button:disabled{opacity:.4;cursor:default}
 .hint.warn{color:var(--warn)}
 .ping{color:var(--accent);font-weight:600}
 .msg.out .body .ping{color:inherit;text-decoration:underline}
-.ping.me{background:var(--accent);color:var(--accent-ink);padding:0 3px}
+.ping.me{display:inline;width:auto;margin:0;border:0;background:var(--accent);color:var(--accent-ink);padding:0 3px}
 .msg.out .body .ping.me{background:var(--accent-ink);color:var(--accent);text-decoration:none}
 .msg.pinged .body{box-shadow:inset 3px 0 0 var(--accent)}
 .badge.at{background:var(--warn)}
@@ -503,6 +503,71 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
 .hint.dirty{margin-left:0;color:var(--warn)}
 @media (max-width:1180px){.side{position:absolute;top:0;right:0;bottom:0;z-index:15;box-shadow:-18px 0 44px rgba(0,0,0,.32)}}
 @media (max-width:1100px){.pgrid{grid-template-columns:minmax(0,1fr)}.pgrid .preview{position:static;order:-1;max-width:340px}}
+/* servers: a narrow list of servers, then the open server's channels beside its chat and members */
+.app.srv-col .col{width:236px}
+.av.stile{background:var(--row);color:var(--text);border:1px solid var(--line2);font-weight:600}
+.av.stile svg{width:15px;height:15px}
+.srow[aria-current=true] .av.stile{border-color:var(--accent);color:var(--accent-soft)}
+.sdot{display:inline-block;width:7px;height:7px;background:var(--accent)}
+.srv{flex:1;min-height:0;display:flex}
+.chans{width:224px;flex:none;display:flex;flex-direction:column;min-height:0;background:var(--list);border-right:1px solid var(--line)}
+.chans-head{display:flex;align-items:center;gap:8px;min-height:65px;padding:0 10px 0 16px;border-bottom:1px solid var(--line)}
+.chans-head .grow{flex:1;min-width:0}
+.chans-head .pane-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chans-head .tbtn{padding:6px 8px;font-size:9px}
+.chans-list{flex:1;overflow-y:auto;padding:4px 0 10px}
+.chans .grouplbl{padding:14px 16px 6px}
+.ch{display:flex;align-items:center;gap:8px;width:100%;min-height:32px;padding:6px 12px 6px 16px;font-size:13.5px;color:var(--muted);transition:background .15s,color .15s}
+button.ch:hover{background:var(--row);color:var(--text)}
+.ch[aria-current=true]{background:var(--row);color:var(--text);box-shadow:inset 2px 0 0 var(--accent)}
+.ch.live{color:var(--ok)}
+.ch .cn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch.unread{color:var(--text);font-weight:600}
+.ch.unread .cn::after{content:'';display:inline-block;width:6px;height:6px;margin-left:7px;vertical-align:2px;background:var(--accent)}
+.ch.locked{opacity:.5}
+.ch .badge{margin:0}
+.ci{width:14px;flex:none;display:inline-grid;place-items:center;font-family:'JetBrains Mono',monospace;color:var(--faint)}
+.ci svg{width:14px;height:14px}
+.ch .vn{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--dim)}
+.vusers{display:flex;flex-direction:column;gap:3px;padding:2px 10px 8px 38px}
+.vu{display:flex;align-items:center;gap:7px;min-width:0;font-size:12px;color:var(--muted)}
+.vu span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vu i{margin-left:auto;font-style:normal;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint)}
+.vu .av{width:20px;height:20px;font-size:8px}
+.chans-foot{border-top:1px solid var(--line);padding:10px 10px 10px 14px}
+.vnow{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ok)}
+.vnow>i{width:6px;height:6px;flex:none;background:currentColor}
+.vnow .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vnow .tbtn,.vnow .hang{padding:5px 7px;font-size:9px}
+.vnow.vmedia{margin-top:6px}.vnow.vmedia .tbtn{flex:1}
+.schat{flex:1;min-width:0;display:flex;flex-direction:column}
+.sbody{flex:1;min-height:0;display:flex}
+.scol{flex:1;min-width:0;display:flex;flex-direction:column}
+.smembers{display:none;width:220px;flex:none;overflow-y:auto;background:var(--list);border-left:1px solid var(--line);padding-bottom:10px}
+.sbody.mem .smembers{display:block}
+.smembers .grouplbl{padding:14px 14px 6px}
+.sm{display:flex;align-items:center;gap:9px;width:100%;padding:6px 14px;font-size:13px;transition:background .15s}
+.sm:hover{background:var(--row)}
+.sm .row-main{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.rolechip{color:var(--rc);border-color:var(--rc)}
+.modal.wide{width:640px}
+.ss-tabs{display:flex;flex-wrap:wrap;border:1px solid var(--line2);margin:14px 0}
+.ss-tabs button{flex:1;padding:8px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.06em;color:var(--dim);transition:background .2s,color .2s}
+.ss-tabs button[aria-pressed=true]{background:var(--accent-wash);color:var(--accent-soft)}
+.ss-list{border:1px solid var(--line2);background:var(--input);max-height:300px;overflow-y:auto}
+.ss-list .row-sub{font-size:11.5px}
+.perm{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+.perm:last-child{border-bottom:0}
+.perm input{accent-color:var(--accent);margin:3px 0 0;flex:none}
+.perm small{display:block;margin-top:2px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--dim)}
+.perm.off{opacity:.5;cursor:default}
+.rsw{width:12px;height:12px;flex:none;background:var(--rc)}
+.code{font-family:'JetBrains Mono',monospace;font-size:22px;letter-spacing:.14em;color:var(--accent-soft);padding:12px;margin-bottom:8px;border:1px dashed var(--accent);text-align:center;user-select:all}
+.code.long{font-size:14px;letter-spacing:.05em;overflow-wrap:anywhere}
+.msg .body.gone{opacity:.6;font-style:italic}.msg .body.gone svg{width:12px;height:12px;vertical-align:-1px}
+.ico-in{display:inline-flex;vertical-align:-2px}.ico-in svg{width:12px;height:12px}
+select.inp{cursor:pointer}
+@media (max-width:1100px){.sbody.mem .scol{display:none}.sbody.mem .smembers{flex:1;width:auto;border-left:0}}
 /* narrow screens: one column at a time */
 @media (max-width:820px){
  .rail{display:none}
@@ -523,6 +588,10 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
  .thread{padding:16px}
  .composer{margin:0 12px 12px}
  .pane.enter{animation-name:paneSide}
+ .app.srv-col .col{width:100%}
+ .chans{width:100%;border-right:0}
+ .srv.in-chan .chans{display:none}
+ .srv:not(.in-chan) .schat{display:none}
  .side{width:100%;border-left:0;z-index:16;box-shadow:none}
  .side .back{display:none}
 }
@@ -538,6 +607,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
     <div class="nav" id="nav">
       <button data-screen="messages" aria-current="page"><i class="dot"></i>Messages<span class="n" id="navUnread"></span></button>
       <button data-screen="peers"><i class="dot"></i>Peers<span class="n" id="navPeers"></span></button>
+      <button data-screen="servers"><i class="dot"></i>Servers<span class="n" id="navSrv"></span></button>
       <button data-screen="discord" id="navDiscord" class="hidden"><i class="dot"></i>Discord<span class="n" id="navDc"></span></button>
       <button data-screen="settings"><i class="dot"></i>Settings<span class="n"></span></button>
       <button data-screen="admin" id="navAdmin" class="hidden"><i class="dot"></i>Moderation<span class="n"></span></button>
@@ -563,6 +633,7 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
     <div class="tabs" id="tabs">
       <button data-screen="messages">CHATS<span class="n" id="tabUnread"></span></button>
       <button data-screen="peers">PEERS<span class="n" id="tabPeers"></span></button>
+      <button data-screen="servers">SERVERS<span class="n" id="tabSrv"></span></button>
       <button data-screen="discord" id="tabDiscord" class="hidden">DISCORD<span class="n" id="tabDc"></span></button>
       <button data-screen="settings">SETTINGS</button>
       <button data-screen="admin" id="tabAdmin" class="hidden">STAFF</button>
@@ -605,11 +676,11 @@ textarea.inp{display:block;resize:vertical;min-height:88px;font:400 13px/1.5 'Sp
    used automatically.
    ========================================================================== */
 const LOGO='<svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" fill="#151311"/><rect x=".5" y=".5" width="15" height="15" fill="none" stroke="#f0a92a"/><g transform="translate(1.75 1.25)"><g transform="scale(.8)"><line x2="5.5" stroke="#f0a92a" x1="1.5" y1="13.5" y2="13.5" stroke-width="1.5"/><line x2="14" stroke="#f0a92a" y2="2.5" x1="14" y1="14.5" stroke-width="2"/><line x2="9" stroke="#f0a92a" y2="2.5" x1="9" y1="14.5" stroke-width="2"/><polyline fill="none" stroke="#f0be72" points="5.5 14 1 14 7 2.5 15 2.5"/></g></g></svg>';
-const SERVER='https://3-232-71-161.sslip.io';
+const SERVER='https://dzp7zbkpmcitu.cloudfront.net';
 /* Tried in order when SERVER can't be reached. Browsers block an https page
    from calling an http:// server, so http:// ones are only tried when this
    file is opened from disk or over http. */
-const FALLBACK_SERVERS=['http://marmot-beta.us-east-1.elasticbeanstalk.com'];
+const FALLBACK_SERVERS=['https://3-232-71-161.sslip.io','http://marmot-beta.us-east-1.elasticbeanstalk.com'];
 /** The GitHub Pages copy offers the raw page as a download, to run from disk. */
 const ON_PAGES=/\.github\.io$/i.test(location.hostname);
 const DL_LINK='<a class="tbtn" href="index.html" download="marmot.html">DOWNLOAD HTML</a>';
@@ -648,6 +719,10 @@ function ub64(str){const s=atob(str),a=new Uint8Array(s.length);for(let i=0;i<s.
 function cat(...parts){const p=parts.map(x=>new Uint8Array(x));const out=new Uint8Array(p.reduce((n,x)=>n+x.length,0));let o=0;for(const x of p){out.set(x,o);o+=x.length}return out}
 function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}
 const uid=()=>crypto.randomUUID?crypto.randomUUID():hex(rand(16));
+/** Base32 (RFC 4648, no padding): the secret half of an encrypted server's invite code. */
+const B32='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function b32(bytes){let bits=0,v=0,out='';for(const x of bytes){v=((v<<8)|x)&0xffff;bits+=8;while(bits>=5){out+=B32[(v>>>(bits-5))&31];bits-=5}}if(bits>0)out+=B32[(v<<(5-bits))&31];return out}
+function ub32(str){let bits=0,v=0;const out=[];for(const ch of str){const i=B32.indexOf(ch);if(i<0)return null;v=((v<<5)|i)&0xffff;bits+=5;if(bits>=8){out.push((v>>>(bits-8))&255);bits-=8}}return new Uint8Array(out)}
 const Z32=new Uint8Array(32);
 const MAXTEXT=8000,DCTEXT=2000,MAXSDP=60000;
 const FIRST=10;  // messages drawn when a thread opens (or snaps back to the bottom)
@@ -1371,12 +1446,13 @@ class Voice{
   try{call.actx=this.relayMedia.context()}catch(e){call.actx=null}}
  why(){return this.RTC?'voice calls need microphone access: open Marmot over https or from localhost':'this browser does not support voice calls'}
  /** Whether this call can carry video at all (some link negotiated the video sections). */
- canVideo(){const c=this.call;if(!c)return false;for(const l of c.links.values())if(l.tx&&l.tx.cam)return true;return false}
- canScreen(){const c=this.call;if(!this.getDisplay||!c)return false;for(const l of c.links.values())if(l.tx&&l.tx.screen)return true;return false}
+ canVideo(){const c=this.call;if(!c)return false;if(c.chan&&!c.links.size)return true;for(const l of c.links.values())if(l.tx&&l.tx.cam)return true;return false}
+ canScreen(){const c=this.call;if(!this.getDisplay||!c)return false;if(c.chan&&!c.links.size)return true;for(const l of c.links.values())if(l.tx&&l.tx.screen)return true;return false}
  emit(){this.c.emit('call',this.call)}
  _sig(peer,id,g,t,extra){
   return this.c._sendInner(peer,Object.assign({k:'call',t,call:id},g?{g}:{},extra),null,g?{g}:null)}
- send(call,peer,t,extra){return this._sig(peer,call.id,call.group,t,extra)}
+ /** A voice channel's signals go over the socket (the server checks both ends are in the channel); every other call's over the ratchet. */
+ send(call,peer,t,extra){return call.chan?this.c._vsig(peer,Object.assign({k:'call',t,call:call.id,chan:call.chan},extra)):this._sig(peer,call.id,call.group,t,extra)}
  /** Whether l is still one of the current call's links. */
  _live(call,l){return this.call===call&&call.links.get(l.peer)===l}
  _link(call,peer,o){
@@ -1409,6 +1485,23 @@ class Voice{
   const r=await Promise.allSettled(ids.map(id=>this._dial(call,id,true)));
   if(r.every(x=>x.status==='rejected'))throw r[0].reason;
   return this.call===call?call:null}
+
+ /** Enters a server's voice channel (see server/servers.js). Nobody rings: the microphone
+     opens, and then whoever joins connects to everyone already there (dialChan), and
+     everyone fills in the rest of the mesh from rosters, as in a group call. A voice
+     channel is a call that stays up while this side is in it, even alone. Its id is the
+     channel's, so everyone in the channel is in the same call. */
+ async joinChan(sid,cid){
+  if(this.call)throw new Error('you are already in a call');
+  if(!this.supported())throw new Error(this.why());
+  const now=Date.now(),call=this.call=new VCall({id:'vc:'+cid,chan:cid,server:sid,dir:'out',state:'active',created:now,started:now});
+  this._ctx(call);this.emit();
+  try{await this._mic(call)}
+  catch(e){if(this.call===call)this._drop(call);throw e}
+  return call}
+ dialChan(call,ids){
+  const me=this.c.me.userId;
+  for(const id of ids||[])if(this.call===call&&id!==me&&!call.links.has(id))this._dial(call,id,false).catch(()=>{})}
 
  /** Rings more members of the group into the call this side is in. */
  async invite(ids){
@@ -1508,7 +1601,8 @@ class Voice{
 
  async _video(kind,on,open){
   const call=this.call;on=!!on;
-  if(!call||!call.links.size)throw new Error('not in a call');
+  // a voice channel can show video with nobody else there yet: whoever joins picks it up (see _open)
+  if(!call||(!call.links.size&&!call.chan))throw new Error('not in a call');
   if(!(kind==='cam'?this.canVideo():this.canScreen()))
    throw new Error(kind==='screen'&&!this.getDisplay?'this browser cannot share its screen':call.relayed?'a relayed call is voice only':'this call is voice only');
   if(call[kind]===on||call.switching.has(kind))return;
@@ -1586,11 +1680,11 @@ class Voice{
   if(!call.started)call.started=Date.now();
   call.state='active';
   if(call.cam||call.screen||call.muted)this._media(call,l).catch(()=>{});
-  if(call.group)this._roster(call)}
+  if(call.group||call.chan)this._roster(call)}
 
- /** Where a call that is not ringing stands, from its links. */
+ /** Where a call that is not ringing stands, from its links. A voice channel is up as long as this side is in it. */
  _sync(call){
-  if(call.state==='ringing')return;
+  if(call.state==='ringing'||call.chan)return;
   const ls=[...call.links.values()];
   call.state=call.started||ls.some(l=>l.state==='active')?'active':ls.some(l=>l.state==='connecting')?'connecting':call.dir==='out'?'calling':'connecting'}
 
@@ -1669,16 +1763,20 @@ class Voice{
    pc.onicegatheringstatechange=()=>{if(pc.iceGatheringState==='complete')done()};
    pc.onicecandidate=ev=>{if(!ev.candidate)done()}})}
 
- /** Inbound signal, already authenticated by the ratchet (and, with g, checked to be from a member of that group). */
- _signal(peer,s,ts){
+ /** Inbound signal, already authenticated by the ratchet (and, with g, checked to be from a member of that group).
+     A voice channel's signals (chan) come over the socket instead (via 'vsig'), where the server checked that
+     the sender is in that channel with this side; neither kind is taken from the other path. */
+ _signal(peer,s,ts,via){
+  const chan=typeof s.chan==='string'?s.chan:null;
+  if(!!chan!==(via==='vsig')||(chan&&s.g!=null))return;
   const g=s.g!=null?String(s.g):null,me=this.c.me.userId;
   let call=this.call;
-  const same=!!call&&call.id===s.call&&call.group===g;
+  const same=!!call&&call.id===s.call&&call.group===g&&(call.chan||null)===chan;
   if(s.t==='offer'){
    if(typeof s.sdp!=='string')return;
    const link={dir:'in',offer:s.sdp,peerRelay:Voice.relayOf(s)};
    if(same){
-    if(!g)return;                       // a direct call has its one connection already
+    if(!g&&!chan)return;                // a direct call has its one connection already
     const l=call.links.get(peer);
     if(call.state==='ringing'){
      // rung by a second person in the same call: answering answers both
@@ -1690,6 +1788,8 @@ class Voice{
      this._close(call,l)}
     this._answer(call,this._link(call,peer,Object.assign(link,{state:'connecting'}))).catch(()=>{});
     this.emit();return}
+   // a voice channel this side is not in: it never rings, it is turned away
+   if(chan){this.c._vsig(peer,{k:'call',t:'end',call:s.call,chan}).catch(()=>{});return}
    // an offer without ring only joins up people already in a call: never a ringing phone
    if(g&&!s.ring){this._sig(peer,s.call,g,'end').catch(()=>{});return}
    let glare=false;
@@ -1738,9 +1838,9 @@ class Voice{
    if(this._canRelay(l))this._toRelay(call,l,false).catch(e=>{if(this._live(call,l))this._endLink(call,l,'failed',e.message)})}
   else if(s.t==='roster'){
    // not waiting for this side to see the link up too: the other end may get there first
-   if(!call.group||call.state==='ringing'||!Array.isArray(s.ids))return;
+   if(!(call.group||call.chan)||call.state==='ringing'||!Array.isArray(s.ids))return;
    for(const id of s.ids.slice(0,64))
-    if(typeof id==='string'&&id!==me&&me<id&&!call.links.has(id)&&this.c.inGroup(call.group,id))this._dial(call,id,false).catch(()=>{})}
+    if(typeof id==='string'&&id!==me&&me<id&&!call.links.has(id)&&(call.chan?this.c.inVoice(call.chan,id):this.c.inGroup(call.group,id)))this._dial(call,id,false).catch(()=>{})}
   else if((s.t==='decline'||s.t==='busy')&&l.dir==='out'&&l.state==='calling')this._gone(call,l,s.t==='busy'?'busy':'declined');
   else if(s.t==='end')this._gone(call,l,'ended')}
 
@@ -1763,6 +1863,7 @@ class Voice{
   if(!this._live(call,l))return;
   const was=l.state;
   this._close(call,l);
+  if(call.chan){this.emit();if(was==='active')this._roster(call);return}
   if(!call.group||!call.links.size)return this._finish(call,how,detail);
   this._sync(call);this.emit();
   if(was==='active')this._roster(call)}
@@ -1780,11 +1881,13 @@ class Voice{
   for(const l of call.links.values())this._release(l);
   for(const s of [call.stream,call.camStream,call.screenStream])if(s)s.getTracks().forEach(t=>t.stop());
   if(call.actx&&call.actx.close)call.actx.close().catch(()=>{});
+  if(call.chan)this.c._vleft(call);
   this.emit()}
 
  _finish(call,how,detail){
   if(this.call!==call)return;
   this._drop(call);
+  if(call.chan)return;   // leaving a voice channel leaves nothing in any chat
   const g=!!call.group,kind=g?'group call':'voice call';
   let text;
   if(call.started)text=kind+' · '+clock(Math.round((Date.now()-call.started)/1000))+(how==='lost'?' · connection lost':'');
@@ -1804,7 +1907,7 @@ class MarmotClient{
   this.WS=opts.WebSocket||globalThis.WebSocket;
   this.iter=opts.iter||Acct.ITER;
   this.opkBatch=opts.opkBatch||50;
-  this.handlers=new Map();this.server='';this.ws=null;
+  this.handlers=new Map();this.server='';this.ws=null;this.readMarks=opts.readMarks||null;
   this.voice=new Voice(this,opts);
   this._reset()}
 
@@ -1812,13 +1915,14 @@ class MarmotClient{
   this.closing=true;
   this.voice._drop();
   if(this.ws){try{this.ws.close()}catch(e){}}
-  clearTimeout(this._wsTimer);clearTimeout(this._retryTimer);
+  clearTimeout(this._wsTimer);clearTimeout(this._retryTimer);if(this.sktimers)for(const t of this.sktimers.values())clearTimeout(t);
   Object.assign(this,{token:null,vk:null,me:null,vault:null,key:null,mac:null,ws:null,wsState:'closed',
    recs:new Map(),names:new Map(),byPeer:new Map(),pending:new Map(),done:new Set(),queued:new Set(),
    locks:new Map(),inq:Promise.resolve(),_batch:null,_flushing:null,unread:new Map(),opkCount:null,_backoff:0,
    peers:new Map(),peersLoaded:false,discoverable:false,links:new Map(),publicLinks:[],discordEnabled:false,skew:0,
    groups:new Map(),applied:new Map(),avv:new Map(),avc:new Map(),_avReq:new Set(),staff:null,mute:null,roles:new Map(),mutes:new Map(),pinged:new Set(),
-   prof:new Map(),profc:new Map(),_pfReq:new Set(),_pfFail:new Map(),myProfile:cleanProfile(),presenceMode:'auto',idle:false})}
+   prof:new Map(),profc:new Map(),_pfReq:new Set(),_pfFail:new Map(),myProfile:cleanProfile(),presenceMode:'auto',idle:false,
+   servers:new Map(),serversLoaded:false,sicons:new Map(),skc:new Map(),skreqAt:new Map(),skansAt:new Map(),srot:new Set(),sktimers:new Map(),_vq:Promise.resolve(),smembers:new Map(),schan:new Map(),sread:new Map(),spings:new Map()})}
 
  /** The server's clock, as of the last socket handshake. Envelope timestamps are server time. */
  serverNow(){return Date.now()+this.skew}
@@ -1880,7 +1984,11 @@ class MarmotClient{
   this.vault=vault;
   this.key=await CR.aesKey(ub64(vault.dataKey));
   this.mac=await CR.hmacKey(ub64(vault.macKey));
-  this.me={userId:info.userId,username:info.username,ik:vault.ik,sk:vault.sk,spk:vault.spk,created:vault.created}}
+  this.me={userId:info.userId,username:info.username,ik:vault.ik,sk:vault.sk,spk:vault.spk,created:vault.created};
+  // where this account had read up to in each server channel, kept by the page (opts.readMarks)
+  let marks={};try{marks=this.readMarks?this.readMarks.load(info.userId)||{}:{}}catch(e){}
+  this.sread=new Map(Object.entries(marks).filter(([k,v])=>typeof k==='string'&&Number.isSafeInteger(v)))}
+ _saveMarks(){if(this.readMarks&&this.me)try{this.readMarks.save(this.me.userId,Object.fromEntries(this.sread))}catch(e){}}
  _spk(id){const v=this.vault;if(v.spk.id===id)return v.spk;return (v.spks||[]).find(s=>s.id===id)||null}
 
  /* ---- account ---- */
@@ -1942,7 +2050,8 @@ class MarmotClient{
   await this._loadStore();
   await this.loadPeers();
   await this.loadGroups().catch(()=>{});
-  await this.loadLinks().catch(()=>{})}
+  await this.loadLinks().catch(()=>{});
+  await this.loadServers().catch(()=>{})}
 
  session(){return this.token?{server:this.server,token:this.token,vk:this.vk}:null}
 
@@ -1982,8 +2091,16 @@ class MarmotClient{
   ws.onopen=()=>ws.send(JSON.stringify({t:'auth',token:this.token,idle:this.idle}));
   ws.onmessage=ev=>{
    let m;try{m=JSON.parse(ev.data)}catch(e){return}
-   if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{});this.loadLinks().catch(()=>{})}
+   if(m.t==='ready'){if(Number.isFinite(m.ts))this.skew=m.ts-Date.now();this.wsState='live';this._backoff=0;this.emit('status');this.drain().catch(()=>{});this.loadPeers().catch(()=>{});this.loadGroups().catch(()=>{});this.loadLinks().catch(()=>{});
+    // channel history may have moved on while the socket was down: what is open loads again
+    this.schan.clear();this.loadServers().catch(()=>{});
+    const vc=this.voice.call;if(vc&&vc.chan)this.api('POST','/api/servers/voice',{server:vc.server,channel:vc.chan}).then(r=>this._svoice(vc.server,vc.chan,r.users)).catch(()=>{})}
    else if(m.t==='env'&&m.env)this._enqueue(m.env);
+   else if(m.t==='server'&&typeof m.server==='string'){if(m.gone){this._forgetServer(m.server);this.emit('change')}else this.loadServer(m.server).catch(()=>{})}
+   else if(m.t==='smsg'&&m.msg){const x=m;this._sopen(x.server,x.channel,x.msg).then(()=>this._smsg(x.server,x.channel,x.msg,x.user))}
+   else if(m.t==='sdel')this._sdel(m.server,m.channel,m.id);
+   else if(m.t==='svoice'&&Array.isArray(m.users))this._svoice(m.server,m.channel,m.users);
+   else if(m.t==='vsig'&&typeof m.from==='string'&&m.sig&&typeof m.sig==='object'){const x=m;this._vq=this._vq.then(()=>this._vsigIn(x.from,x.sig)).catch(()=>{})}
    else if(m.t==='vr')this.voice._relayIn(m);
    else if(m.t==='peers')this.loadPeers().catch(()=>{});
    else if(m.t==='groups')this.loadGroups().catch(()=>{});
@@ -2125,7 +2242,10 @@ class MarmotClient{
     let sess=out.rec;
     const inner=out.inner||{};
     if(out.opk!=null)await tx.del('opk:'+out.opk);
-    if(inner.g!=null){
+    // someone I reach only through an encrypted server (not a friend, in none of my groups) may pass its keys, nothing more
+    const keyOnly=inner.k!=='skreq'&&inner.k!=='skey'&&inner.g==null&&!this.isFriend(peerId)&&!this._sharesGroup(peerId)&&[...this.servers.values()].some(s=>s.e2ee);
+    if(keyOnly&&inner.k!=='receipt'){}
+    else if(inner.g!=null){
      const r=await this._groupInner(peerId,inner,e,tx,sess);
      sess=r.sess;note=r.note;after=r.after||null;sig=r.sig||null}
     else if(inner.k==='text'&&typeof inner.t==='string'&&inner.id){
@@ -2147,6 +2267,8 @@ class MarmotClient{
      for(const id of inner.ids.slice(0,100)){
       const key='msg:'+peerId+':'+id,m=this.get(key);
       if(m&&m.dir==='out'&&m.state!=='delivered')await tx.put(key,Object.assign({},m,{state:'delivered'}))}}
+    else if(inner.k==='skreq'&&typeof inner.s==='string'){const q=inner;after=()=>{this._answerSkreq(peerId,q).catch(()=>{})}}
+    else if(inner.k==='skey'&&typeof inner.s==='string'&&inner.keys&&typeof inner.keys==='object'){const q=inner;after=()=>{this._takeKeys(q.s,q.keys,false).catch(()=>{})}}
     else if(callSig(inner)){
      const key='msg:'+peerId+':call-'+inner.call;
      // an offer that waited in the mailbox past its ring time is a missed call, not a ringing phone
@@ -2760,6 +2882,337 @@ class MarmotClient{
  relation(id){const p=this.peers.get(id);return p?p.state:'none'}
  isFriend(id){return this.relation(id)==='friend'}
 
+ /* ---- servers (see server/servers.js) ----
+   Communities with text and voice channels, roles and permissions. A server is
+   end-to-end encrypted unless its creator turned that off (see server/servers.js):
+   messages and voice signals are sealed here under the server's key, epoch by epoch,
+   and the keys live in the vault ('skey:<server>'). They arrive with the invite (its
+   secret half unlocks them), or from another member over the ratchet (skreq/skey),
+   and each one is checked against the chain the server publishes (checks[n]), so the
+   server cannot slip in a key of its own. An unencrypted server's channels can be read
+   by the server, and the client says so. Nothing here touches the ratchet or the record store: history is fetched from
+   the server a page at a time and held in memory (schan, keyed "<server>/<channel>").
+   What has been read is a channel's newest message id when it was last looked at
+   (sread), which the page keeps between sessions; a channel seen for the first time
+   counts as read. */
+ async loadServers(){
+  const r=await this.api('GET','/api/servers');
+  this.servers=new Map((r.servers||[]).map(s=>[s.serverId,s]));
+  for(const s of this.servers.values())this._seenServer(s);
+  this._saveMarks();
+  for(const id of [...this.smembers.keys()])if(!this.servers.has(id))this.smembers.delete(id);
+  this.serversLoaded=true;this.emit('change')}
+ async loadServer(id){
+  try{const r=await this.api('GET','/api/servers/one?server='+encodeURIComponent(id));this.servers.set(id,r.server);this._seenServer(r.server)}
+  catch(e){if(e.status===404){this._forgetServer(id);this.emit('change');return}throw e}
+  if(this.smembers.has(id))await this.loadServerMembers(id).catch(()=>{});
+  this.emit('change')}
+ srv(id){return this.servers.get(id)||null}
+ /** A server's icon (a data: URL), or null. Fetched once each time it changes (the view's iv); a
+     fetch still on its way returns null meanwhile and redraws once the icon is in. */
+ serverIcon(sid){
+  const v=this.srv(sid);if(!v||!v.iv)return null;
+  const c=this.sicons.get(sid);
+  if(c&&c.iv===v.iv)return c.icon;
+  if(!c||c.want!==v.iv){
+   const want=v.iv;this.sicons.set(sid,{iv:c&&c.iv,icon:c&&c.icon,want});
+   this.api('GET','/api/servers/icon?server='+encodeURIComponent(sid)).then(r=>{
+    const now=this.sicons.get(sid);if(!now||now.want!==want)return;
+    this.sicons.set(sid,{iv:r.iv,icon:isPic(r.icon)?r.icon:null,want:r.iv});this.emit('change')
+   }).catch(()=>{const now=this.sicons.get(sid);if(now&&now.want===want)now.want=null})}
+  return c&&c.icon||null}
+ /** Sets a server's icon (from shrinkImage) or, with null, removes it. */
+ async setServerIcon(sid,icon){
+  const r=await this.api('POST','/api/servers/icon',{server:sid,icon:icon||null});
+  this.sicons.set(sid,{iv:r.server.iv,icon:icon||null,want:r.server.iv});
+  return this._gotServer(r.server)}
+ _forgetServer(id){
+  this.servers.delete(id);this.smembers.delete(id);this.sicons.delete(id);
+  for(const k of [...this.schan.keys()])if(k.startsWith(id+'/'))this.schan.delete(k);
+  const c=this.voice.call;if(c&&c.server===id)this.voice.hangup().catch(()=>{})}
+ _seenServer(s){
+  if(s.e2ee)Promise.resolve().then(()=>this._keyChores(s.serverId));
+  for(const ch of s.channels)if(ch.kind==='text'){const k=s.serverId+'/'+ch.id;if(!this.sread.has(k))this.sread.set(k,ch.last||0)}}
+ /** What I may do in a server: {view, send, …} (see PERMS in server/servers.js). */
+ sperms(sid){const s=this.srv(sid);return s?s.me.perms:{}}
+ /** Whether a text channel has messages newer than the last time it was read. */
+ sunread(sid,cid){
+  const s=this.srv(sid),ch=s&&s.channels.find(x=>x.id===cid);
+  return !!ch&&ch.kind==='text'&&!!s.me.perms.view&&(ch.last||0)>(this.sread.get(sid+'/'+cid)||0)}
+ /** How many times I was @mentioned, unread, in one channel or (no cid) a whole server. */
+ spingCount(sid,cid){
+  let n=0;for(const [k,v] of this.spings)if(cid?k===sid+'/'+cid:k.startsWith(sid+'/'))n+=v;return n}
+ /** Marks a channel read up to its newest message. */
+ markRead(sid,cid){
+  const k=sid+'/'+cid,s=this.srv(sid),ch=s&&s.channels.find(x=>x.id===cid),c=this.schan.get(k);
+  const top=Math.max(ch&&ch.last||0,c&&c.msgs.length?c.msgs[c.msgs.length-1].id:0);
+  if(top>(this.sread.get(k)||0)||this.spings.has(k)){this.sread.set(k,top);this.spings.delete(k);this._saveMarks();this.emit('change')}}
+ async loadServerMembers(id){
+  const r=await this.api('GET','/api/servers/members?server='+encodeURIComponent(id));
+  for(const m of r.members)this._learnUser(m);
+  this.smembers.set(id,r.members);this.emit('change');return r.members}
+ _learnUser(u){if(u&&typeof u.userId==='string'){this._learnProf(u);this._learnAv(u.userId,u.av)}}
+ /** A channel's history as far as it has been loaded: {msgs (oldest first), more, loaded}. */
+ chan(sid,cid){return this.schan.get(sid+'/'+cid)||{msgs:[],more:false,loaded:false}}
+ /** Loads a channel's newest page, or with `older` the page before what is loaded. */
+ loadChannel(sid,cid,older){
+  const k=sid+'/'+cid;let c=this.schan.get(k);
+  if(!c)this.schan.set(k,c={msgs:[],more:false,loaded:false,loading:null,err:''});
+  if(c.loading)return c.loading;
+  if(older&&(!c.loaded||!c.more))return Promise.resolve();
+  const before=older&&c.msgs.length?c.msgs[0].id:0;
+  c.loading=this.api('GET','/api/servers/messages?server='+encodeURIComponent(sid)+'&channel='+encodeURIComponent(cid)+(before?'&before='+before:'')).then(async r=>{
+   for(const u of r.users||[])this._learnUser(u);
+   await Promise.all((r.msgs||[]).map(m=>this._sopen(sid,cid,m)));
+   const have=new Set(c.msgs.map(m=>m.id));
+   c.msgs=c.msgs.concat((r.msgs||[]).filter(m=>!have.has(m.id))).sort((a,b)=>a.id-b.id);
+   if(older||!c.loaded)c.more=!!r.more;
+   c.loaded=true;c.err='';this.emit('change')
+  },e=>{c.err=e.message;c.loaded=true;this.emit('change');throw e}).finally(()=>{c.loading=null});
+  return c.loading}
+ _smsg(sid,cid,m,user){
+  if(!m||!Number.isSafeInteger(m.id))return;
+  this._learnUser(user);
+  const k=sid+'/'+cid,c=this.schan.get(k);
+  if(c&&c.loaded&&!c.msgs.some(x=>x.id===m.id)){c.msgs.push(m);if(c.msgs.length>1&&c.msgs[c.msgs.length-2].id>m.id)c.msgs.sort((a,b)=>a.id-b.id)}
+  const s=this.srv(sid),ch=s&&s.channels.find(x=>x.id===cid);
+  if(ch&&m.id>(ch.last||0))ch.last=m.id;
+  const mine=!!this.me&&m.from===this.me.userId;
+  if(mine){this.sread.set(k,Math.max(this.sread.get(k)||0,m.id));this._saveMarks()}
+  else if(m.text&&this.pings(m.text))this.spings.set(k,(this.spings.get(k)||0)+1);
+  if(!mine)this.emit('smsg',sid,cid,m);
+  this.emit('change')}
+ _sdel(sid,cid,id){const c=this.schan.get(sid+'/'+cid);if(c)c.msgs=c.msgs.filter(m=>m.id!==id);this.emit('change')}
+ async sendServer(sid,cid,text,re){
+  const s=this.srv(sid),body={server:sid,channel:cid,re};
+  if(s&&s.e2ee){
+   // the reply's quote goes inside, since the server cannot read the message it quotes
+   const o=re!=null?this.chan(sid,cid).msgs.find(x=>x.id===re):null;
+   body.enc=await this._seal(sid,this._smsgAad(sid,cid,this.me.userId),{t:text,r:re!=null?re:undefined,q:o&&o.text?o.text.slice(0,120):undefined})}
+  else body.text=text;
+  const r=await this.api('POST','/api/servers/send',body);
+  await this._sopen(sid,cid,r.msg);
+  this._smsg(sid,cid,r.msg,null);return r.msg}
+ async deleteServerMsg(sid,cid,id){await this.api('POST','/api/servers/msg-delete',{server:sid,id});this._sdel(sid,cid,id)}
+ _gotServer(v){if(v){this.servers.set(v.serverId,v);this._seenServer(v);this.emit('change')}return v}
+ /** A new server, end-to-end encrypted unless opts.e2ee is false. Its first key is made here; only a check of it goes to the server. */
+ async createServer(name,opts){
+  const e2ee=!(opts&&opts.e2ee===false),raw=e2ee?rand(32):null;
+  const r=await this.api('POST','/api/servers',e2ee?{name,e2ee,check:await this._kcheck(raw)}:{name,e2ee});
+  if(raw)await this._storeKeys(r.server.serverId,{1:b64(raw)});
+  return this._gotServer(r.server)}
+ /** Joins with an invite code. An encrypted server's code has a second half that never goes
+     to the server: it unlocks the keys the invite carries. */
+ async joinServer(code){
+  const a=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,''),inv=a.slice(0,8),sec=a.slice(8);
+  const r=await this.api('POST','/api/servers/join',{code:inv});
+  const v=r.server,sid=v.serverId;
+  this.servers.set(sid,v);
+  if(v.e2ee&&r.blob&&sec){
+   try{
+    const secret=ub32(sec);if(!secret||secret.length<16)throw new Error('bad code');
+    const raw=ub64(r.blob),k=await crypto.subtle.importKey('raw',await CR.hkdf(secret.slice(0,16),Z32,'Marmot_ServerInvite',32),'AES-GCM',false,['decrypt']);
+    const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.slice(0,12),additionalData:te.encode('marmot-sinvite|'+sid)},k,raw.slice(12));
+    await this._takeKeys(sid,JSON.parse(td.decode(pt)).keys||{},true)}
+   catch(e){}}
+  return this._gotServer(v)}
+ /** An invite code. For an encrypted server it carries the keys, locked under a secret that is
+     only in the code's second half: anyone with the whole code can read the server. */
+ async createInvite(sid,opts){
+  const s=this.srv(sid),body=Object.assign({server:sid},opts);let secret=null;
+  if(s&&s.e2ee){
+   const keys=this._skeys(sid);
+   if(!keys[s.epoch])throw new Error('you do not have this server\'s key yet, so you cannot invite anyone');
+   secret=rand(16);
+   const k=await crypto.subtle.importKey('raw',await CR.hkdf(secret,Z32,'Marmot_ServerInvite',32),'AES-GCM',false,['encrypt']),iv=rand(12);
+   const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:te.encode('marmot-sinvite|'+sid)},k,te.encode(JSON.stringify({keys})));
+   body.blob=b64(cat(iv,ct))}
+  const r=await this.api('POST','/api/servers/invite',body);
+  if(secret)r.code+='-'+b32(secret);
+  return r}
+
+ /* encrypted servers: keys */
+ _skeys(sid){return (this.get('skey:'+sid)||{}).keys||{}}
+ /** Whether I can read and write an encrypted server now: 'ok', 'wait' (I am owed its current key) or 'none' (I hold none of its keys). */
+ skeyState(sid){
+  const s=this.srv(sid);if(!s||!s.e2ee)return 'ok';
+  const k=this._skeys(sid);return k[s.epoch]?'ok':Object.keys(k).length?'wait':'none'}
+ async _skey(sid,n){
+  const raw=this._skeys(sid)[n];if(!raw)return null;
+  const id=sid+'/'+n+'/'+raw.slice(0,8);let k=this.skc.get(id);
+  if(!k){k=crypto.subtle.importKey('raw',ub64(raw),'AES-GCM',false,['encrypt','decrypt']);this.skc.set(id,k)}
+  return k}
+ async _kcheck(raw){return hex(await CR.hmac(raw,te.encode('marmot-server-key-check'))).slice(0,32)}
+ async _kauth(prev,sid,n,check){return hex(await CR.hmac(prev,te.encode('marmot-server-key-auth|'+sid+'|'+n+'|'+check))).slice(0,32)}
+ /** Saves keys to the vault (they never leave it unencrypted), then opens what was waiting on them. */
+ async _storeKeys(sid,add){
+  await this.lock('skey|'+sid,async()=>{
+   const keys=Object.assign({},this._skeys(sid),add),tx=new Tx(this);
+   await tx.put('skey:'+sid,{keys});await tx.commit()});
+  await this._reopen(sid)}
+ /** Keys someone handed me, each checked against the server's chain: key n must match checks[n].c, and
+     checks[n].a must be signed by key n-1 that I already trust. Keys from an invite (trusted: the
+     invite's secret unlocked them) need only match their check. Returns how many were new. */
+ async _takeKeys(sid,keys,trusted){
+  let s=this.srv(sid);
+  const want=Object.keys(keys).map(Number).filter(n=>Number.isInteger(n)&&n>0&&typeof keys[n]==='string');
+  if(!want.length)return 0;
+  if(!s||!s.checks||want.some(n=>!s.checks[n])){await this.loadServer(sid).catch(()=>{});s=this.srv(sid)}
+  if(!s||!s.e2ee||!s.checks)return 0;
+  const have=Object.assign({},this._skeys(sid)),add={};
+  for(const n of want.sort((a,b)=>a-b)){
+   if(have[n])continue;
+   const ck=s.checks[n];if(!ck)continue;
+   let raw;try{raw=ub64(keys[n])}catch(e){continue}
+   if(raw.length!==32||await this._kcheck(raw)!==ck.c)continue;
+   if(!trusted){
+    if(n===1||!have[n-1]||!ck.a)continue;
+    if(await this._kauth(ub64(have[n-1]),sid,n,ck.c)!==ck.a)continue}
+   have[n]=add[n]=keys[n]}
+  const got=Object.keys(add).length;
+  if(got)await this._storeKeys(sid,add);
+  this._keyChores(sid);
+  return got}
+ /** Opens again what could not be opened for want of a key. */
+ async _reopen(sid){
+  for(const [k,c] of this.schan)if(k.startsWith(sid+'/')){
+   const cid=k.slice(sid.length+1);
+   await Promise.all(c.msgs.filter(m=>m.locked).map(m=>this._sopen(sid,cid,m)))}
+  this.emit('change')}
+ /** What a server needs from me about its keys: asking for one I am owed, or replacing a stale one. */
+ _keyChores(sid){
+  const s=this.srv(sid);if(!s||!s.e2ee||!this.me||!this.token)return;
+  const keys=this._skeys(sid);
+  if(!keys[s.epoch])this._needKey(sid);
+  else if(s.stale&&(s.me.perms.kick||s.me.perms.ban||s.me.perms.manageServer)&&!this.srot.has(sid+'/'+s.epoch)){
+   this.srot.add(sid+'/'+s.epoch);
+   // a moment's wait, so of several people online one usually wins without a 409
+   setTimeout(()=>this._rotate(sid).catch(()=>{}),Math.floor(Math.random()*800))}}
+ /** Replaces a stale key: someone was removed, so the next messages go under a key they never get. */
+ async _rotate(sid){
+  const s=this.srv(sid);if(!s||!s.e2ee||!s.stale)return;
+  const prev=this._skeys(sid)[s.epoch];if(!prev)return;
+  const n=s.epoch+1,raw=rand(32),c=await this._kcheck(raw),a=await this._kauth(ub64(prev),sid,n,c);
+  // saved first, so whoever asks for it the moment the change is out can be answered
+  await this._storeKeys(sid,{[n]:b64(raw)});
+  let r;
+  try{r=await this.api('POST','/api/servers/rekey',{server:sid,epoch:n,check:c,auth:a})}
+  catch(e){
+   // someone else's key won (or none did): mine was never the server's, so it goes
+   await this.lock('skey|'+sid,async()=>{
+    const keys=Object.assign({},this._skeys(sid));if(keys[n]!==b64(raw))return;
+    delete keys[n];const tx=new Tx(this);await tx.put('skey:'+sid,{keys});await tx.commit()}).catch(()=>{});
+   await this.loadServer(sid).catch(()=>{});return}
+  this._gotServer(r.server)}
+ /** Asks members for the keys I am missing, proving with one I hold that I was let in. */
+ async _needKey(sid){
+  const now=Date.now();if(now-(this.skreqAt.get(sid)||0)<5000)return;
+  const s=this.srv(sid),keys=this._skeys(sid),ns=Object.keys(keys).map(Number);
+  if(!s||!ns.length)return;
+  this.skreqAt.set(sid,now);
+  // nobody may be able to answer yet (offline, or not holding it either): ask again in a while
+  clearTimeout(this.sktimers.get(sid));
+  const t=setTimeout(()=>{this.sktimers.delete(sid);if(this.token&&this.skeyState(sid)==='wait')this._keyChores(sid)},15000);
+  if(t&&t.unref)t.unref();
+  this.sktimers.set(sid,t);
+  const n=Math.max(...ns),me=this.me.userId;
+  const mac=hex(await CR.hmac(ub64(keys[n]),te.encode('marmot-skreq|'+sid+'|'+me))).slice(0,32);
+  let mem=this.smembers.get(sid);
+  if(!mem)mem=await this.loadServerMembers(sid).catch(()=>[]);
+  const to=new Set([s.epochBy,s.owner].filter(x=>x&&x!==me));
+  for(const m of [...mem].sort(()=>Math.random()-.5)){if(to.size>=6)break;if(m.userId!==me)to.add(m.userId)}
+  await Promise.all([...to].map(id=>this._sendInner(id,{k:'skreq',s:sid,n,mac},null,{skey:true}).catch(()=>{})))}
+ /** Another member asks for a server's keys: they get them if the server lists them as a member
+     and they prove they hold one of its keys already. */
+ async _answerSkreq(peer,q){
+  const s=this.srv(q.s);if(!s||!s.e2ee||!Number.isInteger(q.n)||typeof q.mac!=='string')return;
+  const keys=this._skeys(q.s),raw=keys[q.n];if(!raw)return;
+  const k=q.s+'|'+peer,now=Date.now();if(now-(this.skansAt.get(k)||0)<5000)return;
+  if(hex(await CR.hmac(ub64(raw),te.encode('marmot-skreq|'+q.s+'|'+peer))).slice(0,32)!==q.mac)return;
+  const mem=await this.loadServerMembers(q.s).catch(()=>null);
+  if(!mem||!mem.some(m=>m.userId===peer))return;
+  this.skansAt.set(k,now);
+  await this._sendInner(peer,{k:'skey',s:q.s,keys},null,{skey:true})}
+ /** Whether someone is in one of my group chats. */
+ _sharesGroup(id){for(const g of this.groups.values())if(g.members.some(m=>m.userId===id))return true;return false}
+
+ /* encrypted servers: sealing */
+ _smsgAad(sid,cid,from){return 'marmot-smsg|'+sid+'|'+cid+'|'+from}
+ async _seal(sid,aad,obj){
+  const s=this.srv(sid),n=s&&s.epoch,k=n&&await this._skey(sid,n);
+  if(!k){this._keyChores(sid);throw new Error('you do not have this server\'s key yet: it comes from another member when one is online')}
+  const iv=rand(12),ct=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:te.encode(aad)},k,te.encode(JSON.stringify(obj)));
+  return {n,iv:b64(iv),ct:b64(ct)}}
+ /** undefined: I have no key for it; null: it does not open. */
+ async _unseal(sid,aad,e){
+  if(!e||typeof e!=='object'||typeof e.iv!=='string'||typeof e.ct!=='string')return null;
+  const k=await this._skey(sid,e.n);if(!k)return undefined;
+  try{return JSON.parse(td.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(e.iv),additionalData:te.encode(aad)},k,ub64(e.ct))))}
+  catch(x){return null}}
+ /** Opens an encrypted channel message in place: text (and its reply's quote), or `locked` until the key comes, or `bad`. */
+ async _sopen(sid,cid,m){
+  if(!m||!m.enc)return m;
+  const p=await this._unseal(sid,this._smsgAad(sid,cid,m.from),m.enc);
+  if(p===undefined){m.locked=true;m.text='';this._keyChores(sid);return m}
+  m.locked=false;
+  if(!p||typeof p.t!=='string'){m.bad=true;m.text='';return m}
+  m.bad=false;m.text=p.t.slice(0,MAXTEXT);
+  if(m.re){if(p.r!==m.re.id)m.re=null;else m.re.t=typeof p.q==='string'?p.q.slice(0,120):''}
+  return m}
+ /** The server whose channel this is. */
+ _chanServer(cid){for(const s of this.servers.values())if(s.channels.some(c=>c.id===cid))return s;return null}
+ /** A voice signal that came over the socket: opened first if the server is encrypted (one that is not sealed is dropped). */
+ async _vsigIn(from,sig){
+  const s=this._chanServer(sig.chan);
+  if(s&&s.e2ee){
+   if(!sig.enc)return;
+   const p=await this._unseal(s.serverId,'marmot-vsig|'+s.serverId+'|'+sig.chan+'|'+from+'|'+this.me.userId,sig.enc);
+   if(!p||typeof p!=='object'||p.chan!==sig.chan)return;
+   sig=p}
+  if(callSig(sig))this.voice._signal(from,sig,this.serverNow(),'vsig')}
+ /** Any other change to a server: path is settings, transfer, invite, kick, unban, member-role, channel or role. */
+ async serverOp(path,body){
+  const r=await this.api('POST','/api/servers/'+path,body);
+  if(r.server)this._gotServer(r.server);else if(path!=='invite')await this.loadServer(body.server).catch(()=>{});
+  if(this.smembers.has(body.server)&&/^(kick|member-role|transfer)$/.test(path))await this.loadServerMembers(body.server).catch(()=>{});
+  return r}
+ async leaveServer(sid){await this.api('POST','/api/servers/leave',{server:sid});this._forgetServer(sid);this.emit('change')}
+ async deleteServer(sid){await this.api('POST','/api/servers/delete',{server:sid});this._forgetServer(sid);this.emit('change')}
+ /* voice channels */
+ voiceUsers(sid,cid){const s=this.srv(sid);return (s&&s.voice&&s.voice[cid])||[]}
+ inVoice(cid,id){for(const s of this.servers.values()){const u=s.voice&&s.voice[cid];if(u)return u.includes(id)}return false}
+ /** Joins a voice channel (leaving any other): the microphone first, then the server, then connections to whoever is there. */
+ async joinVoice(sid,cid){
+  const cur=this.voice.call;
+  if(cur&&cur.chan===cid)return cur;
+  if(cur&&!cur.chan)throw new Error('hang up your call first');
+  if(cur)await this.voice.hangup();
+  const call=await this.voice.joinChan(sid,cid);
+  let r;
+  try{r=await this.api('POST','/api/servers/voice',{server:sid,channel:cid})}
+  catch(e){if(this.voice.call===call)this.voice._drop(call);throw e}
+  this._svoice(sid,cid,r.users);
+  this.voice.dialChan(call,r.users);
+  return call}
+ /** The voice channel call ended here: the server stops listing this side in it (unless it has moved on to another meanwhile). */
+ _vleft(call){if(this.token)this.api('POST','/api/servers/voice',{channel:null,was:call.chan}).catch(()=>{})}
+ async _vsig(to,sig){
+  const ws=this.ws;
+  if(!ws||this.wsState!=='live'||ws.readyState!==1)throw new Error('not connected');
+  // in an encrypted server only the channel stays readable, for the server to check both ends are in it
+  const s=this._chanServer(sig.chan);
+  if(s&&s.e2ee)sig={k:'call',chan:sig.chan,enc:await this._seal(s.serverId,'marmot-vsig|'+s.serverId+'|'+sig.chan+'|'+this.me.userId+'|'+to,sig)};
+  if(this.ws!==ws||ws.readyState!==1)throw new Error('not connected');
+  ws.send(JSON.stringify({t:'vsig',to,sig}))}
+ _svoice(sid,cid,users){
+  const s=this.srv(sid);if(!s)return;
+  users=users.filter(u=>typeof u==='string');
+  s.voice=Object.assign({},s.voice,{[cid]:users});if(!users.length)delete s.voice[cid];
+  // someone the server no longer lists in my channel is gone, even if they could not say so
+  const c=this.voice.call;
+  if(c&&c.chan===cid)for(const l of [...c.links.values()])if(!users.includes(l.peer))this.voice._gone(c,l,'ended');
+  this.emit('change')}
+
  /* ---- discord link ---- */
  async loadLinks(){
   if(!this.token)return;
@@ -3229,7 +3682,9 @@ const Theme={
   this._url=null;$('#bgImg').style.backgroundImage='';this.apply(true)}
 };
 
-const M=new MarmotClient();
+const M=new MarmotClient({readMarks:{
+ load:id=>{try{return JSON.parse(store.get('sread.'+id)||'{}')}catch(e){return {}}},
+ save:(id,o)=>store.set('sread.'+id,JSON.stringify(o))}});
 const svg=d=>'<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">'+d+'</svg>';
 /** The emoji browser's set: [tab icon, name, "emoji keywords, …"]. */
 const EMOJI=[
@@ -3260,11 +3715,13 @@ const ICON={
  reply:svg('<path d="M6.5 3.5 2.5 7.5l4 4"/><path d="M3 7.5h5.5a5 5 0 0 1 5 5v.5"/>'),
  react:svg('<path d="M13.5 8A5.5 5.5 0 1 1 8 2.5"/><path d="M5.75 9.5c.55.7 1.3 1.05 2.25 1.05s1.7-.35 2.25-1.05"/><path d="M6 6.25v.5M10 6.25v.5"/><path d="M12.5 1.5v4M10.5 3.5h4"/>'),
  trash:svg('<path d="M2.5 4.5h11M6 4.5V2.5h4v2M4 4.5l.7 9h6.6l.7-9M6.75 7v4.5M9.25 7v4.5"/>'),
- x:svg('<path d="M4 4l8 8M12 4l-8 8"/>')};
+ x:svg('<path d="M4 4l8 8M12 4l-8 8"/>'),
+ speaker:svg('<path d="M2.5 6v4h2.5l3.5 3V3L5 6z"/><path d="M10.75 5.75a3.25 3.25 0 0 1 0 4.5M12.5 3.75a6 6 0 0 1 0 8.5"/>'),
+ lock:svg('<rect x="3.5" y="7" width="9" height="6.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>')};
 
 const UI={
  S:{screen:'messages',chat:null,dc:null,last:'chat',side:null,sideErr:'',set:false,pf:null,filter:'',paneKey:'',reply:null,unveiled:new Set(),
-    global:{q:null,users:[],more:false,loading:false,err:'',seq:0},adm:null},
+    global:{q:null,users:[],more:false,loading:false,err:'',seq:0},adm:null,srv:null,schans:{},sre:null,inChan:false,smem:null},
  _raf:0,
  /** Replays el's entrance animation: for when what it shows changes, not for every re-render. */
  enter(el){el.classList.remove('enter');void el.offsetWidth;el.classList.add('enter')},
@@ -3291,11 +3748,14 @@ const UI={
   $('#navUnread').textContent=$('#tabUnread').textContent=count(unread);
   $('#navPeers').textContent=$('#tabPeers').textContent=count(requests);
   $('#navDc').textContent=$('#tabDc').textContent=count(dcUnread);
+  // servers: @mentions as a number, other unread messages as a dot
+  let sPings=0,sUnread=false;for(const s of M.servers.values()){sPings+=M.spingCount(s.serverId);if(!sUnread&&this.serverUnread(s))sUnread=true}
+  $('#navSrv').textContent=$('#tabSrv').textContent=sPings?count(sPings):sUnread?'•':'';
   const dcOn=!!M.me&&(M.discordEnabled||M.links.size>0);
   $('#navDiscord').classList.toggle('hidden',!dcOn);$('#tabDiscord').classList.toggle('hidden',!dcOn);
   $('#navAdmin').classList.toggle('hidden',!M.staff);$('#tabAdmin').classList.toggle('hidden',!M.staff);
   if(!M.staff&&this.S.screen==='admin'){this.S.screen='messages';this.S.adm=null}
-  const total=unread+requests+dcUnread,vc=M.voice.call;
+  const total=unread+requests+dcUnread+sPings,vc=M.voice.call;
   document.title=vc&&vc.state==='ringing'?'Incoming call · Marmot':(total?'('+count(total)+') ':'')+'Marmot';
   if(M.me){
    this.setAv($('#meAv'),M.me.userId,M.me.username);$('#meName').textContent=M.displayName(M.me.userId);
@@ -3320,16 +3780,17 @@ const UI={
  fill(rows,html){
   if(rows.innerHTML===html)return;
   const d=n=>n.dataset;
-  this.patch(rows,html,n=>{const s=d(n);return s.chat||s.dc||s.dcpub||s.peer||s.admSel||s.act||n.className+'|'+n.textContent})},
+  this.patch(rows,html,n=>{const s=d(n);return s.chat||s.dc||s.dcpub||s.peer||s.admSel||s.srv||s.act||n.className+'|'+n.textContent})},
  renderCol(){
   const rows=$('#rows'),scr=this.S.screen;
   if(this._colScreen!==scr){if(this._colScreen)this.enter(rows);this._colScreen=scr}
-  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord',admin:'Staff'}[scr]||'Messages';
+  $('#colTitle').textContent={settings:'Settings',peers:'Peers',discord:'Discord',admin:'Staff',servers:'Servers'}[scr]||'Messages';
+  $('#app').classList.toggle('srv-col',scr==='servers');
   $('#colAction').textContent=scr==='peers'?'+ ADD':scr==='discord'?'+ JOIN':'+ NEW';
   $('#colAction').classList.toggle('hidden',scr==='settings'||scr==='admin');
   const search=$('#search');
   search.classList.toggle('hidden',scr==='settings');
-  search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':scr==='admin'?'search accounts…':'search conversations…';
+  search.placeholder=scr==='peers'?'search friends and global…':scr==='discord'?'search servers and channels…':scr==='admin'?'search accounts…':scr==='servers'?'search servers…':'search conversations…';
   if(scr==='settings'){
    const sec=this.S.set||'profile',row=(v,name,sub)=>'<button class="row" data-act="open-settings" data-v="'+v+'"'+(sec===v?' aria-current="true"':'')+'>'+
     '<div class="row-main"><div class="row-name">'+name+'</div><div class="row-sub">'+sub+'</div></div></button>';
@@ -3342,6 +3803,7 @@ const UI={
   if(scr==='peers')return this.renderPeers(rows);
   if(scr==='discord')return this.renderDiscordCol(rows);
   if(scr==='admin')return this.renderAdminCol(rows);
+  if(scr==='servers')return this.renderServersCol(rows);
   const f=this.S.filter.toLowerCase();
   const list=M.conversations(this.S.chat).filter(c=>!isDiscord(c.id)).filter(c=>!f||M.displayName(c.id).toLowerCase().includes(f)||c.id.startsWith(f));
   this.fill(rows,list.length?list.map(c=>{
@@ -3390,6 +3852,475 @@ const UI={
  /** What presence reads as, in words. */
  PRES:{online:'online',idle:'idle',dnd:'do not disturb',offline:'offline',invisible:'invisible'},
  memberCount(id){const g=M.group(id),n=g?g.members.length:0;return n+' member'+(n===1?'':'s')},
+
+ /* ---------- servers ----------
+    The Servers screen: a narrow list of the servers this account is in; the open
+    server's channels beside the open channel's chat; and its members on the right.
+    A server is end-to-end encrypted unless its creator turned that off (see
+    server/servers.js); an unencrypted one says so, with a note each time it is opened. */
+ /** What each permission is called and does, in the order the role editor lists them. */
+ SPERMS:[['admin','Administrator','every permission, whatever else is set'],
+  ['view','Read messages','see text channels and their history'],
+  ['send','Send messages','post in text channels'],
+  ['sendReadonly','Send in read-only channels','post where everyone else can only read'],
+  ['deleteMsgs','Delete messages','remove anyone’s messages'],
+  ['connect','Join voice channels','talk in voice channels'],
+  ['invite','Create invites','make invite codes for other people'],
+  ['kick','Kick members','remove members ranked below them'],
+  ['ban','Ban members','remove members ranked below them for good, and lift bans'],
+  ['manageChannels','Manage channels','create, rename, reorder and delete channels'],
+  ['manageRoles','Manage roles','edit roles below their own and give them out'],
+  ['manageServer','Manage server','rename the server']],
+ serverUnread(s){return s.channels.some(ch=>M.sunread(s.serverId,ch.id))},
+ /** The text channel open in a server: the one picked last, else the first. */
+ schanOf(s){
+  if(!s)return null;
+  const want=this.S.schans[s.serverId],t=s.channels.filter(c=>c.kind==='text');
+  return (t.find(c=>c.id===want)||t[0]||{}).id||null},
+ openServer(sid){
+  if(this.S.screen!=='servers'){this.S.screen='servers';this.S.filter='';$('#search').value=''}
+  const moved=this.S.srv!==sid;
+  if(moved){this.S.sre=null;this.S.inChan=false}
+  this.S.srv=sid;
+  if(!M.smembers.has(sid))M.loadServerMembers(sid).catch(()=>{});
+  this.render();
+  const s=M.srv(sid);
+  if(moved&&s&&!s.e2ee&&!$('#overlay .scrim:not(.out)'))this.plainNote()},
+ /** The note an unencrypted server opens with. */
+ plainNote(){
+  this.modal('<div class="note" style="margin:0">Note: This server is not end to end encrypted. The creator decided to turn it off</div>'+
+   '<div class="modal-foot"><span class="grow"></span><button class="send" data-m="ok">OK</button></div>',act=>{if(act==='ok')this.close()})},
+ openSChan(cid){
+  const sid=this.S.srv;if(!sid)return;
+  if(this.S.schans[sid]!==cid)this.S.sre=null;
+  this.S.schans[sid]=cid;this.S.inChan=true;this.render();
+  const ta=$('#composer');if(ta&&!this.narrow())ta.focus()},
+ /** A server's tile: its icon, or its initials. */
+ sicon(s,cls){const ic=M.serverIcon(s.serverId);return '<div class="av '+cls+' stile">'+(ic?'<img src="'+esc(ic)+'" alt="">':esc(initials(s.name)))+'</div>'},
+ renderServersCol(rows){
+  const f=this.S.filter.trim().toLowerCase(),vc=M.voice.call;
+  const list=[...M.servers.values()].filter(s=>!f||s.name.toLowerCase().includes(f)).sort((a,b)=>a.name.localeCompare(b.name));
+  this.fill(rows,list.length?list.map(s=>{
+   const pings=M.spingCount(s.serverId),unread=this.serverUnread(s),inv=!!vc&&vc.server===s.serverId;
+   return '<button class="row srow" data-srv="'+esc(s.serverId)+'"'+(this.S.srv===s.serverId?' aria-current="true"':'')+'>'+
+    this.sicon(s,'av-34')+'<div class="row-main"><div class="row-top"><span class="row-name">'+esc(s.name)+'</span></div>'+
+    '<div class="row-sub">'+(inv?'in voice · ':'')+s.members+' member'+(s.members===1?'':'s')+'</div></div>'+
+    '<div class="row-right">'+(pings?'<div class="badge at" title="You were mentioned">@ '+count(pings)+'</div>':unread?'<i class="sdot" title="Unread messages"></i>':'')+'</div></button>'}).join('')
+   :'<div class="grouplbl">'+(f?'NO MATCHES':M.serversLoaded?'NO SERVERS YET<br>CREATE ONE, OR JOIN ONE<br>WITH AN INVITE CODE: + NEW':'LOADING…')+'</div>')},
+ renderServerPane(pane){
+  const sid=this.S.srv,s=sid&&M.srv(sid);
+  if(sid&&!s&&M.serversLoaded){this.S.srv=null;this.S.sre=null}
+  if(!s){
+   if(this.S.paneKey!=='empty:servers'){this.S.paneKey='empty:servers';this.enter(pane);
+    pane.innerHTML='<div class="empty">'+(M.me?'PICK A SERVER<br>OR CREATE OR JOIN ONE WITH + NEW':'')+'</div>'}
+   return}
+  if(this.S.paneKey!=='srv:'+sid){
+   this.S.paneKey='srv:'+sid;this.enter(pane);this._schatKey=null;
+   pane.innerHTML='<div class="srv" id="srvBox"><div class="chans">'+
+    '<div class="chans-head"><button class="tbtn back" data-act="back">←</button><div id="srvIcon"></div><div class="grow"><div class="pane-title" id="srvName"></div><div class="meta" id="srvMeta"></div></div>'+
+    '<button class="tbtn" data-act="s-settings" title="Server settings, invites, roles and members">SETTINGS</button></div>'+
+    '<div class="chans-list" id="chansList"></div><div class="chans-foot hidden" id="chansFoot"></div></div>'+
+    '<div class="schat" id="schat"></div></div>'}
+  $('#srvBox').classList.toggle('in-chan',!!this.S.inChan);
+  const nm=$('#srvName');if(nm.textContent!==s.name)nm.textContent=s.name;
+  const ic=$('#srvIcon'),ih=this.sicon(s,'av-34');if(ic.innerHTML!==ih)ic.innerHTML=ih;
+  const meta=s.members+' member'+(s.members===1?'':'s')+(s.owner===M.me.userId?' · you own it':'');
+  if($('#srvMeta').textContent!==meta)$('#srvMeta').textContent=meta;
+  this.renderChans(s);
+  this.renderSChat(s)},
+ /** A member's highest role that has a color, as {name, color}, or null. */
+ topRole(s,uid){
+  const m=(M.smembers.get(s.serverId)||[]).find(x=>x.userId===uid);
+  return m&&s.roles.find(r=>r.id!=='everyone'&&r.color&&m.roles.includes(r.id))||null},
+ renderChans(s){
+  const sid=s.serverId,cur=this.schanOf(s),vc=M.voice.call,p=s.me.perms;
+  const texts=s.channels.filter(c=>c.kind==='text'),voices=s.channels.filter(c=>c.kind==='voice');
+  let html='<div class="grouplbl">TEXT CHANNELS</div>'+(texts.length?texts.map(ch=>{
+   const un=M.sunread(sid,ch.id),n=M.spingCount(sid,ch.id);
+   return '<button class="ch'+(un?' unread':'')+(p.view?'':' locked')+'" data-schan="'+esc(ch.id)+'"'+(cur===ch.id?' aria-current="true"':'')+(ch.topic?' title="'+esc(ch.topic)+'"':'')+'>'+
+    '<span class="ci">#</span><span class="cn">'+esc(ch.name)+'</span>'+(ch.readonly?'<span class="ci" title="Read-only">'+ICON.lock+'</span>':'')+
+    (n?'<span class="badge at">@'+count(n)+'</span>':'')+'</button>'}).join(''):'<div class="ch locked"><span class="cn">none yet</span></div>');
+  html+='<div class="grouplbl">VOICE CHANNELS</div>'+(voices.length?voices.map(ch=>{
+   const users=M.voiceUsers(sid,ch.id),here=!!vc&&vc.chan===ch.id;
+   return '<button class="ch'+(here?' live':'')+(p.connect?'':' locked')+'" data-svoice="'+esc(ch.id)+'"'+(here?' aria-current="true"':'')+' title="'+(here?'You are in this voice channel':p.connect?'Join voice':'You cannot join voice channels here')+'">'+
+    '<span class="ci">'+ICON.speaker+'</span><span class="cn">'+esc(ch.name)+'</span>'+(users.length?'<span class="vn">'+users.length+'</span>':'')+'</button>'+
+    (users.length?'<div class="vusers">'+users.map(u=>'<div class="vu" data-pf="'+esc(u)+'">'+this.av(u,'av-26',null,' style="background:var(--avatar);color:var(--avatar-fg)"')+
+     '<span>'+esc(u===M.me.userId?M.displayName(u)+' (you)':M.displayName(u))+'</span>'+(here&&this.vstate(vc,u)?'<i>'+this.vstate(vc,u)+'</i>':'')+'</div>').join('')+'</div>':'')}).join('')
+   :'<div class="ch locked"><span class="cn">none yet</span></div>');
+  this.patch($('#chansList'),html,n=>n.dataset.schan||n.dataset.svoice||n.className+'|'+n.textContent);
+  // the voice channel this side is in, wherever it is, with a way out
+  const foot=$('#chansFoot'),vs=vc&&vc.chan?M.srv(vc.server):null;
+  foot.classList.toggle('hidden',!vs);
+  if(vs){const ch=vs.channels.find(x=>x.id===vc.chan);
+   const fh='<div class="vnow"><i></i><div class="grow" title="'+esc((ch?ch.name:'voice')+' / '+vs.name)+'">VOICE · '+esc(ch?ch.name:'channel')+(vs.serverId!==sid?' / '+esc(vs.name):'')+'</div>'+
+    '<button class="tbtn" data-act="call-mute" aria-pressed="'+vc.muted+'">'+(vc.muted?'UNMUTE':'MUTE')+'</button><button class="hang" data-act="call-hangup">LEAVE</button></div>'+
+    '<div class="vnow vmedia">'+(M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+vc.cam+'" title="Turn your camera on or off">CAMERA</button>':'')+
+    (M.voice.canScreen()?'<button class="tbtn" data-act="call-screen" aria-pressed="'+vc.screen+'" title="Share your screen, a window or a tab">SCREEN</button>':'')+
+    '<button class="tbtn" data-act="call-view" aria-pressed="'+!this._stageOff+'" title="Show or hide the call window">VIEW</button></div>';
+   if(foot.innerHTML!==fh)foot.innerHTML=fh}},
+ /** How someone in my voice channel is connected, when it is not simply up. */
+ vstate(vc,u){
+  if(u===M.me.userId)return [vc.screen&&'live',vc.cam&&'camera',vc.muted&&'muted'].filter(Boolean).join(' · ');
+  const l=vc.links.get(u);if(!l)return 'connecting…';
+  return l.state!=='active'?'connecting…':l.unstable?'reconnecting…':[l.peerScreen&&'live',l.peerCam&&'camera',l.peerMuted&&'muted'].filter(Boolean).join(' · ')},
+ renderSChat(s){
+  const box=$('#schat'),sid=s.serverId,cid=this.schanOf(s),ch=cid&&s.channels.find(x=>x.id===cid);
+  const key=sid+'/'+(cid||'');
+  if(this._schatKey!==key){
+   this._schatKey=key;this._sThreadFor=null;this.enter(box);
+   if(!ch){box.innerHTML='<div class="empty">NO TEXT CHANNELS'+(s.me.perms.manageChannels?'<br>MAKE ONE IN SETTINGS → CHANNELS':'')+'</div>';return}
+   if(this.S.smem==null)this.S.smem=!matchMedia('(max-width:1100px)').matches;
+   box.innerHTML='<div class="pane-head"><button class="tbtn back" data-act="s-back">←</button><div class="av av-34 stile">#</div>'+
+    '<div style="min-width:0"><div class="pane-title" id="schName"></div><div class="meta" id="schMeta"></div></div>'+
+    '<div class="acts"><button class="tbtn" data-act="s-members" id="sMemBtn">MEMBERS</button></div></div>'+
+    '<div class="sbody" id="sbody"><div class="scol"><div class="thread" id="sthread"></div>'+
+    '<div class="composer" id="composerBox"><div class="replybar hidden" id="replyBar"></div><textarea id="composer" maxlength="2000" placeholder="Message #'+esc(ch.name)+'"></textarea>'+
+    '<div class="composer-bar"><button class="cbtn" data-act="emoji" title="Emoji" aria-label="Emoji" aria-expanded="false">'+ICON.smile+'</button>'+
+    '<span class="hint" id="cHint">↵ send · shift+↵ newline</span><button class="send" data-act="send">SEND</button></div></div>'+
+    '<div class="gate hidden" id="gate"></div></div><div class="smembers" id="smembers"></div></div>'}
+  if(!ch)return;
+  const p=s.me.perms,mu=M.muted();
+  const name=esc(ch.name)+(ch.readonly?' <span class="chip">READ-ONLY</span>':'');
+  if($('#schName').innerHTML!==name)$('#schName').innerHTML=name;
+  const meta=[ch.topic,s.e2ee?'end-to-end encrypted':'not end-to-end encrypted'].filter(Boolean).join(' · ');
+  if($('#schMeta').textContent!==meta)$('#schMeta').textContent=meta;
+  const can=!!(p.view&&p.send&&(!ch.readonly||p.sendReadonly));
+  const why=!p.view?'You do not have permission to read messages in this server.'
+   :ch.readonly&&!p.sendReadonly?'This channel is read-only.':!p.send?'You do not have permission to send messages in this server.':'';
+  $('#composerBox').classList.toggle('hidden',!can);
+  const gate=$('#gate');gate.classList.toggle('hidden',can);
+  const gh='<span class="grow">'+esc(why)+'</span>';if(!can&&gate.innerHTML!==gh)gate.innerHTML=gh;
+  const h=$('#cHint'),ht=mu?'you are muted '+this.muteText(mu):'↵ send · shift+↵ newline';
+  if(h.textContent!==ht)h.textContent=ht;h.classList.toggle('warn',!!mu);
+  $('#sbody').classList.toggle('mem',!!this.S.smem);
+  $('#sMemBtn').setAttribute('aria-pressed',String(!!this.S.smem));
+  if(p.view&&!M.schan.has(sid+'/'+cid))M.loadChannel(sid,cid).catch(()=>{});
+  this.renderSThread(s,ch);this.renderSReply(s,ch);this.renderSMembers(s)},
+ renderSThread(s,ch){
+  const th=$('#sthread');if(!th)return;
+  const sid=s.serverId,cid=ch.id,k=sid+'/'+cid,p=s.me.perms,c=M.chan(sid,cid),me=M.me.userId;
+  const opened=this._sThreadFor!==k;
+  if(opened){this._sThreadFor=k;this._sSeen=new Set(c.msgs.map(m=>m.id))}
+  const near=th.scrollHeight-th.scrollTop-th.clientHeight<80,h0=th.scrollHeight,t0=th.scrollTop;
+  const f=M.filter(),seen=this._sSeen,calm=opened||document.hidden;
+  let html='';
+  if(!p.view)html='<div class="sys" data-k="noview">you do not have permission to read messages in this server</div>';
+  else if(!c.loaded)html='<div class="sys" data-k="loading">loading…</div>';
+  else if(c.err&&!c.msgs.length)html='<div class="sys" data-k="err">could not load this channel: '+esc(c.err)+'</div>';
+  else{
+   html=c.more?'<div class="sys" data-k="earlier"><button data-searlier>scroll up for earlier messages</button></div>'
+    :s.e2ee?'<div class="plain" data-k="plain">this is the start of #'+esc(ch.name)+'. this server is end-to-end encrypted. <br>Everyone who can read this channel sees its history.</div>'
+    :'<div class="plain" data-k="plain">this is the start of #'+esc(ch.name)+'. this server is not end-to-end encrypted:<br>the Marmot server can read it, and everyone who can read this channel sees its history.</div>';
+   const ks=M.skeyState(sid);
+   if(ks==='none')html+='<div class="sys" data-k="nokey">you joined without the whole invite code, so you cannot read or send here.<br>ask a member for a new invite code and join with all of it.</div>';
+   else if(ks==='wait')html+='<div class="sys" data-k="waitkey">waiting for the server\'s current key from another member…</div>';
+   const msgs=c.msgs,run=(a,b)=>!!a&&!!b&&a.from===b.from&&b.ts-a.ts<=60000&&dayLabel(a.ts)===dayLabel(b.ts)&&!b.re;
+   const canSend=p.view&&p.send&&(!ch.readonly||p.sendReadonly),r=this.S.sre;
+   let lastDay='';
+   msgs.forEach((m,i)=>{
+    const out=m.from===me,caught=!out&&f.level!=='none'&&chatFilter.test(f.level,m.text);
+    if(caught&&f.action==='delete')return;
+    const day=dayLabel(m.ts);
+    if(day!==lastDay){html+='<div class="day" data-k="d'+day+'"><i></i><span>'+day+'</span><i></i></div>';lastDay=day}
+    const start=!run(msgs[i-1],m),end=!run(m,msgs[i+1]),veil=caught&&!this.S.unveiled.has('s|'+m.id);
+    const fresh=seen.has(m.id)||calm?'':' new';seen.add(m.id);
+    const acts=(canSend&&!veil?'<button data-sreply="'+m.id+'" title="Reply" aria-label="Reply">'+ICON.reply+'</button>':'')+
+     (out||p.deleteMsgs?'<button class="del" data-sdel="'+m.id+'" title="Delete" aria-label="Delete">'+ICON.trash+'</button>':'');
+    const tr=start&&!out?this.topRole(s,m.from):null;
+    let quote='';
+    if(m.re){const live=msgs.find(x=>x.id===m.re.id);
+     quote='<button class="quote" data-sjump="'+m.re.id+'" title="Jump to message"><b>'+esc(m.re.from===me?'you':M.displayName(m.re.from))+'</b>'+
+      '<span'+(live?'':' class="gone"')+'>'+esc((live?live.text:m.re.t||'original message').slice(0,200))+'</span></button>'}
+    html+='<div class="msg '+(out?'out':'in')+fresh+(start?'':' cont')+(end?'':' mid')+(!out&&M.pings(m.text)?' pinged':'')+
+     (r&&r.k===k&&r.id===m.id?' replying':'')+'" data-k="s'+m.id+'" tabindex="-1"'+(end?'':' title="'+esc(hm(m.ts))+'"')+'>'+
+     (start&&!out?'<div class="who"><span class="pf" data-pf="'+esc(m.from)+'"'+(tr?' style="color:'+esc(tr.color)+'"':'')+'>'+esc(M.displayName(m.from))+'</span>'+
+      (m.from===s.owner?' <i>· owner</i>':'')+'</div>':'')+
+     '<div class="mrow">'+(end?this.av(m.from,'mav','',' data-pf="'+esc(m.from)+'"'):'<div class="av mav ghost"></div>')+
+     '<div class="bub'+(m.re&&!veil?' has-re':'')+'">'+(acts?'<div class="macts">'+acts+'</div>':'')+(veil?'':quote)+
+     (veil?'<button class="body veil" data-sunveil="'+m.id+'" title="Show this message">hidden by your chat filter · click to show</button>'
+      :m.locked?'<div class="body gone">'+ICON.lock+' encrypted: waiting for the key to read this message</div>'
+      :m.bad?'<div class="body gone">this message could not be decrypted</div>'
+      :'<div class="body">'+this.rich(m.text)+'</div>')+'</div></div>'+
+     '<div class="stamp">'+hm(m.ts)+'</div></div>'})}
+  this.patch(th,html);
+  if(opened||this._sStick||(near&&!this._sOlder))th.scrollTop=th.scrollHeight;
+  else if(this._sOlder)th.scrollTop=t0+th.scrollHeight-h0;
+  this._sStick=false;this._sOlder=false;
+  if(p.view&&c.loaded&&!document.hidden)M.markRead(sid,cid)},
+ /** The reader scrolled near the top of a channel: the page before loads, keeping their place. */
+ sScrolled(th){
+  const s=M.srv(this.S.srv),cid=this.schanOf(s);if(!s||!cid||th.scrollTop>120)return;
+  const c=M.chan(s.serverId,cid);if(!c.more||c.loading)return;
+  M.loadChannel(s.serverId,cid,true).then(()=>{this._sOlder=true;this.render()}).catch(e=>toast('could not load earlier messages: '+e.message))},
+ renderSReply(s,ch){
+  const bar=$('#replyBar');if(!bar)return;
+  const r=this.S.sre,k=s.serverId+'/'+ch.id,m=r&&r.k===k&&M.chan(s.serverId,ch.id).msgs.find(x=>x.id===r.id);
+  if(!m){bar.classList.add('hidden');bar.innerHTML='';return}
+  const html=ICON.reply+'<div class="grow"><div class="lbl">REPLYING TO '+esc((m.from===M.me.userId?'yourself':M.displayName(m.from)).toUpperCase())+'</div>'+
+   '<div class="rtext">'+esc(m.text.slice(0,200))+'</div></div><button data-act="s-reply-cancel" title="Cancel reply (Esc)" aria-label="Cancel reply">'+ICON.x+'</button>';
+  bar.classList.remove('hidden');if(bar.innerHTML!==html)bar.innerHTML=html},
+ renderSMembers(s){
+  const box=$('#smembers');if(!box)return;
+  const list=M.smembers.get(s.serverId);
+  if(!list){box.innerHTML='<div class="grouplbl">LOADING…</div>';return}
+  const groups=new Map(s.roles.map(r=>[r.id,[]]));
+  for(const m of list){const top=s.roles.find(r=>r.id!=='everyone'&&m.roles.includes(r.id));groups.get(top?top.id:'everyone').push(m)}
+  let html='';
+  for(const r of s.roles){
+   const ms=groups.get(r.id);if(!ms.length)continue;
+   ms.sort((a,b)=>M.displayName(a.userId).localeCompare(M.displayName(b.userId)));
+   html+='<div class="grouplbl">'+(r.id==='everyone'?'MEMBERS':esc(r.name.toUpperCase()))+' · '+ms.length+'</div>'+ms.map(m=>{
+    const tr=this.topRole(s,m.userId);
+    return '<button class="sm" data-smem="'+esc(m.userId)+'" data-pf="'+esc(m.userId)+'">'+this.av(m.userId,'av-26',null,' style="background:var(--avatar);color:var(--avatar-fg)"')+
+     '<span class="row-main"'+(tr?' style="color:'+esc(tr.color)+'"':'')+'>'+esc(M.displayName(m.userId))+'</span>'+(m.userId===s.owner?'<span class="chip">OWNER</span>':'')+'</button>'}).join('')}
+  this.patch(box,html,n=>n.dataset.smem||n.className+'|'+n.textContent)},
+ async sendServer(){
+  const ta=$('#composer'),sid=this.S.srv,s=M.srv(sid),cid=this.schanOf(s);if(!ta||!cid)return;
+  const text=ta.value;if(!text.trim())return;
+  let out=emojify(text);
+  try{const f=funCommand(out,M.me.username);if(f){if(f.poll)return toast('polls are not available in server channels');out=f.text;this.acClose()}}
+  catch(e){return toast(text.trim().split(/\s/)[0]+': '+e.message,6000)}
+  if(out.length>2000)return toast('server messages are limited to 2000 characters');
+  const mu=M.muted();if(mu)return toast('you are muted '+this.muteText(mu)+(mu.reason?' — '+mu.reason:''),6000);
+  const r=this.S.sre,re=r&&r.k===sid+'/'+cid?r.id:undefined;
+  ta.value='';this.S.sre=null;this._sStick=true;this.emojiClose();this.render();
+  try{await M.sendServer(sid,cid,out,re)}
+  catch(e){if(!ta.value)ta.value=text;toast('not sent: '+e.message)}},
+ sReply(id){const s=M.srv(this.S.srv),cid=this.schanOf(s);if(!cid)return;this.S.sre={k:s.serverId+'/'+cid,id};this.render();const ta=$('#composer');if(ta)ta.focus()},
+ sJump(id){
+  const el=document.querySelector('#sthread .msg[data-k="s'+id+'"]');
+  if(!el)return toast('that message is not loaded, or was deleted');
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  const b=el.querySelector('.body'),c=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if(b&&b.animate)b.animate([{boxShadow:'0 0 0 2px '+c},{boxShadow:'0 0 0 2px '+c,offset:.5},{boxShadow:'0 0 0 2px transparent'}],{duration:1400,easing:'ease-out'})},
+ async sDelete(id){
+  const s=M.srv(this.S.srv),cid=this.schanOf(s),m=cid&&M.chan(s.serverId,cid).msgs.find(x=>x.id===id);if(!m)return;
+  const mine=m.from===M.me.userId;
+  if(!await this.confirm('Delete message?',(mine?'Your message':M.displayName(m.from)+'’s message')+' is removed from the channel for everyone. This cannot be undone.','DELETE'))return;
+  try{await M.deleteServerMsg(s.serverId,cid,id)}catch(e){toast('not deleted: '+e.message)}},
+ async joinVoice(cid){
+  const sid=this.S.srv,vc=M.voice.call,s=M.srv(sid);
+  if(vc&&vc.chan===cid)return;
+  if(vc&&!vc.chan)return toast('hang up your call first');
+  if(s&&!s.me.perms.connect)return toast('you do not have permission to join voice channels in this server');
+  try{await M.joinVoice(sid,cid)}
+  catch(e){toast(!e.status&&/permission|denied|notallowed/i.test(e.name+' '+e.message)?'microphone access was blocked — allow it in the browser to join voice':'could not join voice: '+e.message,7000)}},
+ /** A message in a channel that is not open: only @mentions make a sound or a toast; the rest is the unread dot. */
+ snotify(sid,cid,m){
+  const s=M.srv(sid),ch=s&&s.channels.find(x=>x.id===cid);if(!ch)return;
+  const open=this.S.screen==='servers'&&this.S.srv===sid&&this.schanOf(s)===cid&&!document.hidden;
+  if(open||!M.pings(m.text)||M.presenceMode==='dnd')return;
+  const n=M.notifyPrefs(),f=M.filter(),caught=f.level!=='none'&&chatFilter.test(f.level,m.text);
+  if(caught&&f.action==='delete')return;
+  if(n.sound)chime();
+  const where='#'+ch.name+' · '+s.name,body=M.displayName(m.from)+': '+(caught?'message hidden by your chat filter':m.text.slice(0,140));
+  if(document.hidden&&n.desktop&&'Notification' in window&&Notification.permission==='granted'){
+   try{const x=new Notification('@ '+where,{tag:'marmot:s:'+cid,silent:true,body:n.preview?body:'you were mentioned'});
+    x.onclick=()=>{window.focus();this.openServer(sid);this.openSChan(cid);x.close()}}catch(e){}}
+  else toast('@ you were mentioned in '+where+' · '+body,9000)},
+
+ /* + NEW on the Servers screen */
+ newServer(mode){
+  mode=mode==='join'?'join':'create';
+  this.modal('<h3>'+(mode==='create'?'Create a server':'Join a server')+'</h3>'+
+   '<div class="auth-seg"><button data-m="mode-create" aria-pressed="'+(mode==='create')+'">CREATE</button><button data-m="mode-join" aria-pressed="'+(mode==='join')+'">JOIN</button></div>'+
+   (mode==='create'?'<div class="note">A server has text and voice channels, and roles that decide who can do what.</div>'+
+     '<div class="field"><div class="lbl">SERVER NAME</div><input class="inp" id="nsIn" maxlength="32" autocomplete="off"></div>'+
+     '<label class="perm"><input type="checkbox" id="nsE2ee" checked><span>End-to-end encrypted<small>only members can read messages and join voice; the Marmot server cannot. This cannot be changed later.</small></span></label>'+
+     '<div class="note hidden" id="nsPlain" style="margin-top:8px">Without encryption the Marmot server stores the messages and can read them, and everyone who opens the server is told so.</div>'
+    :'<div class="note">Enter the whole invite code from someone in the server. For an encrypted server the code\'s last part unlocks its messages.</div>'+
+     '<div class="field"><div class="lbl">INVITE CODE</div><input class="inp" id="nsIn" placeholder="XXXX-XXXX-…" autocomplete="off" spellcheck="false"></div>')+
+   '<div class="err" id="nsErr"></div><div class="modal-foot"><span class="grow"></span><button class="tbtn" data-m="cancel">CANCEL</button><button class="send" data-m="go">'+(mode==='create'?'CREATE':'JOIN')+'</button></div>',
+   async(act,btn)=>{
+    if(act==='mode-create'||act==='mode-join')return this.newServer(act.slice(5));
+    if(act==='cancel')return this.close();
+    if(act!=='go')return;
+    const err=$('#nsErr'),v=$('#nsIn').value.trim();err.textContent='';if(!v)return;
+    btn.disabled=true;
+    try{const s=mode==='create'?await M.createServer(v,{e2ee:$('#nsE2ee').checked}):await M.joinServer(v);this.close();toast((mode==='create'?'created ':'joined ')+s.name);this.openServer(s.serverId)}
+    catch(e){err.textContent=e.message;btn.disabled=false}});
+  $('#nsIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('[data-m=go]').click()});
+  const cb=$('#nsE2ee');if(cb)cb.addEventListener('change',()=>$('#nsPlain').classList.toggle('hidden',cb.checked))},
+
+ /* ---------- server settings ---------- */
+ serverSettings(sid,tab){
+  const s=M.srv(sid);if(!s)return;
+  this.modal('<div id="ssBox"></div>',(act,btn)=>this.ssAct(act,btn));
+  $('#overlay .modal').classList.add('wide');
+  this._ss={sid,tab:tab||'overview',role:null,edit:null,mem:null,confirm:null,code:null,err:'',q:'',kind:'text'};
+  this._onClose=()=>{this._ss=null};
+  if(!M.smembers.has(sid))M.loadServerMembers(sid).then(()=>{if(this._ss&&this._ss.tab==='members')this.ssFill()}).catch(()=>{});
+  this.ssFill()},
+ ssFill(){
+  const st=this._ss,box=$('#ssBox');if(!st||!box)return;
+  const s=M.srv(st.sid);if(!s){this.close();return}
+  const p=s.me.perms;
+  const tabs=[['overview','OVERVIEW',true],['invite','INVITE',p.invite],['channels','CHANNELS',p.manageChannels],['roles','ROLES',p.manageRoles],['members','MEMBERS',true],['bans','BANS',p.ban]].filter(t=>t[2]);
+  if(!tabs.some(t=>t[0]===st.tab))st.tab='overview';
+  const body={overview:'ssOverview',invite:'ssInvite',channels:'ssChannels',roles:'ssRoles',members:'ssMembers',bans:'ssBans'}[st.tab];
+  box.innerHTML='<h3>'+esc(s.name)+'</h3><div class="ss-tabs">'+tabs.map(t=>'<button data-m="tab:'+t[0]+'" aria-pressed="'+(st.tab===t[0])+'">'+t[1]+'</button>').join('')+'</div>'+
+   this[body](s)+'<div class="err">'+esc(st.err||'')+'</div><div class="modal-foot"><span class="grow"></span><button class="send" data-m="close">DONE</button></div>';
+  st.err='';
+  const q=$('#ssQ');if(q){q.addEventListener('input',()=>{st.q=q.value;const l=$('#ssMemList');if(l)l.innerHTML=this.ssMemberRows(s)})}},
+ /** Whether I can manage the role at position i: the owner any, others only those below their highest. */
+ ssBelow(s,i){return s.me.rank===0||i>=s.me.rank},
+ ssRank(s,uid){
+  if(uid===s.owner)return 0;
+  const m=(M.smembers.get(s.serverId)||[]).find(x=>x.userId===uid);if(!m)return s.roles.length;
+  let best=s.roles.length-1;for(const id of m.roles){const i=s.roles.findIndex(r=>r.id===id);if(i>=0&&i<best)best=i}
+  return best+1},
+ ssOverview(s){
+  const st=this._ss,p=s.me.perms,mine=s.owner===M.me.userId,others=(M.smembers.get(s.serverId)||[]).filter(m=>m.userId!==M.me.userId);
+  const myRoles=s.roles.filter(r=>s.me.roles.includes(r.id)).map(r=>r.name);
+  let h='<div class="pc-kv"><b>OWNER</b><span>'+esc(mine?'you':M.displayName(s.owner))+'</span></div>'+
+   '<div class="pc-kv"><b>MEMBERS</b><span>'+s.members+'</span></div>'+
+   '<div class="pc-kv"><b>CREATED</b><span>'+esc(new Date(s.created).toLocaleDateString())+'</span></div>'+
+   '<div class="pc-kv"><b>YOUR ROLES</b><span>'+esc(mine?'owner (every permission)':myRoles.length?myRoles.join(', '):'@everyone only')+'</span></div>';
+  if(p.manageServer)h+='<div class="field" style="margin-top:14px"><div class="lbl">SERVER ICON</div><div class="btnrow" style="margin:0;align-items:center">'+this.sicon(s,'av-64')+
+   '<button class="tbtn" data-m="icon-pick">'+(s.iv?'CHANGE ICON':'UPLOAD ICON')+'</button>'+(s.iv?'<button class="tbtn danger" data-m="icon-clear">REMOVE ICON</button>':'')+'</div></div>'+
+   '<div class="field" style="margin-top:14px"><div class="lbl">SERVER NAME</div><div class="btnrow" style="margin:0;flex-wrap:nowrap"><input class="inp" id="ssName" maxlength="32" value="'+esc(s.name)+'"><button class="tbtn" data-m="rename">SAVE</button></div></div>';
+  h+=s.e2ee?'<div class="note" style="margin-top:14px"><span class="ico-in">'+ICON.lock+'</span> This server is end-to-end encrypted: messages and voice are sealed with a key only members hold. The Marmot server still sees names (of the server, channels and roles), who is in it, and who posted when. When someone leaves or is removed, the key is replaced.</div>'
+   :'<div class="note" style="margin-top:14px">This server is not end-to-end encrypted: its creator turned that off. The Marmot server stores its messages and can read them. Voice channels connect the people in them directly where they can, with the server passing on the setup.</div>';
+  if(st.confirm==='delete')h+='<div class="gate" style="margin:0"><span class="grow">Delete '+esc(s.name)+' for everyone, with all its channels and messages? This cannot be undone.</span><button class="tbtn" data-m="no">CANCEL</button><button class="hang" data-m="del-server-yes">DELETE FOREVER</button></div>';
+  else if(st.confirm==='transfer'){
+   h+='<div class="gate" style="margin:0"><span class="grow">Hand '+esc(s.name)+' over to '+esc(M.displayName(st.to))+'? They become the owner, and you keep only your roles.</span><button class="tbtn" data-m="no">CANCEL</button><button class="hang" data-m="transfer-yes">HAND OVER</button></div>'}
+  else if(mine){
+   h+=(others.length?'<div class="field"><div class="lbl">HAND THE SERVER OVER</div><div class="btnrow" style="margin:0;flex-wrap:nowrap"><select class="inp" id="ssTo">'+
+     others.map(m=>'<option value="'+esc(m.userId)+'">'+esc(M.displayName(m.userId))+' (@'+esc(m.username)+')</option>').join('')+'</select><button class="tbtn" data-m="transfer">HAND OVER</button></div></div>':'')+
+    '<div class="btnrow">'+(others.length?'':'<button class="tbtn danger" data-m="leave">LEAVE (DELETES IT)</button>')+'<button class="tbtn danger" data-m="del-server">DELETE SERVER</button></div>'}
+  else h+='<div class="btnrow"><button class="tbtn danger" data-m="leave">LEAVE SERVER</button></div>';
+  return h},
+ ssInvite(s){
+  const st=this._ss;
+  return '<div class="note">Anyone with the code can join until it runs out. Joining lets them read the history of every channel @everyone can read.'+
+   (s.e2ee?' The code\'s last part holds the key to the server\'s messages and never goes to the Marmot server: share the whole code, and only with people you want in.':'')+'</div>'+
+   '<div class="btnrow" style="margin:0 0 12px"><div class="field" style="margin:0;flex:1"><div class="lbl">EXPIRES AFTER</div><select class="inp" id="ssHours">'+
+   [[1,'1 hour'],[24,'1 day'],[168,'7 days'],[720,'30 days']].map(([v,l])=>'<option value="'+v+'"'+(v===168?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'+
+   '<div class="field" style="margin:0;flex:1"><div class="lbl">USES</div><select class="inp" id="ssUses">'+
+   [[0,'no limit'],[1,'1 use'],[5,'5 uses'],[10,'10 uses'],[25,'25 uses'],[100,'100 uses']].map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join('')+'</select></div></div>'+
+   '<button class="send" data-m="inv-make">CREATE INVITE CODE</button>'+
+   (st.code?'<div class="field" style="margin-top:16px"><div class="lbl">INVITE CODE</div><div class="code'+(st.code.code.length>9?' long':'')+'">'+esc(st.code.code)+'</div>'+
+    '<div class="note" style="margin-top:6px">expires '+esc(new Date(st.code.expires).toLocaleString())+' · '+(st.code.uses?st.code.uses+' use'+(st.code.uses===1?'':'s'):'no use limit')+
+    ' · they join with + NEW → JOIN on the Servers screen</div><button class="tbtn" data-m="inv-copy">COPY</button></div>':'')},
+ ssChannels(s){
+  const st=this._ss,list=s.channels;
+  const rows=list.map((ch,i)=>{
+   if(st.edit===ch.id)return '<div class="gp-row"><span class="ci">'+(ch.kind==='text'?'#':ICON.speaker)+'</span><input class="inp" id="ssChName" maxlength="32" value="'+esc(ch.name)+'" style="flex:1;min-width:120px">'+
+    (ch.kind==='text'?'<input class="inp" id="ssChTopic" maxlength="120" placeholder="topic (optional)" value="'+esc(ch.topic||'')+'" style="flex-basis:100%">':'')+
+    '<div class="acts" style="flex-basis:100%"><button class="tbtn" data-m="ch-cancel">CANCEL</button><button class="tbtn" data-m="ch-save:'+ch.id+'">SAVE</button></div></div>';
+   if(st.confirm==='ch:'+ch.id)return '<div class="gp-row"><span class="row-main">Delete '+(ch.kind==='text'?'#':'')+esc(ch.name)+(ch.kind==='text'?' and every message in it':'')+'?</span>'+
+    '<div class="acts"><button class="tbtn" data-m="no">CANCEL</button><button class="tbtn danger" data-m="ch-del-yes:'+ch.id+'">DELETE</button></div></div>';
+   return '<div class="gp-row"><span class="ci">'+(ch.kind==='text'?'#':ICON.speaker)+'</span><span class="row-main">'+esc(ch.name)+
+    (ch.readonly?' <span class="chip">READ-ONLY</span>':'')+(ch.topic?'<div class="row-sub">'+esc(ch.topic)+'</div>':'')+'</span><div class="acts">'+
+    '<button class="tbtn" data-m="ch-move:'+ch.id+':-1"'+(i?'':' disabled')+' title="Move up">↑</button><button class="tbtn" data-m="ch-move:'+ch.id+':1"'+(i<list.length-1?'':' disabled')+' title="Move down">↓</button>'+
+    (ch.kind==='text'?'<button class="tbtn" data-m="ch-ro:'+ch.id+'" aria-pressed="'+!!ch.readonly+'" title="Only people who may send in read-only channels can post">'+(ch.readonly?'MAKE WRITABLE':'MAKE READ-ONLY')+'</button>':'')+
+    '<button class="tbtn" data-m="ch-edit:'+ch.id+'">EDIT</button><button class="tbtn danger" data-m="ch-del:'+ch.id+'">DELETE</button></div></div>'}).join('');
+  return '<div class="ss-list">'+(rows||'<div class="grouplbl">NO CHANNELS</div>')+'</div>'+
+   '<div class="field" style="margin-top:14px"><div class="lbl">NEW CHANNEL</div>'+
+   '<div class="auth-seg" style="margin:0 0 8px"><button data-m="ch-kind:text" aria-pressed="'+(st.kind==='text')+'"># TEXT</button><button data-m="ch-kind:voice" aria-pressed="'+(st.kind==='voice')+'">VOICE</button></div>'+
+   '<div class="btnrow" style="margin:0;flex-wrap:nowrap"><input class="inp" id="ssNewCh" maxlength="32" placeholder="'+(st.kind==='text'?'channel-name':'Channel name')+'" autocomplete="off"><button class="tbtn" data-m="ch-new">CREATE</button></div></div>'},
+ ssRoles(s){
+  const st=this._ss,mine=s.me.perms;
+  if(!s.roles.some(r=>r.id===st.role))st.role=s.roles[0].id;
+  const i=s.roles.findIndex(r=>r.id===st.role),r=s.roles[i],all=r.id==='everyone',can=all||this.ssBelow(s,i),last=s.roles.length-1;
+  const list='<div class="ss-list" style="max-height:200px">'+s.roles.map((x,j)=>'<div class="gp-row" style="padding:6px 10px"><span class="rsw" style="--rc:'+esc(x.color||'var(--faint)')+'"></span>'+
+   '<button class="row-main" data-m="r-sel:'+x.id+'" style="text-align:left'+(x.id===st.role?';color:var(--accent-soft)':'')+'">'+esc(x.name)+(x.id===st.role?' ←':'')+'</button>'+
+   (x.id==='everyone'?'<span class="chip">EVERYONE</span>':'<div class="acts"><button class="tbtn" data-m="r-move:'+x.id+':-1"'+(j>0&&this.ssBelow(s,j-1)&&this.ssBelow(s,j)?'':' disabled')+' title="Move up">↑</button>'+
+    '<button class="tbtn" data-m="r-move:'+x.id+':1"'+(j<last-1&&this.ssBelow(s,j)?'':' disabled')+' title="Move down">↓</button></div>')+'</div>').join('')+'</div>';
+  const perms=this.SPERMS.map(([k,label,d])=>{
+   const on=!!r.perms[k],lock=!can||(!on&&!mine[k]);
+   return '<label class="perm'+(lock?' off':'')+'"><input type="checkbox" data-perm="'+k+'"'+(on?' checked':'')+(lock?' disabled':'')+'><span>'+esc(label)+'<small>'+esc(d)+'</small></span></label>'}).join('');
+  return '<div class="note">Roles higher in the list outrank lower ones. Everyone has @everyone; a member gets every permission from every role they have. You can only edit and hand out roles below your own highest, and only switch on permissions you hold.</div>'+list+
+   '<div class="btnrow" style="margin:8px 0 14px;flex-wrap:nowrap"><input class="inp" id="ssNewRole" maxlength="24" placeholder="new role name" autocomplete="off"><button class="tbtn" data-m="r-new">CREATE ROLE</button></div>'+
+   '<div class="lbl">EDITING '+esc(r.name.toUpperCase())+'</div>'+
+   (can?'':'<div class="note" style="margin:0 0 8px">This role is not below your highest role, so you cannot change it.</div>')+
+   (all?'':'<div class="btnrow" style="margin:0 0 10px;flex-wrap:nowrap"><input class="inp" id="ssRoleName" maxlength="24" value="'+esc(r.name)+'"'+(can?'':' disabled')+'>'+
+    '<input type="color" id="ssRoleColor" value="'+esc(r.color||'#a39d95')+'" title="Role color"'+(can?'':' disabled')+' style="width:40px;height:34px;padding:0;border:1px solid var(--line2);background:none">'+
+    '<label class="perm" style="border:0;padding:0 4px;white-space:nowrap"><input type="checkbox" id="ssRoleNoColor"'+(r.color?'':' checked')+(can?'':' disabled')+'>no color</label></div>')+
+   '<div class="ss-list">'+perms+'</div>'+
+   (can?'<div class="btnrow"><button class="send" data-m="r-save">SAVE ROLE</button>'+(all?'':(st.confirm==='role'?'<span class="note" style="margin:0">delete it, taking it off everyone?</span><button class="tbtn" data-m="no">NO</button><button class="hang" data-m="r-del-yes">DELETE</button>':'<button class="tbtn danger" data-m="r-del">DELETE ROLE</button>'))+'</div>':'')},
+ ssMemberRows(s){
+  const st=this._ss,p=s.me.perms,list=M.smembers.get(s.serverId);
+  if(!list)return '<div class="grouplbl">LOADING…</div>';
+  const q=st.q.trim().toLowerCase(),me=M.me.userId,myRank=s.me.rank;
+  const shown=list.filter(m=>!q||(M.displayName(m.userId)+' '+m.username).toLowerCase().includes(q))
+   .sort((a,b)=>this.ssRank(s,a.userId)-this.ssRank(s,b.userId)||M.displayName(a.userId).localeCompare(M.displayName(b.userId)));
+  if(!shown.length)return '<div class="grouplbl">NO MATCHES</div>';
+  return shown.map(m=>{
+   const below=m.userId!==me&&this.ssRank(s,m.userId)>myRank,self=m.userId===me;
+   const chips=s.roles.filter(r=>r.id!=='everyone'&&m.roles.includes(r.id)).map(r=>'<span class="chip rolechip" style="--rc:'+esc(r.color||'var(--muted)')+'">'+esc(r.name)+'</span>').join(' ');
+   const canRoles=p.manageRoles&&(below||self);
+   let h='<div class="gp-row">'+this.av(m.userId,'av-26',null,' style="background:var(--avatar);color:var(--avatar-fg)"')+
+    '<span class="row-main">'+esc(M.displayName(m.userId))+(self?' (you)':'')+(m.userId===s.owner?' <span class="chip">OWNER</span>':'')+(chips?'<div style="margin-top:3px">'+chips+'</div>':'')+'</span>'+
+    '<div class="acts">'+(canRoles?'<button class="tbtn" data-m="m-roles:'+m.userId+'" aria-pressed="'+(st.mem===m.userId)+'">ROLES</button>':'')+
+    (p.kick&&below?'<button class="tbtn danger" data-m="m-kick:'+m.userId+'">KICK</button>':'')+(p.ban&&below?'<button class="tbtn danger" data-m="m-ban:'+m.userId+'">BAN</button>':'')+'</div>';
+   if(st.mem===m.userId&&canRoles){
+    const opts=s.roles.map((r,i)=>[r,i]).filter(([r,i])=>r.id!=='everyone'&&this.ssBelow(s,i));
+    h+='<div class="gp-durs" style="justify-content:flex-start;padding-left:36px">'+(opts.length?opts.map(([r])=>{const on=m.roles.includes(r.id);
+     return '<button class="tbtn" data-m="m-role:'+m.userId+':'+r.id+'" aria-pressed="'+on+'" style="'+(on?'border-color:var(--accent);color:var(--accent-soft)':'')+'">'+(on?'✓ ':'+ ')+esc(r.name)+'</button>'}).join('')
+     :'<span class="note" style="margin:0">no roles below yours to give</span>')+'</div>'}
+   if(st.confirm&&st.confirm.user===m.userId)h+='<div class="gp-durs"><input class="inp" id="ssReason" maxlength="200" placeholder="reason (optional)" style="flex:1;min-width:140px">'+
+    '<button class="tbtn" data-m="no">CANCEL</button><button class="hang" data-m="m-'+st.confirm.kind+'-yes:'+m.userId+'">'+(st.confirm.kind==='ban'?'BAN':'KICK')+' '+esc(M.displayName(m.userId))+'</button></div>';
+   return h+'</div>'}).join('')},
+ ssMembers(s){
+  return '<input class="search" id="ssQ" placeholder="filter members…" autocomplete="off" style="margin:0 0 8px;width:100%" value="'+esc(this._ss.q)+'">'+
+   '<div class="ss-list" id="ssMemList" style="max-height:360px">'+this.ssMemberRows(s)+'</div>'},
+ ssBans(s){
+  const b=s.bans||[];
+  return '<div class="ss-list">'+(b.length?b.map(x=>'<div class="gp-row"><span class="row-main">'+esc(x.username)+'<div class="row-sub">'+esc(new Date(x.ts).toLocaleDateString())+
+   (x.by?' · by '+esc(M.displayName(x.by)):'')+(x.reason?' · '+esc(x.reason):'')+'</div></span><div class="acts"><button class="tbtn" data-m="b-unban:'+esc(x.userId)+'">UNBAN</button></div></div>').join('')
+   :'<div class="grouplbl">NOBODY IS BANNED</div>')+'</div>'},
+ async ssAct(act,btn){
+  const st=this._ss;if(!st)return;
+  const sid=st.sid,s=M.srv(sid);if(!s)return this.close();
+  const [a,x,y]=act.split(':');
+  const run=async(fn,ok)=>{if(btn)btn.disabled=true;
+   try{await fn();if(ok)toast(ok)}catch(e){if(this._ss)this._ss.err=e.message}
+   if(this._ss){this._ss.confirm=null;this.ssFill()}};
+  const op=(path,body)=>M.serverOp(path,Object.assign({server:sid},body));
+  switch(a){
+   case 'close':return this.close();
+   case 'tab':st.tab=x;st.confirm=null;st.edit=null;return this.ssFill();
+   case 'no':st.confirm=null;return this.ssFill();
+   case 'rename':return run(()=>op('settings',{name:$('#ssName').value}),'server renamed');
+   case 'icon-pick':{const f=await pickImage();if(!f)return;return run(async()=>M.setServerIcon(sid,await shrinkImage(f)),'server icon changed')}
+   case 'icon-clear':return run(()=>M.setServerIcon(sid,null),'server icon removed');
+   case 'leave':this.close();
+    if(!await this.confirm('Leave '+s.name+'?',s.owner===M.me.userId?'You are the only member, so leaving deletes the server and everything in it.':'You can come back only with a new invite.','LEAVE'))return;
+    try{await M.leaveServer(sid);this.S.srv=null;this.render();toast('left '+s.name)}catch(e){toast(e.message)}return;
+   case 'del-server':st.confirm='delete';return this.ssFill();
+   case 'del-server-yes':if(btn)btn.disabled=true;
+    try{await M.deleteServer(sid);this.close();this.S.srv=null;this.render();toast('deleted '+s.name)}catch(e){st.err=e.message;st.confirm=null;this.ssFill()}return;
+   case 'transfer':st.to=$('#ssTo').value;st.confirm='transfer';return this.ssFill();
+   case 'transfer-yes':return run(()=>op('transfer',{user:st.to}),'handed over to '+M.displayName(st.to));
+   case 'inv-make':return run(async()=>{st.code=await M.createInvite(sid,{hours:Number($('#ssHours').value),uses:Number($('#ssUses').value)})});
+   case 'inv-copy':try{await navigator.clipboard.writeText(st.code.code);toast('invite code copied')}catch(e){toast('could not copy: select the code instead')}return;
+   case 'ch-kind':st.kind=x;return this.ssFill();
+   case 'ch-new':{const n=$('#ssNewCh').value.trim();if(!n)return;return run(()=>op('channel',{op:'create',name:n,kind:st.kind}))}
+   case 'ch-edit':st.edit=x;return this.ssFill();
+   case 'ch-cancel':st.edit=null;return this.ssFill();
+   case 'ch-save':{const t=$('#ssChTopic'),b={op:'update',channel:x,name:$('#ssChName').value};if(t)b.topic=t.value;
+    return run(async()=>{await op('channel',b);st.edit=null})}
+   case 'ch-ro':{const ch=s.channels.find(c=>c.id===x);return run(()=>op('channel',{op:'update',channel:x,readonly:!(ch&&ch.readonly)}))}
+   case 'ch-move':return run(()=>op('channel',{op:'move',channel:x,dir:Number(y)}));
+   case 'ch-del':st.confirm='ch:'+x;return this.ssFill();
+   case 'ch-del-yes':return run(()=>op('channel',{op:'delete',channel:x}));
+   case 'r-sel':st.role=x;st.confirm=null;return this.ssFill();
+   case 'r-move':return run(()=>op('role',{op:'move',role:x,dir:Number(y)}));
+   case 'r-new':{const n=$('#ssNewRole').value.trim();if(!n)return;return run(async()=>{const r=await op('role',{op:'create',name:n});st.role=r.role})}
+   case 'r-save':{
+    const perms={};document.querySelectorAll('#ssBox [data-perm]').forEach(i=>{if(!i.disabled)perms[i.dataset.perm]=i.checked});
+    const b={op:'update',role:st.role,perms};
+    if($('#ssRoleName')){b.name=$('#ssRoleName').value;b.color=$('#ssRoleNoColor').checked?'':$('#ssRoleColor').value}
+    return run(()=>op('role',b),'role saved')}
+   case 'r-del':st.confirm='role';return this.ssFill();
+   case 'r-del-yes':return run(()=>op('role',{op:'delete',role:st.role}));
+   case 'm-roles':st.mem=st.mem===x?null:x;return this.ssFill();
+   case 'm-role':{const m=(M.smembers.get(sid)||[]).find(z=>z.userId===x);return run(()=>op('member-role',{user:x,role:y,on:!(m&&m.roles.includes(y))}))}
+   case 'm-kick':case 'm-ban':st.confirm={user:x,kind:a.slice(2)};return this.ssFill();
+   case 'm-kick-yes':case 'm-ban-yes':{const reason=$('#ssReason')?$('#ssReason').value:'';
+    return run(()=>op('kick',{user:x,ban:a==='m-ban-yes',reason}),(a==='m-ban-yes'?'banned ':'kicked ')+M.displayName(x))}
+   case 'b-unban':return run(()=>op('unban',{user:x}),'ban lifted')}},
 
  /* ---------- discord ---------- */
  /** Linked Discord servers, each with the channels this account has joined. */
@@ -3686,8 +4617,9 @@ const UI={
  renderPane(){
   const pane=$('#pane'),scr=this.S.screen;
   // on a narrow screen Peers is only ever the list: a profile opens over it
-  const sel=scr==='settings'?!!this.S.set:scr==='peers'?false:scr==='admin'?!!(this.S.adm&&this.S.adm.sel):!!this.cur();
+  const sel=scr==='settings'?!!this.S.set:scr==='peers'?false:scr==='admin'?!!(this.S.adm&&this.S.adm.sel):scr==='servers'?!!this.S.srv:!!this.cur();
   $('#app').classList.toggle('in-pane',sel);
+  if(scr==='servers')return this.renderServerPane(pane);
   if(scr==='admin'){
    // rebuilt only when the selection or its data changes, so half-typed reasons survive other renders
    const A=this.adm(),pk='admin:'+(A.sel||'')+':'+A.v;
@@ -4843,6 +5775,7 @@ const UI={
   this.S.side=id;this.hoverHide();this.render()},
 
  async send(){
+  if(this.S.screen==='servers')return this.sendServer();
   const ta=$('#composer');if(!ta)return;
   const text=ta.value,id=this.cur();
   const r=this.S.reply,re=r&&r.conv===id?r.id:undefined;
@@ -4910,6 +5843,7 @@ const UI={
   if(conv&&!isGroup(conv)&&!isDiscord(conv))add(conv,M.username(conv));
   for(const p of M.peers.values())if(p.state==='friend')add(p.userId,M.username(p.userId)||p.username);
   if(M.staff&&this.S.adm)for(const u of this.S.adm.users)add(u.userId,u.username);
+  if(this.S.screen==='servers'&&this.S.srv)for(const m of M.smembers.get(this.S.srv)||[])add(m.userId,m.username);
   return [...seen.values()]},
  /** Opens, updates or closes the suggestion list for the word being typed. */
  acUpdate(){
@@ -5051,22 +5985,24 @@ const UI={
   if(!this._callTick)this._callTick=setInterval(()=>this.renderCall(),1000);
   const ringing=c.dir==='in'&&c.state==='ringing',grp=c.group?'g:'+c.group:null;
   const ls=[...c.links.values()],on=ls.filter(l=>l.state==='active').length;
-  const who=grp?M.displayName(grp):M.displayName(c.peer);
+  const vs=c.chan?M.srv(c.server):null,vch=vs&&vs.channels.find(x=>x.id===c.chan);
+  const who=c.chan?(vch?vch.name:'voice channel')+(vs?' · '+vs.name:''):grp?M.displayName(grp):M.displayName(c.peer);
   const st=c.state==='active'?(c.unstable?'reconnecting… · ':'')+clock(Math.floor((Date.now()-c.started)/1000))+
-    (grp?' · '+(on+1)+' in call':'')+(c.muted?' · muted':'')
+    (c.chan?' · '+(on+1)+' in channel':grp?' · '+(on+1)+' in call':'')+(c.muted?' · muted':'')
    :ringing?(grp?'group call from '+M.displayName(c.peer):'incoming voice call')
    :{calling:grp?'ringing '+ls.length+'…':'calling…',connecting:'connecting…'}[c.state];
-  const html=this.av(grp||c.peer,'av-34')+
+  const html=(c.chan?'<div class="av av-34 stile">'+ICON.speaker+'</div>':this.av(grp||c.peer,'av-34'))+
    '<div class="grow"><button class="who-btn" data-act="call-open"><div class="pane-title">'+esc(who)+
-   (!grp&&M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
-   '<div class="meta'+(c.unstable?' warn':'')+'"'+(c.relayed?' title="no direct or TURN connection: audio goes through the server, still end-to-end encrypted"':'')+'>'+esc(st)+(c.relayed?' · relayed':'')+' · end-to-end encrypted</div></div>'+
+   (!grp&&!c.chan&&M.peer(c.peer).verified?' <span class="chip ok">VERIFIED</span>':'')+'</div></button>'+
+   '<div class="meta'+(c.unstable?' warn':'')+'"'+(c.relayed?' title="no direct or TURN connection: audio goes through the server, still encrypted"':'')+'>'+esc(st)+(c.relayed?' · relayed':'')+
+   (c.chan?(vs&&vs.e2ee?' · voice channel · end-to-end encrypted':' · voice channel'):' · end-to-end encrypted')+'</div></div>'+
    '<div class="cacts">'+(ringing?'<button class="hang" data-act="call-decline">DECLINE</button><button class="send ok" data-act="call-accept">'+(grp?'JOIN':'ACCEPT')+'</button>'
     :(grp?'<button class="tbtn" data-act="call-invite">INVITE</button>':'')+
      (M.voice.canVideo()?'<button class="tbtn" data-act="call-cam" aria-pressed="'+c.cam+'">CAMERA</button>':'')+
      (M.voice.canScreen()?'<button class="tbtn" data-act="call-screen" aria-pressed="'+c.screen+'">SCREEN</button>':'')+
      '<button class="tbtn" data-act="call-mute" aria-pressed="'+c.muted+'">'+(c.muted?'UNMUTE':'MUTE')+'</button>'+
      '<button class="tbtn" data-act="call-view" aria-pressed="'+!this._stageOff+'" title="show or hide the call window">VIEW</button>'+
-     '<button class="hang" data-act="call-hangup">'+(grp?'LEAVE':'HANG UP')+'</button>')+'</div>';
+     '<button class="hang" data-act="call-hangup">'+(grp||c.chan?'LEAVE':'HANG UP')+'</button>')+'</div>';
   box.className='callbar'+(ringing?' ringing':'');
   if(box.innerHTML!==html)box.innerHTML=html;
   this.renderStage(c)},
@@ -5178,6 +6114,15 @@ document.addEventListener('click',async e=>{
  if(t.dataset.chat){UI.open(t.dataset.chat);return}
  if(t.dataset.dc){UI.open(t.dataset.dc);return}
  if(t.dataset.dcpub){UI.joinPublic(t.dataset.dcpub);return}
+ if(t.dataset.srv){UI.openServer(t.dataset.srv);return}
+ if(t.dataset.schan){UI.openSChan(t.dataset.schan);return}
+ if(t.dataset.svoice){UI.joinVoice(t.dataset.svoice);return}
+ if(t.dataset.sreply){UI.sReply(Number(t.dataset.sreply));return}
+ if(t.dataset.sdel){UI.sDelete(Number(t.dataset.sdel));return}
+ if(t.dataset.sjump){UI.sJump(Number(t.dataset.sjump));return}
+ if(t.dataset.searlier!=null){const th=$('#sthread');if(th){th.scrollTop=0;UI.sScrolled(th)}return}
+ if(t.dataset.sunveil){UI.S.unveiled.add('s|'+t.dataset.sunveil);UI.render();return}
+ if(t.dataset.smem){UI.showPeer(t.dataset.smem);return}
  if(t.dataset.peer){UI.showPeer(t.dataset.peer);return}
  if(t.dataset.peerAct){UI.peerAct(t.dataset.peerAct,t.dataset.id||UI.S.chat);return}
  if(t.dataset.showHeld!=null){UI.showHeld();return}
@@ -5197,7 +6142,7 @@ document.addEventListener('click',async e=>{
  if(t.dataset.ac!=null){UI.acPick(Number(t.dataset.ac));return}
  if(t.dataset.admSel){UI.admOpen(t.dataset.admSel);return}
  if(t.dataset.adm){UI.admAct(t.dataset.adm,t);return}
- if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
+ if(t.id==='colAction'){if(M.me)UI.S.screen==='discord'?UI.joinDiscord():UI.S.screen==='servers'?UI.newServer():UI.S.screen==='messages'?UI.newChat():UI.addPeer();return}
  switch(t.dataset.act){
   case 'send':UI.send();break;
   case 'reply-cancel':UI.cancelReply();{const ta=$('#composer');if(ta)ta.focus()}break;
@@ -5207,7 +6152,7 @@ document.addEventListener('click',async e=>{
   case 'back':
    if(UI.S.screen==='peers')UI.S.side=null;else if(UI.S.screen==='settings')UI.S.set=false;
    else if(UI.S.screen==='admin')UI.adm().sel=null;
-   else if(UI.S.screen==='discord')UI.S.dc=null;else UI.S.chat=null;
+   else if(UI.S.screen==='discord')UI.S.dc=null;else if(UI.S.screen==='servers'){UI.S.srv=null;UI.S.sre=null}else UI.S.chat=null;
    UI.render();break;
   case 'verify':UI.verify(UI.S.chat);break;
   case 'call':UI.call(UI.S.chat);break;
@@ -5215,7 +6160,11 @@ document.addEventListener('click',async e=>{
   case 'call-decline':M.voice.decline();break;
   case 'call-hangup':M.voice.hangup();break;
   case 'call-mute':M.voice.setMuted(!(M.voice.call&&M.voice.call.muted));break;
-  case 'call-open':{const c=M.voice.call;if(c)UI.open(c.group?'g:'+c.group:c.peer)}break;
+  case 'call-open':{const c=M.voice.call;if(c&&c.chan)UI.openServer(c.server);else if(c)UI.open(c.group?'g:'+c.group:c.peer)}break;
+  case 's-settings':if(UI.S.srv)UI.serverSettings(UI.S.srv);break;
+  case 's-members':UI.S.smem=!UI.S.smem;UI.render();break;
+  case 's-back':UI.S.inChan=false;UI.S.sre=null;UI.render();break;
+  case 's-reply-cancel':UI.S.sre=null;UI.render();{const ta=$('#composer');if(ta)ta.focus()}break;
   case 'call-invite':{const c=M.voice.call;if(c&&c.group)UI.groupCall('g:'+c.group,true)}break;
   case 'call-view':UI._stageOff=!UI._stageOff;UI.renderCall();break;
   case 'g-call':UI.groupCall(UI.S.chat);break;
@@ -5293,6 +6242,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Escape'&&UI.emojiOpen()){UI.emojiClose();const ta=$('#composer');if(ta)ta.focus()}
  else if(e.key==='Escape'&&$('#overlay .scrim:not(.solid):not(.out)'))UI.close();
  else if(e.key==='Escape'&&UI.S.reply&&UI.S.reply.conv===UI.cur())UI.cancelReply();
+ else if(e.key==='Escape'&&UI.S.sre&&UI.S.screen==='servers'){UI.S.sre=null;UI.render()}
  else if(e.key==='Escape'&&UI.S.side&&!$('#overlay .scrim'))UI.closeSide()});
 document.addEventListener('input',e=>{if(e.target.id==='composer')UI.acUpdate()});
 // Settings → Appearance sliders restyle live; moving one switches to the image theme
@@ -5344,7 +6294,7 @@ document.addEventListener('drop',e=>{
  if(!f||!UI.cur()||!$('#composer'))return;
  e.preventDefault();if(!isDiscord(UI.cur()))UI.attachFile(f)});
 // older messages load as the thread is scrolled up (scroll does not bubble, so listen while capturing)
-document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target)},true);
+document.addEventListener('scroll',e=>{if(e.target.id==='thread')UI.scrolled(e.target);else if(e.target.id==='sthread')UI.sScrolled(e.target)},true);
 document.addEventListener('wheel',e=>{const th=e.target.closest&&e.target.closest('#thread');if(th&&e.deltaY<0)UI.pulled(th)},{passive:true});
 {let y0=null;
  document.addEventListener('touchstart',e=>{y0=e.target.closest&&e.target.closest('#thread')?e.touches[0].clientY:null},{passive:true});
@@ -5354,6 +6304,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)UI.hoverHid
 M.on('change',()=>UI.renderSoon());
 M.on('status',()=>UI.render());
 M.on('message',(peer,text)=>UI.notify(peer,text));
+M.on('smsg',(sid,cid,m)=>UI.snotify(sid,cid,m));
 M.on('backlog',(n,chats)=>summary(n,chats));
 M.on('outdated',msg=>outdatedPopup(msg));
 M.on('call',()=>{UI.renderCall();UI.render()});
@@ -5365,6 +6316,7 @@ M.on('peer',(kind,p)=>{
  else if(kind==='changed')toast('warning: '+p.username+' now belongs to a different identity than before',9000)});
 M.on('signedout',reason=>{
  store.sset(null);UI.hoverHide();Object.assign(UI.S,{chat:null,dc:null,last:'chat',side:null,sideErr:'',set:false,pf:null,paneKey:'',filter:'',reply:null,adm:null,
+  srv:null,schans:{},sre:null,inChan:false,smem:null,
   global:{q:null,users:[],more:false,loading:false,err:'',seq:UI.S.global.seq+1}});
  $('#search').value='';UI.render();
  UI.auth('login',reason||'')});
